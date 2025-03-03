@@ -156,6 +156,17 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
             });
         }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            let collapsibles = document.querySelectorAll(".collapsible");
+
+            collapsibles.forEach(button => {
+                button.addEventListener("click", function () {
+                    let content = this.nextElementSibling;
+                    content.style.display = content.style.display === "block" ? "none" : "block";
+                });
+            });
+        });
     </script>
 </head>
 <body onload="fetchData()">
