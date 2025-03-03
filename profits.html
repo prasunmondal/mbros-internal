@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profit Report</title>
+    <script>
+        async function fetchProfit() {
+            try {
+                let response = await fetch('https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec', {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        operations: JSON.stringify([{
+                            opCode: "FETCH_ALL",
+                            sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
+                            tabName: "cumilativeCalculations",
+                            opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+                        }])
+                    })
+                });
+
+                let data = await response.json();
+                let profits = {};
+                let currentMonth = new Date().getMonth() + 1;
+                let previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+                let currentYear = new Date().getFullYear();
+                let previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+                data[0].content.forEach(entry => {
+                    if (!entry.profit || entry.profit === "#N/A") return;
+                    let date = new Date(entry.date);
+                    let month = date.getMonth() + 1;
+                    let year = date.getFullYear();
+
+                    if (year === currentYear && month === currentMonth) {
+                        profits.currentMonth = (profits.currentMonth || 0) + parseFloat(entry.profit);
+                    }
+                    if (year === previousYear && month === previousMonth) {
+                        profits.previousMonth = (profits.previousMonth || 0) + parseFloat(entry.profit);
+                    }
+                });
+
+                document.getElementById('currentProfit').innerText = profits.currentMonth || 0;
+                document.getElementById('previousProfit').innerText = profits.previousMonth || 0;
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+    </script>
+</head>
+<body onload="fetchProfit()">
+<h1>Profit Report</h1>
+<p>Profit for Current Month: <span id="currentProfit">Loading...</span></p>
+<p>Profit for Previous Month: <span id="previousProfit">Loading...</span></p>
+</body>
+</html>
