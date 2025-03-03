@@ -128,6 +128,7 @@
 
         function processKgData(data) {
             let kgData = {};
+            let uniqueYears = new Set();
 
             data[0].content.forEach(entry => {
                 if (!entry.kg || entry.kg === "#N/A") return;
@@ -139,6 +140,7 @@
                 if (!kgData[key][year]) kgData[key][year] = 0;
                 kgData[key][year] += parseFloat(entry.kg);
                 console.log(year + "/"  + date + ": [" + key + "] = " + kgData[key][year])
+                uniqueYears.add(year)
             });
 
             let labels = Object.keys(kgData).sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
@@ -146,7 +148,7 @@
             console.log(labels)
             console.log(Object.keys(kgData[labels[8]]))
 
-            let datasets = Object.keys(kgData[labels[8]]).map(year => ({
+            let datasets = uniqueYears.map(year => ({
                 label: `Year ${year}`,
                 data: labels.map(label => kgData[label][year] || 0),
                 borderColor: `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`,
