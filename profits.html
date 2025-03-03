@@ -3,195 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profit and KG Data</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            color: #333;
-        }
-        canvas {
-            max-width: 800px;
-            margin: 20px auto;
-        }
-    </style>
-    <!-- Include Chart.js -->
+    <title>Profit Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-<h1>Profit Data - Last 12 Months</h1>
-<canvas id="profitChart"></canvas>
-
-<h1>KG Data - Grouped by Week</h1>
-<canvas id="kgChart"></canvas>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const apiUrl = 'https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec';
-        const formData = new FormData();
-        formData.append('operations', JSON.stringify([{
-            "opCode": "FETCH_ALL",
-            "sheetId": "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-            "tabName": "cumilativeCalculations",
-            "opId": "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
-        }]));
-
-        fetch(apiUrl, {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
-                const content = data[0].content;
-                const currentDate = new Date();
-                const currentMonth = currentDate.getMonth();
-                const currentYear = currentDate.getFullYear();
-
-                // Initialize an array to store profit for the last 12 months
-                const monthlyProfit = Array(12).fill(0);
-
-                // Calculate profit for each of the last 12 months
-                content.forEach(item => {
-                    const itemDate = new Date(item.date);
-                    const itemMonth = itemDate.getMonth();
-                    const itemYear = itemDate.getFullYear();
-
-                    // Calculate the difference in months
-                    const monthDiff = (currentYear - itemYear) * 12 + (currentMonth - itemMonth);
-
-                    // If the item is within the last 12 months, add its profit
-                    if (monthDiff >= 0 && monthDiff < 12) {
-                        monthlyProfit[11 - monthDiff] += parseFloat(item.profit) || 0;
-                    }
+    <script src="config.js"></script>
+    <script>
+        async function fetchData() {
+            try {
+                let response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        operations: JSON.stringify([{
+                            opCode: "FETCH_ALL",
+                            sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
+                            tabName: "cumilativeCalculations",
+                            opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+                        }])
+                    })
                 });
 
-                // Generate labels for the last 12 months
-                const monthNames = [
-                    'January', 'February', 'March', 'April', 'May', 'June',
-                    'July', 'August', 'September', 'October', 'November', 'December'
-                ];
-                const labels = [];
-                for (let i = 11; i >= 0; i--) {
-                    const monthIndex = (currentMonth - i + 12) % 12;
-                    labels.push(monthNames[monthIndex]);
+                let data = await response.json();
+                processProfitData(data);
+                processKgData(data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        function getMonthName(monthIndex) {
+            return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][monthIndex];
+        }
+
+        function getWeek(date) {
+            let firstDay = new Date(date.getFullYear(), 0, 1);
+            return Math.ceil((((date - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
+        }
+
+        function processProfitData(data) {
+            let profits = [];
+            let today = new Date();
+
+            for (let i = 12; i >= 0; i--) {
+                let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                let key = `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
+                profits.push({ key: key, value: 0 });
+            }
+
+            data[0].content.forEach(entry => {
+                if (!entry.profit || entry.profit === "#N/A") return;
+                let date = new Date(entry.date);
+                let key = `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
+                let profitEntry = profits.find(p => p.key === key);
+                if (profitEntry) {
+                    profitEntry.value += parseFloat(entry.profit);
                 }
-
-                // Create the bar chart for profit
-                const profitCtx = document.getElementById('profitChart').getContext('2d');
-                new Chart(profitCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Profit',
-                            data: monthlyProfit,
-                            backgroundColor: labels.map((label, index) =>
-                                index === 11 ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.8)'
-                            ), // Highlight current month
-                            borderColor: labels.map((label, index) =>
-                                index === 11 ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
-                            ),
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Profit'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Month'
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        }
-                    }
-                });
-
-                // Process KG data for the line chart
-                const kgData = {};
-                content.forEach(item => {
-                    const itemDate = new Date(item.date);
-                    const weekNumber = getWeekNumber(itemDate);
-                    const kg = parseFloat(item.kg) || 0;
-
-                    if (!kgData[weekNumber]) {
-                        kgData[weekNumber] = 0;
-                    }
-                    kgData[weekNumber] += kg;
-                });
-
-                // Sort by week number
-                const sortedWeeks = Object.keys(kgData).sort((a, b) => a - b);
-                const kgLabels = sortedWeeks.map(week => `Week ${week}`);
-                const kgValues = sortedWeeks.map(week => kgData[week]);
-
-                // Create the line chart for KG data
-                const kgCtx = document.getElementById('kgChart').getContext('2d');
-                new Chart(kgCtx, {
-                    type: 'line',
-                    data: {
-                        labels: kgLabels,
-                        datasets: [{
-                            label: 'KG',
-                            data: kgValues,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 2,
-                            pointRadius: 5,
-                            pointBackgroundColor: 'rgba(75, 192, 192, 1)'
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'KG'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Week Number'
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        }
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-                alert('Failed to fetch data. Please check the console for details.');
             });
 
-        // Helper function to get the ISO week number
-        function getWeekNumber(date) {
-            const d = new Date(date);
-            d.setHours(0, 0, 0, 0);
-            d.setDate(d.getDate() + 4 - (d.getDay() || 7)); // Set to nearest Thursday
-            const yearStart = new Date(d.getFullYear(), 0, 1);
-            const weekNumber = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-            return weekNumber;
+            let labels = profits.map(p => p.key);
+            let values = profits.map(p => p.value);
+            let currentMonth = `${getMonthName(today.getMonth())} ${today.getFullYear()}`;
+
+            let backgroundColors = labels.map(label =>
+                label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'
+            );
+            let borderColors = labels.map(label =>
+                label === currentMonth ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'
+            );
+
+            let ctx = document.getElementById('profitChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit (Last 12 Months)',
+                        data: values,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         }
+
+        function processKgData(data) {
+            let kgData = {};
+
+            data[0].content.forEach(entry => {
+                if (!entry.kg || entry.kg === "#N/A") return;
+                let date = new Date(entry.date);
+                let key = `${date.getFullYear()} Week ${getWeek(date)}`;
+
+                if (!kgData[key]) {
+                    kgData[key] = 0;
+                }
+                kgData[key] += parseFloat(entry.kg);
+            });
+
+            let labels = Object.keys(kgData).sort((a, b) => a.localeCompare(b));
+            let values = labels.map(label => kgData[label]);
+
+            let ctx = document.getElementById('kgChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumulative KG (Weekly)',
+                        data: values,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        fill: false,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</head>
+<body onload="fetchData()">
+<h1>Profit Report</h1>
+<button class="collapsible">Toggle Profit Chart</button>
+<div class="content">
+    <canvas id="profitChart"></canvas>
+</div>
+<button class="collapsible">Toggle KG Chart</button>
+<div class="content">
+    <canvas id="kgChart"></canvas>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        let collapsibles = document.querySelectorAll(".collapsible");
+        collapsibles.forEach(button => {
+            button.addEventListener("click", function() {
+                this.classList.toggle("active");
+                let content = this.nextElementSibling;
+                content.style.display = content.style.display === "block" ? "none" : "block";
+            });
+        });
     });
 </script>
 </body>
