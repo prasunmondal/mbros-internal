@@ -142,7 +142,7 @@
             });
 
             let labels = Object.keys(kgData).sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
-            let datasets = Object.keys(kgData[labels[0]]).map(year => ({
+            let datasets = Object.keys(kgData[labels[8]]).map(year => ({
                 label: `Year ${year}`,
                 data: labels.map(label => kgData[label][year] || 0),
                 borderColor: `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`,
