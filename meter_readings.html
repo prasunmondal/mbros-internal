@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meter Reading Difference</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        input {
+            margin: 5px 0;
+            padding: 8px;
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Meter Reading Difference</h1>
+
+    <form id="meterForm">
+        <table id="meterTable">
+            <tr>
+                <th>Name</th>
+                <th>Initial Reading</th>
+                <th>Current Reading</th>
+                <th>Difference</th>
+                <th>Target Units</th>
+                <th>Units Required</th>
+                <th>Estimated Bill</th>
+            </tr>
+        </table>
+    </form>
+
+    <script>
+        // API URL and Form Data
+        const apiUrl = 'https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec';
+        const formData = new FormData();
+        formData.append('operations', '[{"opCode":"FETCH_ALL","sheetId":"1VYrAZxWXE4bNA6HjoBWbGS17rQxaMgjvnrIUzopnHdY","tabName":"apiData","opId":"04912489-167e-4048-813f-8a14ea48f6c5-1737648761099"}]');
+
+        // Function to fetch data from the API
+        async function fetchData() {
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', body: formData });
+                const apiResponse = await response.json();
+                const data = apiResponse[0].content;
+
+                // Populate the table with API data
+                const table = document.getElementById('meterTable');
+
+                data.forEach((entry, index) => {
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>${entry[""]}</td>
+                        <td><input type="number" id="initial${index}" value="${entry.initialReading}" disabled /></td>
+                        <td>
+                            <input type="number" id="current${index}" placeholder="${entry.currentReading}" oninput="recalculate(${index})" />
+                        </td>
+                        <td id="difference${index}">0</td>
+                        <td><input type="number" id="targetUnits${index}" value="${entry.targetUnits}" disabled /></td>
+                        <td id="units${index}">0</td>
+                        <td id="estimatedBill${index}">${entry.EstimatedBill || 0}</td>
+                    `;
+
+                    table.appendChild(row);
+
+                    // Initial calculation
+                    recalculate(index);
+                });
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        // Function to recalculate differences and units required
+        function recalculate(index) {
+            const initial = parseFloat(document.getElementById(`initial${index}`).value) || 0;
+            const targetUnits = parseFloat(document.getElementById(`targetUnits${index}`).value) || 0;
+
+            const currentInput = document.getElementById(`current${index}`);
+            const current = currentInput.value ? parseFloat(currentInput.value) : parseFloat(currentInput.placeholder) || 0;
+
+            const difference = current - initial;
+            const unitsRequired = targetUnits - difference;
+
+            document.getElementById(`difference${index}`).innerText = difference;
+            document.getElementById(`units${index}`).innerText = unitsRequired;
+        }
+
+        // Call the fetchData function on page load
+        window.onload = fetchData;
+    </script>
+
+</body>
+</html>
