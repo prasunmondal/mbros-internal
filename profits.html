@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="config.js"></script>
     <script>
-        async function fetchProfit() {
+        async function fetchData() {
             try {
                 let response = await fetch(API_URL, {
                     method: 'POST',
@@ -22,62 +22,121 @@
                 });
 
                 let data = await response.json();
-                let profits = [];
-                let today = new Date();
-
-                for (let i = 12; i >= 0; i--) {
-                    let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                    let key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-                    profits.push({ key: key, value: 0 });
-                }
-
-                data[0].content.forEach(entry => {
-                    if (!entry.profit || entry.profit === "#N/A") return;
-                    let date = new Date(entry.date);
-                    let key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-                    let profitEntry = profits.find(p => p.key === key);
-                    if (profitEntry) {
-                        profitEntry.value += parseFloat(entry.profit);
-                    }
-                });
-
-                let labels = profits.map(p => p.key);
-                let values = profits.map(p => p.value);
-                let currentMonth = `${today.getFullYear()}-${today.getMonth() + 1}`;
-
-                let backgroundColors = labels.map(label =>
-                    label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'
-                );
-                let borderColors = labels.map(label =>
-                    label === currentMonth ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'
-                );
-
-                let ctx = document.getElementById('profitChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Profit (Last 12 Months)',
-                            data: values,
-                            backgroundColor: backgroundColors,
-                            borderColor: borderColors,
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
+                processProfitData(data);
+                processKgData(data);
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
+        }
+
+        function processProfitData(data) {
+            let profits = [];
+            let today = new Date();
+
+            for (let i = 12; i >= 0; i--) {
+                let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                let key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+                profits.push({ key: key, value: 0 });
+            }
+
+            data[0].content.forEach(entry => {
+                if (!entry.profit || entry.profit === "#N/A") return;
+                let date = new Date(entry.date);
+                let key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+                let profitEntry = profits.find(p => p.key === key);
+                if (profitEntry) {
+                    profitEntry.value += parseFloat(entry.profit);
+                }
+            });
+
+            let labels = profits.map(p => p.key);
+            let values = profits.map(p => p.value);
+            let currentMonth = `${today.getFullYear()}-${today.getMonth() + 1}`;
+
+            let backgroundColors = labels.map(label =>
+                label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'
+            );
+            let borderColors = labels.map(label =>
+                label === currentMonth ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'
+            );
+
+            let ctx = document.getElementById('profitChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit (Last 12 Months)',
+                        data: values,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function processKgData(data) {
+            let kgData = {};
+
+            data[0].content.forEach(entry => {
+                if (!entry.kg || entry.kg === "#N/A") return;
+                let date = new Date(entry.date);
+                let key = `${date.getMonth() + 1}-${date.getDate()}`;
+                let yearKey = `${date.getFullYear()}`;
+
+                if (!kgData[key]) {
+                    kgData[key] = {};
+                }
+                kgData[key][yearKey] = parseFloat(entry.kg);
+            });
+
+            let labels = Object.keys(kgData).sort();
+            let datasets = [];
+            let years = new Set();
+
+            Object.values(kgData).forEach(entry => {
+                Object.keys(entry).forEach(year => years.add(year));
+            });
+
+            years = Array.from(years).sort();
+
+            years.forEach(year => {
+                datasets.push({
+                    label: `Year ${year}`,
+                    data: labels.map(label => kgData[label][year] || 0),
+                    borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                    fill: false,
+                    tension: 0.1
+                });
+            });
+
+            let ctx = document.getElementById('kgChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         }
     </script>
     <style>
@@ -102,11 +161,11 @@
             background-color: #f1f1f1;
         }
         .chart-container {
-            height: 400px;
+            height: 200px;
         }
     </style>
 </head>
-<body onload="fetchProfit()">
+<body onload="fetchData()">
 <h1>Profit Report</h1>
 <button class="collapsible">Toggle Profit Chart</button>
 <div class="content">
@@ -114,13 +173,21 @@
         <canvas id="profitChart"></canvas>
     </div>
 </div>
+<button class="collapsible">Toggle KG Chart</button>
+<div class="content">
+    <div class="chart-container">
+        <canvas id="kgChart"></canvas>
+    </div>
+</div>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        let collapsible = document.querySelector(".collapsible");
-        collapsible.addEventListener("click", function() {
-            this.classList.toggle("active");
-            let content = this.nextElementSibling;
-            content.style.display = content.style.display === "block" ? "none" : "block";
+        let collapsibles = document.querySelectorAll(".collapsible");
+        collapsibles.forEach(button => {
+            button.addEventListener("click", function() {
+                this.classList.toggle("active");
+                let content = this.nextElementSibling;
+                content.style.display = content.style.display === "block" ? "none" : "block";
+            });
         });
     });
 </script>
