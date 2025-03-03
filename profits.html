@@ -126,45 +126,36 @@
             });
         }
 
-        const processKgData = (data) => {
-            let weeklyData = {};
-            let allYears = new Set();
-            let allWeeks = new Set();
+        function processKgData(data) {
+            let kgData = {};
 
-            // Process the data
-            data.forEach((entry) => {
-                if (entry.date && entry.kg && entry.kg !== "#N/A") {
-                    const date = new Date(entry.date);
-                    const year = date.getFullYear();
-                    const week = Math.ceil((date.getDate() + new Date(date.getFullYear(), date.getMonth(), 1).getDay()) / 7);
-                    const key = `Week ${week}`;
+            data[0].content.forEach(entry => {
+                if (!entry.kg || entry.kg === "#N/A") return;
+                let date = new Date(entry.date);
+                let key = `Week ${getWeek(date)}`;
+                let year = date.getFullYear();
 
-                    allYears.add(year);
-                    allWeeks.add(key);
-
-                    if (!weeklyData[key]) weeklyData[key] = {};
-                    if (!weeklyData[key][year]) weeklyData[key][year] = 0;
-
-                    weeklyData[key][year] += parseFloat(entry.kg);
-                }
+                if (!kgData[key]) kgData[key] = {};
+                if (!kgData[key][year]) kgData[key][year] = 0;
+                kgData[key][year] += parseFloat(entry.kg);
             });
 
-            // Ensure all weeks have entries for all years
-            allWeeks.forEach((week) => {
-                if (!weeklyData[week]) weeklyData[week] = {};
-                allYears.forEach((year) => {
-                    if (!weeklyData[week][year]) weeklyData[week][year] = 0;
-                });
-            });
-
-            // Sort weeks numerically (extracting the week number)
-            const sortedWeeks = [...allWeeks].sort((a, b) => parseInt(a.split(" ")[1]) - parseInt(b.split(" ")[1]));
-
-            return sortedWeeks.map((week) => ({
-                week,
-                ...weeklyData[week],
+            let labels = Object.keys(kgData).sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
+            let datasets = Object.keys(kgData[labels[0]]).map(year => ({
+                label: `Year ${year}`,
+                data: labels.map(label => kgData[label][year] || 0),
+                borderColor: `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`,
+                fill: false,
+                tension: 0.1
             }));
-        };
+
+            let ctx = document.getElementById('kgChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
 
         document.addEventListener("DOMContentLoaded", function () {
             let collapsibles = document.querySelectorAll(".collapsible");
