@@ -154,15 +154,29 @@
                     if (!kgData[week][year]) kgData[week][year] = 0;
                 });
             });
- 
+
             // Sort weeks numerically
             let labels = [...allWeeks].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
 
-            // Prepare datasets for each year
-            let datasets = [...yearsSet].sort().map(year => ({
+            // Sort years to apply gradient colors correctly
+            let sortedYears = [...yearsSet].sort();
+
+            // Function to generate colors from yellow to red
+            function getGradientColor(index, total) {
+                let ratio = index / (total - 1);
+                let r = Math.round(255);
+                let g = Math.round(255 * (1 - ratio)); // Decrease green
+                let b = 0; // Keep blue at 0 for red shades
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            // Prepare datasets with gradient colors
+            let datasets = sortedYears.map((year, index) => ({
                 label: `Year ${year}`,
                 data: labels.map(label => kgData[label][year] || 0),
-                borderColor: `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`,
+                borderColor: getGradientColor(index, sortedYears.length),
+                backgroundColor: getGradientColor(index, sortedYears.length),
+                pointBackgroundColor: getGradientColor(index, sortedYears.length),
                 fill: false,
                 tension: 0.1
             }));
@@ -171,7 +185,11 @@
             new Chart(ctx, {
                 type: 'line',
                 data: { labels: labels, datasets: datasets },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
             });
         }
 
