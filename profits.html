@@ -108,7 +108,7 @@
                 kgData[key] += parseFloat(entry.kg);
             });
 
-            let labels = Object.keys(kgData).sort();
+            let labels = Object.keys(kgData).sort((a, b) => a.localeCompare(b));
             let values = labels.map(label => kgData[label]);
 
             let ctx = document.getElementById('kgChart').getContext('2d');
@@ -141,15 +141,11 @@
 <h1>Profit Report</h1>
 <button class="collapsible">Toggle Profit Chart</button>
 <div class="content">
-    <div class="chart-container">
-        <canvas id="profitChart"></canvas>
-    </div>
+    <canvas id="profitChart"></canvas>
 </div>
 <button class="collapsible">Toggle KG Chart</button>
 <div class="content">
-    <div class="chart-container">
-        <canvas id="kgChart"></canvas>
-    </div>
+    <canvas id="kgChart"></canvas>
 </div>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
