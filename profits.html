@@ -133,11 +133,12 @@
                 if (!entry.kg || entry.kg === "#N/A") return;
                 let date = new Date(entry.date);
                 let key = `Week ${getWeek(date)}`;
-                let year = date.getFullYear();
+                let year = date.getFullYear()
 
                 if (!kgData[key]) kgData[key] = {};
                 if (!kgData[key][year]) kgData[key][year] = 0;
                 kgData[key][year] += parseFloat(entry.kg);
+                console.log(year + "/"  + date + ": [" + key + "] = " + kgData[key][year])
             });
 
             let labels = Object.keys(kgData).sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
