@@ -141,6 +141,9 @@
                 console.log(year + "/"  + date + ": [" + key + "] = " + kgData[key][year])
             });
 
+            console.log("labels")
+            console.log(Object.keys(kgData[labels[8]]))
+
             let labels = Object.keys(kgData).sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
             let datasets = Object.keys(kgData[labels[8]]).map(year => ({
                 label: `Year ${year}`,
