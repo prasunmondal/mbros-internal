@@ -33,6 +33,11 @@
             return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][monthIndex];
         }
 
+        function getWeek(date) {
+            let firstDay = new Date(date.getFullYear(), 0, 1);
+            return Math.ceil((((date - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
+        }
+
         function processProfitData(data) {
             let profits = [];
             let today = new Date();
@@ -95,41 +100,29 @@
             data[0].content.forEach(entry => {
                 if (!entry.kg || entry.kg === "#N/A") return;
                 let date = new Date(entry.date);
-                let key = `${getMonthName(date.getMonth())} ${date.getDate()}`;
-                let yearKey = `${date.getFullYear()}`;
+                let key = `${date.getFullYear()} Week ${getWeek(date)}`;
 
                 if (!kgData[key]) {
-                    kgData[key] = {};
+                    kgData[key] = 0;
                 }
-                kgData[key][yearKey] = parseFloat(entry.kg);
+                kgData[key] += parseFloat(entry.kg);
             });
 
             let labels = Object.keys(kgData).sort();
-            let datasets = [];
-            let years = new Set();
-
-            Object.values(kgData).forEach(entry => {
-                Object.keys(entry).forEach(year => years.add(year));
-            });
-
-            years = Array.from(years).sort();
-
-            years.forEach(year => {
-                datasets.push({
-                    label: `Year ${year}`,
-                    data: labels.map(label => kgData[label][year] || 0),
-                    borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
-                    fill: false,
-                    tension: 0.1
-                });
-            });
+            let values = labels.map(label => kgData[label]);
 
             let ctx = document.getElementById('kgChart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: datasets
+                    datasets: [{
+                        label: 'Cumulative KG (Weekly)',
+                        data: values,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        fill: false,
+                        tension: 0.1
+                    }]
                 },
                 options: {
                     responsive: true,
