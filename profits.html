@@ -148,7 +148,7 @@
             console.log(labels)
             console.log(Object.keys(kgData[labels[8]]))
 
-            let datasets = uniqueYears.map(year => ({
+            let datasets = Object.keys(uniqueYears).map(year => ({
                 label: `Year ${year}`,
                 data: labels.map(label => kgData[label][year] || 0),
                 borderColor: `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`,
