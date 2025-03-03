@@ -29,20 +29,24 @@
             }
         }
 
+        function getMonthName(monthIndex) {
+            return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][monthIndex];
+        }
+
         function processProfitData(data) {
             let profits = [];
             let today = new Date();
 
             for (let i = 12; i >= 0; i--) {
                 let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                let key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+                let key = `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
                 profits.push({ key: key, value: 0 });
             }
 
             data[0].content.forEach(entry => {
                 if (!entry.profit || entry.profit === "#N/A") return;
                 let date = new Date(entry.date);
-                let key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+                let key = `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
                 let profitEntry = profits.find(p => p.key === key);
                 if (profitEntry) {
                     profitEntry.value += parseFloat(entry.profit);
@@ -51,7 +55,7 @@
 
             let labels = profits.map(p => p.key);
             let values = profits.map(p => p.value);
-            let currentMonth = `${today.getFullYear()}-${today.getMonth() + 1}`;
+            let currentMonth = `${getMonthName(today.getMonth())} ${today.getFullYear()}`;
 
             let backgroundColors = labels.map(label =>
                 label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'
@@ -91,7 +95,7 @@
             data[0].content.forEach(entry => {
                 if (!entry.kg || entry.kg === "#N/A") return;
                 let date = new Date(entry.date);
-                let key = `${date.getMonth() + 1}-${date.getDate()}`;
+                let key = `${getMonthName(date.getMonth())} ${date.getDate()}`;
                 let yearKey = `${date.getFullYear()}`;
 
                 if (!kgData[key]) {
@@ -139,31 +143,6 @@
             });
         }
     </script>
-    <style>
-        .collapsible {
-            background-color: #777;
-            color: white;
-            cursor: pointer;
-            padding: 10px;
-            width: 100%;
-            border: none;
-            text-align: left;
-            outline: none;
-            font-size: 18px;
-        }
-        .active, .collapsible:hover {
-            background-color: #555;
-        }
-        .content {
-            padding: 10px;
-            display: none;
-            overflow: hidden;
-            background-color: #f1f1f1;
-        }
-        .chart-container {
-            height: 200px;
-        }
-    </style>
 </head>
 <body onload="fetchData()">
 <h1>Profit Report</h1>
