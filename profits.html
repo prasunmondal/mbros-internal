@@ -21,26 +21,35 @@
                 });
 
                 let data = await response.json();
-                let profits = {};
+                let profits = [];
                 let today = new Date();
 
-                for (let i = 0; i < 12; i++) {
+                for (let i = 11; i >= 0; i--) {
                     let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
                     let key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-                    profits[key] = 0;
+                    profits.push({ key: key, value: 0 });
                 }
 
                 data[0].content.forEach(entry => {
                     if (!entry.profit || entry.profit === "#N/A") return;
                     let date = new Date(entry.date);
                     let key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-                    if (profits.hasOwnProperty(key)) {
-                        profits[key] += parseFloat(entry.profit);
+                    let profitEntry = profits.find(p => p.key === key);
+                    if (profitEntry) {
+                        profitEntry.value += parseFloat(entry.profit);
                     }
                 });
 
-                let labels = Object.keys(profits).sort();
-                let values = labels.map(key => profits[key]);
+                let labels = profits.map(p => p.key);
+                let values = profits.map(p => p.value);
+                let currentMonth = `${today.getFullYear()}-${today.getMonth() + 1}`;
+
+                let backgroundColors = labels.map(label =>
+                    label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'
+                );
+                let borderColors = labels.map(label =>
+                    label === currentMonth ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'
+                );
 
                 let ctx = document.getElementById('profitChart').getContext('2d');
                 new Chart(ctx, {
@@ -50,8 +59,8 @@
                         datasets: [{
                             label: 'Profit (Last 12 Months)',
                             data: values,
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: backgroundColors,
+                            borderColor: borderColors,
                             borderWidth: 1
                         }]
                     },
