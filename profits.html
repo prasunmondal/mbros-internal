@@ -6,6 +6,49 @@
     <title>Profit Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="config.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .collapsible {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            padding: 10px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            font-size: 16px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .collapsible:hover {
+            background: #0056b3;
+        }
+        .content {
+            display: none;
+            padding: 10px;
+        }
+        canvas {
+            width: 100% !important;
+            height: 300px !important;
+        }
+    </style>
     <script>
         async function fetchData() {
             try {
@@ -62,13 +105,6 @@
             let values = profits.map(p => p.value);
             let currentMonth = `${getMonthName(today.getMonth())} ${today.getFullYear()}`;
 
-            let backgroundColors = labels.map(label =>
-                label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'
-            );
-            let borderColors = labels.map(label =>
-                label === currentMonth ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'
-            );
-
             let ctx = document.getElementById('profitChart').getContext('2d');
             new Chart(ctx, {
                 type: 'bar',
@@ -77,19 +113,15 @@
                     datasets: [{
                         label: 'Profit (Last 12 Months)',
                         data: values,
-                        backgroundColor: backgroundColors,
-                        borderColor: borderColors,
+                        backgroundColor: labels.map(label => label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'),
+                        borderColor: labels.map(label => label === currentMonth ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'),
                         borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
+                    scales: { y: { beginAtZero: true } }
                 }
             });
         }
@@ -100,64 +132,43 @@
             data[0].content.forEach(entry => {
                 if (!entry.kg || entry.kg === "#N/A") return;
                 let date = new Date(entry.date);
-                let key = `${date.getFullYear()} Week ${getWeek(date)}`;
+                let key = `Week ${getWeek(date)}`;
+                let year = date.getFullYear();
 
-                if (!kgData[key]) {
-                    kgData[key] = 0;
-                }
-                kgData[key] += parseFloat(entry.kg);
+                if (!kgData[key]) kgData[key] = {};
+                if (!kgData[key][year]) kgData[key][year] = 0;
+                kgData[key][year] += parseFloat(entry.kg);
             });
 
-            let labels = Object.keys(kgData).sort((a, b) => a.localeCompare(b));
-            let values = labels.map(label => kgData[label]);
+            let labels = Object.keys(kgData).sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
+            let datasets = Object.keys(kgData[labels[0]]).map(year => ({
+                label: `Year ${year}`,
+                data: labels.map(label => kgData[label][year] || 0),
+                borderColor: `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`,
+                fill: false,
+                tension: 0.1
+            }));
 
             let ctx = document.getElementById('kgChart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Cumulative KG (Weekly)',
-                        data: values,
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        fill: false,
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
+                data: { labels: labels, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
             });
         }
     </script>
 </head>
 <body onload="fetchData()">
-<h1>Profit Report</h1>
-<button class="collapsible">Toggle Profit Chart</button>
-<div class="content">
-    <canvas id="profitChart"></canvas>
+<div class="container">
+    <h1>Profit Report</h1>
+    <div class="card">
+        <button class="collapsible">Toggle Profit Chart</button>
+        <div class="content"><canvas id="profitChart"></canvas></div>
+    </div>
+    <div class="card">
+        <button class="collapsible">Toggle KG Chart</button>
+        <div class="content"><canvas id="kgChart"></canvas></div>
+    </div>
 </div>
-<button class="collapsible">Toggle KG Chart</button>
-<div class="content">
-    <canvas id="kgChart"></canvas>
-</div>
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        let collapsibles = document.querySelectorAll(".collapsible");
-        collapsibles.forEach(button => {
-            button.addEventListener("click", function() {
-                this.classList.toggle("active");
-                let content = this.nextElementSibling;
-                content.style.display = content.style.display === "block" ? "none" : "block";
-            });
-        });
-    });
-</script>
 </body>
 </html>
