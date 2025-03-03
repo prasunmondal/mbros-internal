@@ -128,27 +128,38 @@
 
         function processKgData(data) {
             let kgData = {};
-            let uniqueYears = new Set();
+            let yearsSet = new Set();
 
+            // Populate kgData with actual data and track all years
             data[0].content.forEach(entry => {
                 if (!entry.kg || entry.kg === "#N/A") return;
                 let date = new Date(entry.date);
                 let key = `Week ${getWeek(date)}`;
-                let year = date.getFullYear()
+                let year = date.getFullYear();
+
+                yearsSet.add(year);
 
                 if (!kgData[key]) kgData[key] = {};
                 if (!kgData[key][year]) kgData[key][year] = 0;
                 kgData[key][year] += parseFloat(entry.kg);
-                console.log(year + "/"  + date + ": [" + key + "] = " + kgData[key][year])
-                uniqueYears.add(year)
             });
 
-            let labels = Object.keys(kgData).sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
-            console.log("labels")
-            console.log(labels)
-            console.log(Object.keys(kgData[labels[8]]))
+            // Collect all weeks (ensure no missing weeks)
+            let allWeeks = new Set(Object.keys(kgData));
 
-            let datasets = Object.keys(uniqueYears).map(year => ({
+            // Ensure all years are present in all weeks
+            allWeeks.forEach(week => {
+                if (!kgData[week]) kgData[week] = {};
+                yearsSet.forEach(year => {
+                    if (!kgData[week][year]) kgData[week][year] = 0;
+                });
+            });
+
+            // Sort weeks numerically
+            let labels = [...allWeeks].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
+
+            // Prepare datasets for each year
+            let datasets = [...yearsSet].sort().map(year => ({
                 label: `Year ${year}`,
                 data: labels.map(label => kgData[label][year] || 0),
                 borderColor: `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`,
