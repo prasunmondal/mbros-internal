@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profit Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
     <script>
         async function fetchProfit() {
             try {
-                let response = await fetch('https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec', {
+                let response = await fetch(API_URL, {
                     method: 'POST',
                     body: new URLSearchParams({
                         operations: JSON.stringify([{
@@ -101,7 +102,7 @@
             background-color: #f1f1f1;
         }
         .chart-container {
-            height: 300px;
+            height: 200px;
         }
     </style>
 </head>
