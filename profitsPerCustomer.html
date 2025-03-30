@@ -144,11 +144,19 @@
                 (!endDate || customerDate <= endDate);
         });
 
+        console.log(filteredCustomers)
+
+        const prevRecord = window.customers.filter(c => {
+            let customerDate = convertToIST(c.timestamp);
+            return c.name === selectedCustomer &&
+                (!startDate || customerDate < startDate);
+        }).at(-1);
+
         let totalProfit = 0;
         let totalCustKgDelivered = 0;
         let totalAmountDelivered = 0;
         let totalDiscount = 0;
-        let startingBalance = 0;
+        let startingBalance = prevRecord.totalBalance;
         let finalBalance = 0;
         // let totalCustProfit = 0;
 
