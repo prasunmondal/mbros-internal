@@ -14,6 +14,7 @@
             margin: 5px;
         }
     </style>
+    <script src="config.js"></script>
 </head>
 <body>
 <h2>Customer Profits</h2>
@@ -29,37 +30,49 @@
 <p id="profitDisplay">Profit: N/A</p>
 
 <script>
-    let apiResponse = await fetch(API_URL, {
-        method: 'POST',
-        body: new URLSearchParams({
-            operations: JSON.stringify([{
-                opCode: "FETCH_ALL",
-                sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-                tabName: "cumilativeCalculations",
-                opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
-            }])
-        })
-    });
+    // const API_URL = "YOUR_API_ENDPOINT_HERE"; // Replace with actual API endpoint
 
-    const customers = apiResponse[0].content;
-    const selectElement = document.getElementById('customerSelect');
-    const profitDisplay = document.getElementById('profitDisplay');
-    const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
+    async function fetchData() {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: new URLSearchParams({
+                    operations: JSON.stringify([{
+                        opCode: "FETCH_ALL",
+                        sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
+                        tabName: "db2.deliveries",
+                        opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+                    }])
+                })
+            });
+            const data = await response.json();
+            populateCustomers(data[0].content);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    }
 
-    customers.forEach(customer => {
-        let option = document.createElement('option');
-        option.value = customer.name;
-        option.textContent = customer.name;
-        selectElement.appendChild(option);
-    });
+    function populateCustomers(customers) {
+        const selectElement = document.getElementById('customerSelect');
+        selectElement.innerHTML = '<option value="">--Select--</option>';
+        customers.forEach(customer => {
+            let option = document.createElement('option');
+            option.value = customer.name;
+            option.textContent = customer.name;
+            selectElement.appendChild(option);
+        });
+        window.customers = customers;
+    }
 
     function updateProfit() {
-        const selectedCustomer = selectElement.value;
-        const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
-        const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+        const selectedCustomer = document.getElementById('customerSelect').value;
+        const startDate = document.getElementById('startDate').value ? new Date(document.getElementById('startDate').value) : null;
+        const endDate = document.getElementById('endDate').value ? new Date(document.getElementById('endDate').value) : null;
+        const profitDisplay = document.getElementById('profitDisplay');
 
-        const filteredCustomers = customers.filter(c =>
+        if (!window.customers) return;
+
+        const filteredCustomers = window.customers.filter(c =>
             c.name === selectedCustomer &&
             (!startDate || new Date(c.timestamp) >= startDate) &&
             (!endDate || new Date(c.timestamp) <= endDate)
@@ -67,12 +80,10 @@
 
         const totalProfit = filteredCustomers.reduce((sum, c) => sum + c.dummyProfit, 0);
 
-        if (filteredCustomers.length > 0) {
-            profitDisplay.textContent = `Profit: ${totalProfit.toFixed(2)}`;
-        } else {
-            profitDisplay.textContent = "Profit: N/A";
-        }
+        profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
     }
+
+    fetchData();
 </script>
 </body>
 </html>
