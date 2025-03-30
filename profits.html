@@ -3,160 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Profits</title>
+    <title>Profit Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
         }
-        select, p, input {
-            font-size: 18px;
-            margin: 5px;
+        .container {
+            max-width: 100%;
+            margin: auto;
         }
-        table {
+        .card {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .collapsible {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            padding: 10px;
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
+            border: none;
             text-align: left;
+            font-size: 16px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .collapsible:hover {
+            background: #0056b3;
+        }
+        .content {
+            display: none;
+            padding: 10px;
+        }
+        canvas {
+            width: 100% !important;
+            height: 300px !important;
         }
     </style>
+    <script>
+        async function fetchData() {
+            try {
+                let response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        operations: JSON.stringify([{
+                            opCode: "FETCH_ALL",
+                            sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
+                            tabName: "cumilativeCalculations",
+                            opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+                        }])
+                    })
+                });
+
+                let data = await response.json();
+                processProfitData(data);
+                processKgData(data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        function getMonthName(monthIndex) {
+            return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][monthIndex];
+        }
+
+        function getWeek(date) {
+            let firstDay = new Date(date.getFullYear(), 0, 1);
+            return Math.ceil((((date - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
+        }
+
+        function processProfitData(data) {
+            let profits = [];
+            let today = new Date();
+
+            for (let i = 12; i >= 0; i--) {
+                let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                let key = `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
+                profits.push({ key: key, value: 0 });
+            }
+
+            data[0].content.forEach(entry => {
+                if (!entry.profit || entry.profit === "#N/A") return;
+                let date = new Date(entry.date);
+                let key = `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
+                let profitEntry = profits.find(p => p.key === key);
+                if (profitEntry) {
+                    profitEntry.value += parseFloat(entry.profit);
+                }
+            });
+
+            let labels = profits.map(p => p.key);
+            let values = profits.map(p => p.value);
+            let currentMonth = `${getMonthName(today.getMonth())} ${today.getFullYear()}`;
+
+            let ctx = document.getElementById('profitChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit (Last 12 Months)',
+                        data: values,
+                        backgroundColor: labels.map(label => label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'),
+                        borderColor: labels.map(label => label === currentMonth ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function processKgData(data) {
+            let kgData = {};
+            let yearsSet = new Set();
+
+            // Populate kgData with actual data and track all years
+            data[0].content.forEach(entry => {
+                if (!entry.kg || entry.kg === "#N/A") return;
+                let date = new Date(entry.date);
+                let key = `Week ${getWeek(date)}`;
+                let year = date.getFullYear();
+
+                yearsSet.add(year);
+
+                if (!kgData[key]) kgData[key] = {};
+                if (!kgData[key][year]) kgData[key][year] = 0;
+                kgData[key][year] += parseFloat(entry.kg);
+            });
+
+            // Collect all weeks (ensure no missing weeks)
+            let allWeeks = new Set(Object.keys(kgData));
+
+            // Ensure all years are present in all weeks
+            allWeeks.forEach(week => {
+                if (!kgData[week]) kgData[week] = {};
+                yearsSet.forEach(year => {
+                    if (!kgData[week][year]) kgData[week][year] = 0;
+                });
+            });
+
+            // Sort weeks numerically
+            let labels = [...allWeeks].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
+
+            // Sort years to apply gradient colors correctly
+            let sortedYears = [...yearsSet].sort();
+
+            // Function to generate colors from yellow to red
+            function getGradientColor(index, total) {
+                let ratio = index / (total - 1);
+                let r = Math.round(255);
+                let g = Math.round(255 * (1 - ratio)); // Decrease green
+                let b = 0; // Keep blue at 0 for red shades
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            // Prepare datasets with gradient colors
+            let datasets = sortedYears.map((year, index) => ({
+                label: `Year ${year}`,
+                data: labels.map(label => kgData[label][year] || 0),
+                borderColor: getGradientColor(index, sortedYears.length),
+                backgroundColor: getGradientColor(index, sortedYears.length),
+                pointBackgroundColor: getGradientColor(index, sortedYears.length),
+                fill: false,
+                tension: 0.1
+            }));
+
+            let ctx = document.getElementById('kgChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            let collapsibles = document.querySelectorAll(".collapsible");
+
+            collapsibles.forEach(button => {
+                button.addEventListener("click", function () {
+                    let content = this.nextElementSibling;
+                    content.style.display = content.style.display === "block" ? "none" : "block";
+                });
+            });
+        });
+    </script>
 </head>
-<body>
-<h2>Customer Profits</h2>
-<label for="customerSelect">Select a Customer:</label>
-<select id="customerSelect" onchange="updateProfit()">
-    <option value="">--Select--</option>
-</select>
-<br>
-<label for="startDate">Start Date:</label>
-<input type="date" id="startDate" onchange="updateProfit()">
-<label for="endDate">End Date:</label>
-<input type="date" id="endDate" onchange="updateProfit()">
-<p id="profitDisplay">Profit: N/A</p>
-
-<h3>Selected Rows</h3>
-<table id="dataTable">
-    <thead>
-    <tr>
-        <th>Order ID</th>
-        <th>Timestamp</th>
-        <th>Delivered PC</th>
-        <th>Delivered KG</th>
-        <th>Rate</th>
-        <th>Deliver Amount</th>
-        <th>Total Profit</th>
-        <th>Total Delivered Kg</th>
-        <th>Cust Delivered Kg</th>
-        <th>Profit</th>
-    </tr>
-    </thead>
-    <tbody></tbody>
-</table>
-
-<script>
-    const API_URL = "https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec"; // Replace with actual API endpoint
-
-    async function fetchData() {
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                body: new URLSearchParams({
-                    operations: JSON.stringify([{
-                        opCode: "FETCH_ALL",
-                        sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-                        tabName: "db2.deliveries",
-                        opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
-                    }])
-                })
-            });
-            const data = await response.json();
-            populateCustomers(data[0].content);
-        } catch (error) {
-            console.error("Error fetching data:", error);
-        }
-    }
-
-    async function fetchProfits() {
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                body: new URLSearchParams({
-                    operations: JSON.stringify([{
-                        opCode: "FETCH_ALL",
-                        sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-                        tabName: "cumilativeCalculations",
-                        opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
-                    }])
-                })
-            });
-            const data = await response.json();
-            window.profitData = data[0].content;
-        } catch (error) {
-            console.error("Error fetching profit data:", error);
-        }
-    }
-
-    function populateCustomers(customers) {
-        const selectElement = document.getElementById('customerSelect');
-        selectElement.innerHTML = '<option value="">--Select--</option>';
-        customers.forEach(customer => {
-            let option = document.createElement('option');
-            option.value = customer.name;
-            option.textContent = customer.name;
-            selectElement.appendChild(option);
-        });
-        window.customers = customers;
-    }
-
-    function updateProfit() {
-        const selectedCustomer = document.getElementById('customerSelect').value;
-        const startDate = document.getElementById('startDate').value ? new Date(document.getElementById('startDate').value) : null;
-        const endDate = document.getElementById('endDate').value ? new Date(document.getElementById('endDate').value) : null;
-        const profitDisplay = document.getElementById('profitDisplay');
-        const tableBody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
-        tableBody.innerHTML = '';
-
-        if (!window.customers || !window.profitData) return;
-
-        const filteredCustomers = window.customers.filter(c =>
-            c.name === selectedCustomer &&
-            (!startDate || new Date(c.timestamp) >= startDate) &&
-            (!endDate || new Date(c.timestamp) <= endDate)
-        );
-
-        let totalProfit = 0;
-
-        filteredCustomers.forEach(c => {
-            let profitEntry = window.profitData.find(p => new Date(p.date).getTime() === new Date(c.timestamp).getTime());
-            let profitValue = profitEntry ? profitEntry.profit / profitEntry.deliveredKg * c.deliveredKg : "N/A";
-            totalProfit += profitValue !== "N/A" ? profitValue : 0;
-
-            let row = tableBody.insertRow();
-            row.insertCell(0).textContent = c.orderId;
-            row.insertCell(1).textContent = c.timestamp;
-            row.insertCell(2).textContent = c.deliveredPc;
-            row.insertCell(3).textContent = c.deliveredKg;
-            row.insertCell(4).textContent = c.rate;
-            row.insertCell(5).textContent = c.deliverAmount;
-            row.insertCell(6).textContent = profitEntry.profit
-            row.insertCell(7).textContent = profitEntry.deliveredKg
-            row.insertCell(8).textContent = c.deliveredKg
-            row.insertCell(9).textContent = profitValue;
-        });
-
-        profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
-    }
-
-    async function initialize() {
-        await fetchData();
-        await fetchProfits();
-    }
-
-    initialize();
-</script>
+<body onload="fetchData()">
+<div class="container">
+    <h1>Profit Report</h1>
+    <div class="card">
+        <button class="collapsible">Toggle Profit Chart</button>
+        <div class="content"><canvas id="profitChart"></canvas></div>
+    </div>
+    <div class="card">
+        <button class="collapsible">Toggle KG Chart</button>
+        <div class="content"><canvas id="kgChart"></canvas></div>
+    </div>
+</div>
 </body>
 </html>
