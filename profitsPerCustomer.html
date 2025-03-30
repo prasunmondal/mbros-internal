@@ -54,7 +54,7 @@
         <th>Deliver Amount</th>
         <th>Total Profit</th>
         <th>Total Delivered Kg</th>
-        <th>Cust Delivered Kg</th>
+<!--        <th>Cust Delivered Kg</th>-->
         <th>Discount</th>
         <th>Profit</th>
     </tr>
@@ -172,7 +172,7 @@
             row.insertCell(5).textContent = c.deliverAmount;
             row.insertCell(6).textContent = profitEntry ? profitEntry.profit.toFixed(2) : "N/A";
             row.insertCell(7).textContent = profitEntry ? profitEntry.deliveredKg : "N/A";
-            row.insertCell(8).textContent = c.deliveredKg;
+            // row.insertCell(8).textContent = c.deliveredKg;
             row.insertCell(9).textContent = c.discount;
             row.insertCell(10).textContent = profitValue;
             finalBalance = c.totalBalance
