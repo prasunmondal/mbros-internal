@@ -13,8 +13,17 @@
             font-size: 18px;
             margin: 5px;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
     </style>
-    <script src="config.js"></script>
 </head>
 <body>
 <h2>Customer Profits</h2>
@@ -29,8 +38,24 @@
 <input type="date" id="endDate" onchange="updateProfit()">
 <p id="profitDisplay">Profit: N/A</p>
 
+<h3>Selected Rows</h3>
+<table id="dataTable">
+    <thead>
+    <tr>
+        <th>Order ID</th>
+        <th>Timestamp</th>
+        <th>Delivered PC</th>
+        <th>Delivered KG</th>
+        <th>Rate</th>
+        <th>Deliver Amount</th>
+        <th>Dummy Profit</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
 <script>
-    // const API_URL = "YOUR_API_ENDPOINT_HERE"; // Replace with actual API endpoint
+    const API_URL = "https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec"; // Replace with actual API endpoint
 
     async function fetchData() {
         try {
@@ -69,6 +94,8 @@
         const startDate = document.getElementById('startDate').value ? new Date(document.getElementById('startDate').value) : null;
         const endDate = document.getElementById('endDate').value ? new Date(document.getElementById('endDate').value) : null;
         const profitDisplay = document.getElementById('profitDisplay');
+        const tableBody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';
 
         if (!window.customers) return;
 
@@ -79,8 +106,18 @@
         );
 
         const totalProfit = filteredCustomers.reduce((sum, c) => sum + c.dummyProfit, 0);
-
         profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
+
+        filteredCustomers.forEach(c => {
+            let row = tableBody.insertRow();
+            row.insertCell(0).textContent = c.orderId;
+            row.insertCell(1).textContent = c.timestamp;
+            row.insertCell(2).textContent = c.deliveredPc;
+            row.insertCell(3).textContent = c.deliveredKg;
+            row.insertCell(4).textContent = c.rate;
+            row.insertCell(5).textContent = c.deliverAmount;
+            row.insertCell(6).textContent = c.dummyProfit.toFixed(2);
+        });
     }
 
     fetchData();
