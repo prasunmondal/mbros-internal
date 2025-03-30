@@ -37,10 +37,6 @@
 <label for="endDate">End Date:</label>
 <input type="date" id="endDate" onchange="updateProfit()">
 <p id="profitDisplay">Profit: N/A</p>
-<p id="profitDisplayDebtIncrementAdjusted">Profit (debt adjusted): N/A</p>
-<p id="startingDebt">Starting Debt: N/A</p>
-<p id="finalDebt">Final Debt: N/A</p>
-<p id="debtIncreased">Debt Incr.: N/A</p>
 
 <h3>Selected Rows</h3>
 <table id="dataTable">
@@ -141,23 +137,11 @@
         });
 
         let totalProfit = 0;
-        let totalCustKgDelivered = 0;
-        let totalAmountDelivered = 0;
-        let totalDiscount = 0;
-        let startingBalance = 0;
-        let finalBalance = 0;
-        // let totalCustProfit = 0;
 
         filteredCustomers.forEach(c => {
-            if(startingBalance == 0) {
-                startingBalance = c.prevAmount
-            }
             let profitEntry = window.profitData.find(p => convertToIST(p.date).getTime() === convertToIST(c.timestamp).getTime());
             let profitValue = profitEntry ? (profitEntry.profit / profitEntry.deliveredKg * c.deliveredKg) - c.discount : "N/A";
             totalProfit += profitValue !== "N/A" ? profitValue : 0;
-            totalCustKgDelivered += c.deliveredKg? c.deliveredKg : 0;
-            totalAmountDelivered += c.deliverAmount? c.deliverAmount : 0;
-            totalDiscount += c.discount? c.discount : 0;
 
             let row = tableBody.insertRow();
             row.insertCell(0).textContent = c.orderId;
@@ -171,27 +155,9 @@
             row.insertCell(8).textContent = c.deliveredKg;
             row.insertCell(9).textContent = c.discount;
             row.insertCell(10).textContent = profitValue;
-            finalBalance = c.totalBalance
         });
 
-        let row = tableBody.insertRow();
-        row.insertCell(0).textContent = "TOTAL";
-        row.insertCell(1).textContent = "";
-        row.insertCell(2).textContent = "";
-        row.insertCell(3).textContent = totalCustKgDelivered;
-        row.insertCell(4).textContent = "";
-        row.insertCell(5).textContent = totalAmountDelivered;
-        row.insertCell(6).textContent = "";
-        row.insertCell(7).textContent = "";
-        row.insertCell(8).textContent = totalCustKgDelivered;
-        row.insertCell(9).textContent = totalDiscount;
-        row.insertCell(10).textContent = totalProfit;
-
         profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
-        profitDisplayDebtIncrementAdjusted.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2) - (finalBalance - startingBalance)}` : "Profit: N/A";
-        startingDebt.textContent = filteredCustomers.length > 0 ? `Starting Debt: ${startingBalance}` : "Starting Debt: N/A";
-        finalDebt.textContent = filteredCustomers.length > 0 ? `Final Debt: ${finalBalance}` : "Final Debt: N/A";
-        debtIncreased.textContent = filteredCustomers.length > 0 ? `Debt Incr.: ${(finalBalance - startingBalance)}` : "Debt Incr.: N/A";
     }
 
     async function initialize() {
