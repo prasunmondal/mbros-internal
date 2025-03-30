@@ -51,6 +51,7 @@
         <th>Total Profit</th>
         <th>Total Delivered Kg</th>
         <th>Cust Delivered Kg</th>
+        <th>Discount</th>
         <th>Profit</th>
     </tr>
     </thead>
@@ -58,7 +59,13 @@
 </table>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec"; // Replace with actual API endpoint
+    const API_URL = "https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec";
+
+    function convertToIST(dateString) {
+        let date = new Date(dateString);
+        let istOffset = 5.5 * 60 * 60 * 1000;
+        return new Date(date.getTime() + istOffset);
+    }
 
     async function fetchData() {
         try {
@@ -114,38 +121,40 @@
 
     function updateProfit() {
         const selectedCustomer = document.getElementById('customerSelect').value;
-        const startDate = document.getElementById('startDate').value ? new Date(document.getElementById('startDate').value) : null;
-        const endDate = document.getElementById('endDate').value ? new Date(document.getElementById('endDate').value) : null;
+        const startDate = document.getElementById('startDate').value ? convertToIST(document.getElementById('startDate').value) : null;
+        const endDate = document.getElementById('endDate').value ? convertToIST(document.getElementById('endDate').value) : null;
         const profitDisplay = document.getElementById('profitDisplay');
         const tableBody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
         tableBody.innerHTML = '';
 
         if (!window.customers || !window.profitData) return;
 
-        const filteredCustomers = window.customers.filter(c =>
-            c.name === selectedCustomer &&
-            (!startDate || new Date(c.timestamp) >= startDate) &&
-            (!endDate || new Date(c.timestamp) <= endDate)
-        );
+        const filteredCustomers = window.customers.filter(c => {
+            let customerDate = convertToIST(c.timestamp);
+            return c.name === selectedCustomer &&
+                (!startDate || customerDate >= startDate) &&
+                (!endDate || customerDate <= endDate);
+        });
 
         let totalProfit = 0;
 
         filteredCustomers.forEach(c => {
-            let profitEntry = window.profitData.find(p => new Date(p.date).getTime() === new Date(c.timestamp).getTime());
-            let profitValue = profitEntry ? profitEntry.profit / profitEntry.deliveredKg * c.deliveredKg : "N/A";
+            let profitEntry = window.profitData.find(p => convertToIST(p.date).getTime() === convertToIST(c.timestamp).getTime());
+            let profitValue = profitEntry ? (profitEntry.profit / profitEntry.deliveredKg * c.deliveredKg) - c.discount : "N/A";
             totalProfit += profitValue !== "N/A" ? profitValue : 0;
 
             let row = tableBody.insertRow();
             row.insertCell(0).textContent = c.orderId;
-            row.insertCell(1).textContent = c.timestamp;
+            row.insertCell(1).textContent = convertToIST(c.timestamp).toLocaleString();
             row.insertCell(2).textContent = c.deliveredPc;
             row.insertCell(3).textContent = c.deliveredKg;
             row.insertCell(4).textContent = c.rate;
             row.insertCell(5).textContent = c.deliverAmount;
-            row.insertCell(6).textContent = profitEntry.profit
-            row.insertCell(7).textContent = profitEntry.deliveredKg
-            row.insertCell(8).textContent = c.deliveredKg
-            row.insertCell(9).textContent = profitValue;
+            row.insertCell(6).textContent = profitEntry ? profitEntry.profit : "N/A";
+            row.insertCell(7).textContent = profitEntry ? profitEntry.deliveredKg : "N/A";
+            row.insertCell(8).textContent = c.deliveredKg;
+            row.insertCell(9).textContent = c.discount;
+            row.insertCell(10).textContent = profitValue;
         });
 
         profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
