@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Profits</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        select, p, input {
+            font-size: 18px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+<h2>Customer Profits</h2>
+<label for="customerSelect">Select a Customer:</label>
+<select id="customerSelect" onchange="updateProfit()">
+    <option value="">--Select--</option>
+</select>
+<br>
+<label for="startDate">Start Date:</label>
+<input type="date" id="startDate" onchange="updateProfit()">
+<label for="endDate">End Date:</label>
+<input type="date" id="endDate" onchange="updateProfit()">
+<p id="profitDisplay">Profit: N/A</p>
+
+<script>
+    let response = await fetch(API_URL, {
+        method: 'POST',
+        body: new URLSearchParams({
+            operations: JSON.stringify([{
+                opCode: "FETCH_ALL",
+                sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
+                tabName: "db2.deliveries",
+                opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+            }])
+        })
+    });
+
+    const customers = apiResponse[0].content;
+    const selectElement = document.getElementById('customerSelect');
+    const profitDisplay = document.getElementById('profitDisplay');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+
+    customers.forEach(customer => {
+        let option = document.createElement('option');
+        option.value = customer.name;
+        option.textContent = customer.name;
+        selectElement.appendChild(option);
+    });
+
+    function updateProfit() {
+        const selectedCustomer = selectElement.value;
+        const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+        const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+
+        const filteredCustomers = customers.filter(c =>
+            c.name === selectedCustomer &&
+            (!startDate || new Date(c.timestamp) >= startDate) &&
+            (!endDate || new Date(c.timestamp) <= endDate)
+        );
+
+        const totalProfit = filteredCustomers.reduce((sum, c) => sum + c.dummyProfit, 0);
+
+        if (filteredCustomers.length > 0) {
+            profitDisplay.textContent = `Profit: ${totalProfit.toFixed(2)}`;
+        } else {
+            profitDisplay.textContent = "Profit: N/A";
+        }
+    }
+</script>
+</body>
+</html>
