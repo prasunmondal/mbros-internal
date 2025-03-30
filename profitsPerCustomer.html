@@ -114,6 +114,8 @@
     function populateCustomers(customers) {
         const selectElement = document.getElementById('customerSelect');
         selectElement.innerHTML = '<option value="">--Select--</option>';
+        selectElement.innerHTML += '<option value="ALL">ALL</option>';
+
         const uniqueCustomers = new Set();
         customers.forEach(customer => {
             if (!uniqueCustomers.has(customer.name)) {
@@ -139,7 +141,7 @@
 
         const filteredCustomers = window.customers.filter(c => {
             let customerDate = convertToIST(c.timestamp);
-            return c.name === selectedCustomer &&
+            return (selectedCustomer === "ALL" || c.name === selectedCustomer) &&
                 (!startDate || customerDate >= startDate) &&
                 (!endDate || customerDate <= endDate);
         });
@@ -148,7 +150,7 @@
 
         const prevRecord = window.customers.filter(c => {
             let customerDate = convertToIST(c.timestamp);
-            return c.name === selectedCustomer &&
+            return (selectedCustomer === "ALL" || c.name === selectedCustomer) &&
                 (!startDate || customerDate < startDate);
         }).at(-1);
 
@@ -156,20 +158,27 @@
         let totalCustKgDelivered = 0;
         let totalAmountDelivered = 0;
         let totalDiscount = 0;
-        let startingBalance = prevRecord.totalBalance;
+        let startingBalance =0;
         let finalBalance = 0;
+
+        // let prevCumilativeRecord = window.profitData.find(p => convertToIST(p.date).getTime() === convertToIST(prevRecord.timestamp).getTime());
         // let totalCustProfit = 0;
 
         filteredCustomers.forEach(c => {
-            if(startingBalance == 0) {
-                startingBalance = c.prevAmount
-            }
             let profitEntry = window.profitData.find(p => convertToIST(p.date).getTime() === convertToIST(c.timestamp).getTime());
             let profitValue = profitEntry ? (profitEntry.profit / profitEntry.deliveredKg * c.deliveredKg) - c.discount : "N/A";
             totalProfit += profitValue !== "N/A" ? profitValue : 0;
             totalCustKgDelivered += c.deliveredKg? c.deliveredKg : 0;
             totalAmountDelivered += c.deliverAmount? c.deliverAmount : 0;
             totalDiscount += c.discount? c.discount : 0;
+
+            if(startingBalance === 0) {
+                if(selectedCustomer === "ALL") {
+                    startingBalance = profitEntry.prev_due_balance
+                } else {
+                    startingBalance = c.prevAmount
+                }
+            }
 
             let row = tableBody.insertRow();
             row.insertCell(0).textContent = c.orderId;
@@ -183,7 +192,11 @@
             row.insertCell(8).textContent = c.deliveredKg;
             row.insertCell(9).textContent = c.discount;
             row.insertCell(10).textContent = profitValue;
-            finalBalance = c.totalBalance
+            if(selectedCustomer === "ALL") {
+                finalBalance = profitEntry.new_due_balance
+            } else {
+                finalBalance = c.totalBalance
+            }
         });
 
         let row = tableBody.insertRow();
