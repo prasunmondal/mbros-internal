@@ -37,6 +37,10 @@
 <label for="endDate">End Date:</label>
 <input type="date" id="endDate" onchange="updateProfit()">
 <p id="profitDisplay">Profit: N/A</p>
+<p id="profitDisplayDebtIncrementAdjusted">Profit (debt adjusted): N/A</p>
+<p id="startingDebt">Starting Debt: N/A</p>
+<p id="finalDebt">Final Debt: N/A</p>
+<p id="debtIncreased">Debt Incr.: N/A</p>
 
 <h3>Selected Rows</h3>
 <table id="dataTable">
@@ -48,14 +52,24 @@
         <th>Delivered KG</th>
         <th>Rate</th>
         <th>Deliver Amount</th>
-        <th>Dummy Profit</th>
+        <th>Total Profit</th>
+        <th>Total Delivered Kg</th>
+        <th>Cust Delivered Kg</th>
+        <th>Discount</th>
+        <th>Profit</th>
     </tr>
     </thead>
     <tbody></tbody>
 </table>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec"; // Replace with actual API endpoint
+    const API_URL = "https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec";
+
+    function convertToIST(dateString) {
+        let date = new Date(dateString);
+        let istOffset = 5.5 * 60 * 60 * 1000;
+        return new Date(date.getTime() + istOffset);
+    }
 
     async function fetchData() {
         try {
@@ -77,50 +91,119 @@
         }
     }
 
+    async function fetchProfits() {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: new URLSearchParams({
+                    operations: JSON.stringify([{
+                        opCode: "FETCH_ALL",
+                        sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
+                        tabName: "cumilativeCalculations",
+                        opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+                    }])
+                })
+            });
+            const data = await response.json();
+            window.profitData = data[0].content;
+        } catch (error) {
+            console.error("Error fetching profit data:", error);
+        }
+    }
+
     function populateCustomers(customers) {
         const selectElement = document.getElementById('customerSelect');
         selectElement.innerHTML = '<option value="">--Select--</option>';
+        const uniqueCustomers = new Set();
         customers.forEach(customer => {
-            let option = document.createElement('option');
-            option.value = customer.name;
-            option.textContent = customer.name;
-            selectElement.appendChild(option);
+            if (!uniqueCustomers.has(customer.name)) {
+                uniqueCustomers.add(customer.name);
+                let option = document.createElement('option');
+                option.value = customer.name;
+                option.textContent = customer.name;
+                selectElement.appendChild(option);
+            }
         });
         window.customers = customers;
     }
 
     function updateProfit() {
         const selectedCustomer = document.getElementById('customerSelect').value;
-        const startDate = document.getElementById('startDate').value ? new Date(document.getElementById('startDate').value) : null;
-        const endDate = document.getElementById('endDate').value ? new Date(document.getElementById('endDate').value) : null;
+        const startDate = document.getElementById('startDate').value ? convertToIST(document.getElementById('startDate').value) : null;
+        const endDate = document.getElementById('endDate').value ? convertToIST(document.getElementById('endDate').value) : null;
         const profitDisplay = document.getElementById('profitDisplay');
         const tableBody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
         tableBody.innerHTML = '';
 
-        if (!window.customers) return;
+        if (!window.customers || !window.profitData) return;
 
-        const filteredCustomers = window.customers.filter(c =>
-            c.name === selectedCustomer &&
-            (!startDate || new Date(c.timestamp) >= startDate) &&
-            (!endDate || new Date(c.timestamp) <= endDate)
-        );
+        const filteredCustomers = window.customers.filter(c => {
+            let customerDate = convertToIST(c.timestamp);
+            return c.name === selectedCustomer &&
+                (!startDate || customerDate >= startDate) &&
+                (!endDate || customerDate <= endDate);
+        });
 
-        const totalProfit = filteredCustomers.reduce((sum, c) => sum + c.dummyProfit, 0);
-        profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
+        let totalProfit = 0;
+        let totalCustKgDelivered = 0;
+        let totalAmountDelivered = 0;
+        let totalDiscount = 0;
+        let startingBalance = 0;
+        let finalBalance = 0;
+        // let totalCustProfit = 0;
 
         filteredCustomers.forEach(c => {
+            if(startingBalance == 0) {
+                startingBalance = c.prevAmount
+            }
+            let profitEntry = window.profitData.find(p => convertToIST(p.date).getTime() === convertToIST(c.timestamp).getTime());
+            let profitValue = profitEntry ? (profitEntry.profit / profitEntry.deliveredKg * c.deliveredKg) - c.discount : "N/A";
+            totalProfit += profitValue !== "N/A" ? profitValue : 0;
+            totalCustKgDelivered += c.deliveredKg? c.deliveredKg : 0;
+            totalAmountDelivered += c.deliverAmount? c.deliverAmount : 0;
+            totalDiscount += c.discount? c.discount : 0;
+
             let row = tableBody.insertRow();
             row.insertCell(0).textContent = c.orderId;
-            row.insertCell(1).textContent = c.timestamp;
+            row.insertCell(1).textContent = convertToIST(c.timestamp).toLocaleString();
             row.insertCell(2).textContent = c.deliveredPc;
             row.insertCell(3).textContent = c.deliveredKg;
             row.insertCell(4).textContent = c.rate;
             row.insertCell(5).textContent = c.deliverAmount;
-            row.insertCell(6).textContent = c.dummyProfit.toFixed(2);
+            row.insertCell(6).textContent = profitEntry ? profitEntry.profit.toFixed(2) : "N/A";
+            row.insertCell(7).textContent = profitEntry ? profitEntry.deliveredKg : "N/A";
+            row.insertCell(8).textContent = c.deliveredKg;
+            row.insertCell(9).textContent = c.discount;
+            row.insertCell(10).textContent = profitValue;
+            finalBalance = c.totalBalance
         });
+
+        let row = tableBody.insertRow();
+        row.insertCell(0).textContent = "TOTAL";
+        row.insertCell(1).textContent = "";
+        row.insertCell(2).textContent = "";
+        row.insertCell(3).textContent = totalCustKgDelivered;
+        row.insertCell(4).textContent = "";
+        row.insertCell(5).textContent = totalAmountDelivered;
+        row.insertCell(6).textContent = "";
+        row.insertCell(7).textContent = "";
+        row.insertCell(8).textContent = totalCustKgDelivered;
+        row.insertCell(9).textContent = totalDiscount;
+        row.insertCell(10).textContent = totalProfit;
+
+        profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
+        profitDisplayDebtIncrementAdjusted.textContent = filteredCustomers.length > 0 ? `Profit after debt reduction: ${totalProfit.toFixed(2) - (finalBalance - startingBalance)}` : "Profit after debt reduction: N/A";
+        startingDebt.textContent = filteredCustomers.length > 0 ? `Starting Debt: ${startingBalance}` : "Starting Debt: N/A";
+        finalDebt.textContent = filteredCustomers.length > 0 ? `Final Debt: ${finalBalance}` : "Final Debt: N/A";
+        debtIncreased.textContent = filteredCustomers.length > 0 ? `Debt Incr.: ${(finalBalance - startingBalance)}` : "Debt Incr.: N/A";
     }
 
-    fetchData();
+    async function initialize() {
+        await fetchData();
+        await fetchProfits();
+    }
+
+    initialize();
 </script>
 </body>
 </html>
