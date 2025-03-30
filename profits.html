@@ -114,15 +114,11 @@
     function populateCustomers(customers) {
         const selectElement = document.getElementById('customerSelect');
         selectElement.innerHTML = '<option value="">--Select--</option>';
-        const uniqueCustomers = new Set();
         customers.forEach(customer => {
-            if (!uniqueCustomers.has(customer.name)) {
-                uniqueCustomers.add(customer.name);
-                let option = document.createElement('option');
-                option.value = customer.name;
-                option.textContent = customer.name;
-                selectElement.appendChild(option);
-            }
+            let option = document.createElement('option');
+            option.value = customer.name;
+            option.textContent = customer.name;
+            selectElement.appendChild(option);
         });
         window.customers = customers;
     }
@@ -170,7 +166,7 @@
             row.insertCell(3).textContent = c.deliveredKg;
             row.insertCell(4).textContent = c.rate;
             row.insertCell(5).textContent = c.deliverAmount;
-            row.insertCell(6).textContent = profitEntry ? profitEntry.profit.toFixed(2) : "N/A";
+            row.insertCell(6).textContent = profitEntry ? profitEntry.profit : "N/A";
             row.insertCell(7).textContent = profitEntry ? profitEntry.deliveredKg : "N/A";
             row.insertCell(8).textContent = c.deliveredKg;
             row.insertCell(9).textContent = c.discount;
@@ -192,7 +188,7 @@
         row.insertCell(10).textContent = totalProfit;
 
         profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
-        profitDisplayDebtIncrementAdjusted.textContent = filteredCustomers.length > 0 ? `Profit after debt reduction: ${totalProfit.toFixed(2) - (finalBalance - startingBalance)}` : "Profit after debt reduction: N/A";
+        profitDisplayDebtIncrementAdjusted.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2) - (finalBalance - startingBalance)}` : "Profit: N/A";
         startingDebt.textContent = filteredCustomers.length > 0 ? `Starting Debt: ${startingBalance}` : "Starting Debt: N/A";
         finalDebt.textContent = filteredCustomers.length > 0 ? `Final Debt: ${finalBalance}` : "Final Debt: N/A";
         debtIncreased.textContent = filteredCustomers.length > 0 ? `Debt Incr.: ${(finalBalance - startingBalance)}` : "Debt Incr.: N/A";
