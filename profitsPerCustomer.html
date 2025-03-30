@@ -192,7 +192,7 @@
             row.insertCell(i++).textContent = profitEntry ? profitEntry.deliveredKg : "N/A";
             row.insertCell(i++).textContent = c.deliveredKg;
             row.insertCell(i++).textContent = c.discount;
-            row.insertCell(i++).textContent = profitValue;
+            row.insertCell(i++).textContent = profitValue.toFixed(2);
             if(selectedCustomer === "ALL") {
                 finalBalance = profitEntry.new_due_balance
             } else {
