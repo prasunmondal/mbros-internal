@@ -29,13 +29,13 @@
 <p id="profitDisplay">Profit: N/A</p>
 
 <script>
-    let response = await fetch(API_URL, {
+    let apiResponse = await fetch(API_URL, {
         method: 'POST',
         body: new URLSearchParams({
             operations: JSON.stringify([{
                 opCode: "FETCH_ALL",
                 sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-                tabName: "db2.deliveries",
+                tabName: "cumilativeCalculations",
                 opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
             }])
         })
