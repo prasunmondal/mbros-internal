@@ -189,12 +189,13 @@
             row.insertCell(i++).textContent = c.rate;
             row.insertCell(i++).textContent = c.deliverAmount;
             row.insertCell(i++).textContent = profitEntry ? profitEntry.profit.toFixed(2) : "N/A";
-            row.insertCell(i++).textContent = profitEntry ? profitEntry.deliveredKg : "N/A";
+            row.insertCell(i++).textContent = profitEntry ? profitEntry.deliveredKg.toFixed(3) : "N/A";
             row.insertCell(i++).textContent = c.deliveredKg;
             row.insertCell(i++).textContent = c.discount;
-            row.insertCell(i++).textContent = profitValue.toFixed(2);
+            row.insertCell(i++).textContent = profitEntry? profitValue.toFixed(2): 0;
             if(selectedCustomer === "ALL") {
-                finalBalance = profitEntry.new_due_balance
+                if(profitEntry)
+                    finalBalance = profitEntry.new_due_balance
             } else {
                 finalBalance = c.totalBalance
             }
@@ -210,9 +211,9 @@
         row.insertCell(i++).textContent = totalAmountDelivered;
         row.insertCell(i++).textContent = "";
         row.insertCell(i++).textContent = "";
-        row.insertCell(i++).textContent = totalCustKgDelivered;
+        row.insertCell(i++).textContent = totalCustKgDelivered.toFixed(3);
         row.insertCell(i++).textContent = totalDiscount;
-        row.insertCell(i++).textContent = totalProfit;
+        row.insertCell(i++).textContent = totalProfit.toFixed(2);
 
         profitDisplay.textContent = filteredCustomers.length > 0 ? `Profit: ${totalProfit.toFixed(2)}` : "Profit: N/A";
         profitDisplayDebtIncrementAdjusted.textContent = filteredCustomers.length > 0 ? `Profit after debt reduction: ${totalProfit.toFixed(2) - (finalBalance - startingBalance)}` : "Profit after debt reduction: N/A";
