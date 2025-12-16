@@ -3,18 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivered KG Report</title>
+    <title>Delivery Analysis</title>
+
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 1000px; margin: auto; text-align: center; }
+        .container { max-width: 1200px; margin: auto; text-align: center; }
         input { margin: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; display: none; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
         th { background-color: #f4f4f4; }
-        .highlight { background-color: yellow; font-weight: bold; }
-        #loading { display: none; font-size: 14px; color: blue; }
-        .total-row { font-weight: bold; background-color: #f4f4f4; }
-        .total-col { font-weight: bold; background-color: #f4f4f4; }
+
+        .total-row, .total-col {
+            font-weight: bold;
+            background-color: #f4f4f4;
+        }
+
         .highlight-date-cell {
             background-color: #fffdd0;
             font-weight: bold;
@@ -24,182 +38,520 @@
             background-color: #ffe97f;
             font-weight: bold;
         }
+
+        #loading {
+            display: none;
+            color: blue;
+            font-size: 14px;
+        }
+
+        /* Banner */
+        .report-banner {
+            margin-top: 20px;
+            padding: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            background-color: #fffef2;
+        }
+
+        /* Pinned */
+        .pinned-block {
+            border: 2px solid #ccc;
+            padding: 15px;
+            margin: 30px 0;
+            position: relative;
+            background-color: #fafafa;
+        }
+
+        .remove-pin-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ffdddd;
+            border: 1px solid #cc0000;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* ---------- PRINT RULES ---------- */
+        /* ---------- PRINT SCOPES ---------- */
+@media print {
+
+    body.print-active-only #pinnedTables,
+    body.print-active-only h2,
+    body.print-active-only #dateInputs,
+    body.print-active-only button,
+    body.print-active-only select,
+    body.print-active-only input,
+    body.print-active-only hr,
+    body.print-active-only #loading {
+        display: none !important;
+    }
+
+    body.print-pinned-only #activeReport,
+    body.print-pinned-only h2,
+    body.print-pinned-only #dateInputs,
+    body.print-pinned-only button,
+    body.print-pinned-only select,
+    body.print-pinned-only input,
+    body.print-pinned-only hr,
+    body.print-pinned-only #loading {
+        display: none !important;
+    }
+
+    .remove-pin-btn {
+        display: none !important;
+    }
+
+    @page {
+        size: portrait;
+        margin: 15mm;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Each pinned report on a new page */
+    .pinned-block {
+        page-break-before: always;
+        break-before: page;
+    }
+
+    /* Do NOT force page break before first pinned report */
+    .pinned-block:first-child {
+        page-break-before: auto;
+        break-before: auto;
+    }
+
+    .pinned-block {
+        padding-top: 10px;
+    }
+
+    /* Do NOT split a report across pages */
+    .pinned-block {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Do NOT split table rows */
+    table, tr, td, th {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .pinned-block {
+        page-break-before: always;
+        break-before: page;
+    }
+
+    .pinned-block:first-child {
+        page-break-before: auto;
+        break-before: auto;
+    }
+
+    .pinned-block {
+        transform: scale(0.95);
+        transform-origin: top left;
+    }
+
+        .print-hide {
+        display: none !important;
+    }
+
+.pinned-block {
+        page-break-before: always;
+        break-before: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .pinned-block:first-child {
+        page-break-before: auto;
+        break-before: auto;
+    }
+
+    /* Do not split tables or rows */
+    table, tr, td, th {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Optional: scale slightly to fit portrait */
+    .pinned-block {
+        transform: scale(0.95);
+        transform-origin: top left;
+    }
+
+    /* Preserve colors */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .date-hint {
+    cursor: pointer;
+    color: #007bff;
+    font-weight: bold;
+    padding: 2px 6px;
+}
+
+.date-hint:hover {
+    text-decoration: underline;
+}
+
+}
+
     </style>
 </head>
+
 <body>
 
 <div class="container">
-    <h2>Delivered KG Report</h2>
-    <label>Select at least 1 date:</label>
+
+    <h2>Delivery Analysis</h2>
+
+    <label class="print-hide">Select dates:</label>
     <div id="dateInputs">
-        <input type="date" class="date-picker">
+        <input type="date" class="date-picker" onchange="updateDateHints()">
     </div>
+
+    <div id="dateHints" style="margin-bottom:15px; margin-top:5px; font-size:13px; color:#555;">
+        Quick add:
+        <span id="prevDateHint" class="date-hint"></span>
+        |
+        <span id="nextDateHint" class="date-hint"></span>
+    </div>
+
     <button onclick="addDateInput()">+ Add Date</button>
     <button onclick="fetchData()">Get Delivered KG</button>
-    <label for="highlightDate">Highlight Date:</label>
+
+    <label class="print-hide">Highlight Date:</label>
     <select id="highlightDate" onchange="highlightSelectedDate()">
-        <option value="">-- Select Date to Highlight --</option>
+        <option value="">-- Select --</option>
     </select>
 
     <p id="loading">Fetching data...</p>
 
-    <table id="resultTable">
-        <thead>
-        <tr id="tableHeader">
-            <th>Customer Name</th>
-            <th>Total</th>
-        </tr>
-        </thead>
-        <tbody></tbody>
-        <tfoot>
-        <tr id="tableFooter">
-            <th>Total</th>
-        </tr>
-        </tfoot>
-    </table>
+    <div style="margin-top:15px;">
+        <button onclick="pinCurrentTable()">📌 Pin Report</button>
+        <button onclick="printActiveReport()">🖨️ Print / Save Active</button>
+    </div>
+
+    <!-- ACTIVE REPORT -->
+    <div id="activeReport">
+        <div id="reportBanner" contenteditable="true" class="report-banner">
+            Delivered KG Report
+        </div>
+
+        <table id="resultTable">
+            <thead><tr id="tableHeader"></tr></thead>
+            <tbody></tbody>
+            <tfoot><tr id="tableFooter"></tr></tfoot>
+        </table>
+    </div>
+
+    <hr style="margin:20px 0;">
+
+    <button onclick="printAllPinned()">🖨️ Print / Save ALL Pinned</button>
+
+    <h3 class="print-hide">📌 Pinned Reports</h3>
+
+    <div id="pinnedTables"></div>
+
 </div>
 
 <script>
     const apiUrl = 'https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec';
 
-    function addDateInput() {
-        let container = document.getElementById("dateInputs");
-        let input = document.createElement("input");
-        input.type = "date";
-        input.classList.add("date-picker");
-        container.appendChild(input);
+    function addDateInput(value = "") {
+    const input = document.createElement("input");
+    input.type = "date";
+    input.className = "date-picker";
+    input.value = value;
+
+    // ✅ Update hints immediately on change
+    input.addEventListener("change", updateDateHints);
+
+    document.getElementById("dateInputs").appendChild(input);
+
+    // Update hints after adding
+    updateDateHints();
+}
+
+
+
+    function formatDateToIST(d) {
+        const date = new Date(d);
+        date.setHours(date.getHours() + 5, date.getMinutes() + 30);
+        return date.toISOString().split("T")[0];
     }
 
-    function formatDateToIST(utcDateString) {
-        let date = new Date(utcDateString);
-        date.setHours(date.getHours() + 5, date.getMinutes() + 30); // Convert to IST (UTC+5:30)
-        return date.toISOString().split('T')[0]; // Convert to YYYY-MM-DD
+    function getDayName(d) {
+        return new Date(d + "T00:00:00")
+            .toLocaleDateString("en-US", { weekday: "long" });
     }
 
     async function fetchData() {
-        let selectedDates = [...document.querySelectorAll(".date-picker")]
-            .map(input => input.value)
-            .filter(date => date !== "");
+    const dates = [...document.querySelectorAll(".date-picker")]
+        .map(i => i.value)
+        .filter(Boolean);
 
-        if (selectedDates.length === 0) {
-            alert("Please select at least one date.");
-            return;
-        }
+    if (!dates.length) return alert("Select dates");
 
-        document.getElementById("loading").style.display = "block";
-        document.getElementById("resultTable").style.display = "none";
+    document.getElementById("loading").style.display = "block";
 
-        const formData = new FormData();
-        formData.append('operations', JSON.stringify([{
+    const formData = new FormData();
+    formData.append("operations", JSON.stringify([
+        {
             opCode: "FETCH_ALL",
             sheetId: "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw",
             tabName: "deliveries.2023",
-            opId: "mbros-github-site"
-        }]));
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-            if (!result || !result.length || result[0].statusCode !== 200) {
-                alert("Invalid response from API");
-                return;
-            }
-
-            const data = result[0].content || [];
-            let formattedSelectedDates = selectedDates.map(date => formatDateToIST(date));
-            let filteredData = data.filter(entry => formattedSelectedDates.includes(formatDateToIST(entry.timestamp)));
-
-            if (filteredData.length === 0) {
-                alert("No matching records found.");
-                return;
-            }
-
-            let customerData = {};
-            let dateSums = {};
-
-            filteredData.forEach(entry => {
-                let date = formatDateToIST(entry.timestamp);
-                let name = entry.name || "Unknown";
-                let deliveredKg = parseFloat(entry.deliveredKg || 0).toFixed(3);
-
-                if (!customerData[name]) {
-                    customerData[name] = {};
-                }
-                customerData[name][date] = (parseFloat(customerData[name][date] || 0) + parseFloat(deliveredKg)).toFixed(3);
-                dateSums[date] = (parseFloat(dateSums[date] || 0) + parseFloat(deliveredKg)).toFixed(3);
-            });
-
-            updateTable(formattedSelectedDates, customerData, dateSums);
-
-            let highlightDropdown = document.getElementById("highlightDate");
-            highlightDropdown.innerHTML = '<option value="">-- Select Date to Highlight --</option>';
-            formattedSelectedDates.forEach(date => {
-                let option = document.createElement("option");
-                option.value = date;
-                option.textContent = date;
-                highlightDropdown.appendChild(option);
-            });
-
-        } catch (error) {
-            console.error("Error fetching data:", error);
-            alert("Failed to fetch data. Please check the API.");
-        } finally {
-            document.getElementById("loading").style.display = "none";
+            opId: "mbros-github-site-1"
+        },
+        {
+            opCode: "FETCH_ALL",
+            sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
+            tabName: "db2.deliveries",
+            opId: "mbros-github-site-2"
         }
+    ]));
+
+    try {
+        const res = await fetch(apiUrl, { method: "POST", body: formData });
+        const json = await res.json();
+
+        // ✅ Merge data from both sheets
+        const data1 = json[0]?.content || [];
+        const data2 = json[1]?.content || [];
+        const data = [...data1, ...data2];
+
+const formattedDates = dates
+    .map(formatDateToIST)
+    .sort(); // YYYY-MM-DD sorts correctly
+
+        const filtered = data.filter(e =>
+            formattedDates.includes(formatDateToIST(e.timestamp))
+        );
+
+        let customers = {};
+        let dateSums = {};
+
+        filtered.forEach(e => {
+            const d = formatDateToIST(e.timestamp);
+            const n = e.name || "Unknown";
+            const kg = +e.deliveredKg || 0;
+
+            if (!customers[n]) customers[n] = {};
+            customers[n][d] = (customers[n][d] || 0) + kg;
+            dateSums[d] = (dateSums[d] || 0) + kg;
+        });
+
+        updateTable(formattedDates, customers, dateSums);
+
+        // Highlight dropdown
+        const sel = document.getElementById("highlightDate");
+        sel.innerHTML = '<option value="">-- Select --</option>';
+        formattedDates.forEach(d => {
+            const opt = document.createElement("option");
+            opt.value = d;
+            opt.textContent = d;
+            sel.appendChild(opt);
+        });
+
+    } catch (err) {
+        console.error("Fetch failed", err);
+        alert("Failed to fetch data");
+    } finally {
+        document.getElementById("loading").style.display = "none";
     }
 
-    function updateTable(selectedDates, customerData, dateSums) {
-        let highlightDate = document.getElementById("highlightDate").value;
+    updateDateHints();
+}
 
-        let tableHeader = document.getElementById("tableHeader");
-        let tableBody = document.querySelector("#resultTable tbody");
-        let tableFooter = document.getElementById("tableFooter");
 
-        tableHeader.innerHTML = "<th>Customer Name</th>";
-        selectedDates.forEach(date => {
-            let cls = (date === highlightDate) ? 'highlight-date-header' : '';
-            tableHeader.innerHTML += `<th class="${cls}">${date}</th>`;
+    function updateTable(dates, customers, dateSums) {
+        const header = document.getElementById("tableHeader");
+        const body = document.querySelector("#resultTable tbody");
+        const footer = document.getElementById("tableFooter");
+        const highlight = document.getElementById("highlightDate").value;
+
+        header.innerHTML = "<th>Customer</th>";
+        dates.forEach(d => {
+            header.innerHTML += `
+                <th class="${d===highlight?'highlight-date-header':''}">
+                    ${d}<br><small>${getDayName(d)}</small>
+                </th>`;
         });
-        tableHeader.innerHTML += `<th>Total</th>`;
+        header.innerHTML += "<th>Total</th>";
 
-        tableBody.innerHTML = "";
-        let grandTotal = 0;
+        body.innerHTML = "";
+        let grand = 0;
 
-        Object.keys(customerData).forEach(customer => {
-            let rowSum = 0;
-            let row = `<tr><td>${customer}</td>`;
-
-            selectedDates.forEach(date => {
-                let deliveredKg = parseFloat(customerData[customer][date] || 0).toFixed(3);
-                let cls = (date === highlightDate) ? 'highlight-date-cell' : '';
-                row += `<td class="${cls}">${deliveredKg}</td>`;
-                rowSum += parseFloat(deliveredKg);
+        Object.entries(customers).forEach(([name, vals]) => {
+            let sum = 0;
+            let row = `<tr><td>${name}</td>`;
+            dates.forEach(d => {
+                const v = (vals[d]||0).toFixed(3);
+                row += `<td class="${d===highlight?'highlight-date-cell':''}">${v}</td>`;
+                sum += +v;
             });
-
-            row += `<td class="total-row">${rowSum.toFixed(3)}</td></tr>`;
-            tableBody.innerHTML += row;
-            grandTotal += rowSum;
+            row += `<td class="total-row">${sum.toFixed(3)}</td></tr>`;
+            body.innerHTML += row;
+            grand += sum;
         });
 
-        tableFooter.innerHTML = `<th>Total</th>`;
-        selectedDates.forEach(date => {
-            // ✅ No highlighting class here
-            tableFooter.innerHTML += `<td class="total-col">${parseFloat(dateSums[date] || 0).toFixed(3)}</td>`;
-        });
-        tableFooter.innerHTML += `<td class="total-col">${grandTotal.toFixed(3)}</td>`;
-
-        document.getElementById("resultTable").style.display = "table";
+        footer.innerHTML = "<th>Total</th>";
+        dates.forEach(d => footer.innerHTML += `<td class="total-col">${(dateSums[d]||0).toFixed(3)}</td>`);
+        footer.innerHTML += `<td class="total-col">${grand.toFixed(3)}</td>`;
     }
-
 
     function highlightSelectedDate() {
-        // Rebuild the table with the new selected highlight date
-        fetchData();
+    const highlightDate = document.getElementById("highlightDate").value;
+
+    // Clear previous highlights
+    document.querySelectorAll(".highlight-date-cell")
+        .forEach(el => el.classList.remove("highlight-date-cell"));
+
+    document.querySelectorAll(".highlight-date-header")
+        .forEach(el => el.classList.remove("highlight-date-header"));
+
+    if (!highlightDate) return;
+
+    // Highlight header
+    document.querySelectorAll("#tableHeader th").forEach(th => {
+        if (th.innerText.includes(highlightDate)) {
+            th.classList.add("highlight-date-header");
+        }
+    });
+
+    // Highlight column cells
+    const headers = [...document.querySelectorAll("#tableHeader th")];
+    const colIndex = headers.findIndex(th =>
+        th.innerText.includes(highlightDate)
+    );
+
+    if (colIndex === -1) return;
+
+    document.querySelectorAll("#resultTable tbody tr").forEach(tr => {
+        const td = tr.children[colIndex];
+        if (td) td.classList.add("highlight-date-cell");
+    });
+}
+
+
+    /* ---------- PIN ---------- */
+    function pinCurrentTable() {
+        const wrap = document.createElement("div");
+        wrap.className = "pinned-block";
+
+        const btn = document.createElement("button");
+        btn.className = "remove-pin-btn";
+        btn.innerText = "❌ Remove";
+        btn.onclick = () => wrap.remove();
+
+        wrap.appendChild(btn);
+        wrap.appendChild(document.getElementById("reportBanner").cloneNode(true));
+        wrap.appendChild(document.getElementById("resultTable").cloneNode(true));
+
+        document.getElementById("pinnedTables").appendChild(wrap);
     }
+
+    /* ---------- PRINT HELPERS ---------- */
+    function printActiveReport() {
+    document.body.classList.add("print-active-only");
+    window.print();
+    document.body.classList.remove("print-active-only");
+}
+
+
+    function printAllPinned() {
+    const pinned = document.getElementById("pinnedTables");
+    if (!pinned.children.length) {
+        alert("No pinned reports to print.");
+        return;
+    }
+
+    document.body.classList.add("print-pinned-only");
+    window.print();
+    document.body.classList.remove("print-pinned-only");
+}
+
+    function getLastSelectedDate() {
+    const dates = [...document.querySelectorAll(".date-picker")]
+        .map(i => i.value)
+        .filter(Boolean)
+        .sort();
+    return dates[dates.length - 1] || null;
+}
+
+function addDays(dateStr, days) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+
+    // Create LOCAL date (no timezone shift)
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + days);
+
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+
+    function updateDateHints() {
+    const values = [...document.querySelectorAll(".date-picker")]
+        .map(i => i.value)
+        .filter(Boolean);
+
+    const prevHint = document.getElementById("prevDateHint");
+    const nextHint = document.getElementById("nextDateHint");
+
+    if (values.length === 0) {
+        prevHint.textContent = "";
+        nextHint.textContent = "";
+        return;
+    }
+
+    // Sort dates lexicographically (YYYY-MM-DD sorts correctly)
+    values.sort();
+
+    const minDate = values[0];
+    const maxDate = values[values.length - 1];
+
+    const prevDate = addDays(minDate, -1);
+    const nextDate = addDays(maxDate, 1);
+
+    prevHint.textContent = `◀ ${prevDate}`;
+    nextHint.textContent = `${nextDate} ▶`;
+
+    prevHint.onclick = () => addDateWithValue(prevDate);
+    nextHint.onclick = () => addDateWithValue(nextDate);
+}
+
+
+
+<!--    function addDateWithValue(dateValue) {-->
+<!--    const input = document.createElement("input");-->
+<!--    input.type = "date";-->
+<!--    input.className = "date-picker";-->
+<!--    input.value = dateValue;-->
+
+<!--    document.getElementById("dateInputs").appendChild(input);-->
+<!--    updateDateHints();-->
+<!--}-->
+
+    function addDateWithValue(dateValue) {
+    addDateInput(dateValue);
+}
+
+
 </script>
 
 </body>
