@@ -729,12 +729,28 @@
         }
 
         function getGradientColor(index, total) {
-            if (total === 1) return "rgb(255, 165, 0)";
-            let ratio = index / (total - 1);
-            let r = Math.round(255);
-            let g = Math.round(255 * (1 - ratio));
-            let b = 0;
-            return `rgb(${r}, ${g}, ${b})`;
+            // Dual approach: Opacity + Color vibrancy
+            // Older years: muted colors with low opacity
+            // Recent years: vibrant colors with high opacity
+
+            const colorConfig = [
+                { color: 'rgb(189, 189, 189)', opacity: 0.35 },  // Year 0 (oldest) - Pale gray, very faint
+                { color: 'rgb(255, 193, 7)', opacity: 0.55 },    // Year 1 - Muted gold, moderate
+                { color: 'rgb(255, 152, 0)', opacity: 0.75 },    // Year 2 - Vibrant orange, good emphasis
+                { color: 'rgb(244, 67, 54)', opacity: 0.90 },    // Year 3 - Bright red, high emphasis
+                { color: 'rgb(233, 30, 99)', opacity: 1.0 }      // Year 4+ (newest) - Deep pink, full opacity
+            ];
+
+            let config;
+            if (index >= colorConfig.length) {
+                config = colorConfig[colorConfig.length - 1]; // Use most vibrant for extra years
+            } else {
+                config = colorConfig[index];
+            }
+
+            // Parse RGB and add opacity
+            const match = config.color.match(/\d+/g);
+            return `rgba(${match[0]}, ${match[1]}, ${match[2]}, ${config.opacity})`;
         }
 
         function sortLabels(labels, groupBy, dateMap) {
@@ -768,20 +784,25 @@
             let allKeys = Object.keys(grouped);
             let labels = sortLabels(allKeys, groupBy, dateMap);
 
-            let datasets = yearsSet.map((year, index) => ({
-                label: `Year ${year}`,
-                data: labels.map(label => grouped[label][year] || 0),
-                borderColor: getGradientColor(index, yearsSet.length),
-                backgroundColor: getGradientColor(index, yearsSet.length),
-                pointBackgroundColor: getGradientColor(index, yearsSet.length),
-                borderWidth: 3,
-                tension: 0.4,
-                fill: false,
-                pointRadius: 2,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 1,
-                pointHoverRadius: 4
-            }));
+            let datasets = yearsSet.map((year, index) => {
+                // Dynamic stroke width: older years thinner, recent years thicker
+                let strokeWidth = 2 + (index * 0.6);
+
+                return {
+                    label: `Year ${year}`,
+                    data: labels.map(label => grouped[label][year] || 0),
+                    borderColor: getGradientColor(index, yearsSet.length),
+                    backgroundColor: getGradientColor(index, yearsSet.length),
+                    pointBackgroundColor: getGradientColor(index, yearsSet.length),
+                    borderWidth: strokeWidth,
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 2,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 4
+                };
+            });
 
             let ctx = document.getElementById('kgComparisonChart');
             if (!ctx) return;
@@ -817,20 +838,25 @@
             let allKeys = Object.keys(grouped);
             let labels = sortLabels(allKeys, groupBy, dateMap);
 
-            let datasets = yearsSet.map((year, index) => ({
-                label: `Year ${year}`,
-                data: labels.map(label => grouped[label][year] || 0),
-                borderColor: getGradientColor(index, yearsSet.length),
-                backgroundColor: getGradientColor(index, yearsSet.length),
-                pointBackgroundColor: getGradientColor(index, yearsSet.length),
-                borderWidth: 3,
-                tension: 0.4,
-                fill: false,
-                pointRadius: 2,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 1,
-                pointHoverRadius: 4
-            }));
+            let datasets = yearsSet.map((year, index) => {
+                // Dynamic stroke width: older years thinner, recent years thicker
+                let strokeWidth = 2 + (index * 0.6);
+
+                return {
+                    label: `Year ${year}`,
+                    data: labels.map(label => grouped[label][year] || 0),
+                    borderColor: getGradientColor(index, yearsSet.length),
+                    backgroundColor: getGradientColor(index, yearsSet.length),
+                    pointBackgroundColor: getGradientColor(index, yearsSet.length),
+                    borderWidth: strokeWidth,
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 2,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 4
+                };
+            });
 
             let ctx = document.getElementById('profitComparisonChart');
             if (!ctx) return;
