@@ -729,28 +729,38 @@
         }
 
         function getGradientColor(index, total) {
-            // Dual approach: Opacity + Color vibrancy
-            // Older years: muted colors with low opacity
-            // Recent years: vibrant colors with high opacity
+            // Option 3: Opacity Gradient for Criss-Crossing Lines
+            // Recent years more opaque (bolder), older years faded
+            // Gray → Gold → Orange → Red with progressive opacity
 
-            const colorConfig = [
-                { color: 'rgb(189, 189, 189)', opacity: 0.35 },  // Year 0 (oldest) - Pale gray, very faint
-                { color: 'rgb(255, 193, 7)', opacity: 0.55 },    // Year 1 - Muted gold, moderate
-                { color: 'rgb(255, 152, 0)', opacity: 0.75 },    // Year 2 - Vibrant orange, good emphasis
-                { color: 'rgb(244, 67, 54)', opacity: 0.90 },    // Year 3 - Bright red, high emphasis
-                { color: 'rgb(233, 30, 99)', opacity: 1.0 }      // Year 4+ (newest) - Deep pink, full opacity
-            ];
+            const colorPalette = ['#B0BEC5', '#FFB74D', '#FF7043', '#EF5350'];
+            const opacities = [0.4, 0.65, 0.85, 1.0];
 
-            let config;
-            if (index >= colorConfig.length) {
-                config = colorConfig[colorConfig.length - 1]; // Use most vibrant for extra years
-            } else {
-                config = colorConfig[index];
-            }
+            let colorIndex = Math.min(index, colorPalette.length - 1);
+            let opacityIndex = Math.min(index, opacities.length - 1);
 
-            // Parse RGB and add opacity
-            const match = config.color.match(/\d+/g);
-            return `rgba(${match[0]}, ${match[1]}, ${match[2]}, ${config.opacity})`;
+            const color = colorPalette[colorIndex];
+            const opacity = opacities[opacityIndex];
+
+            // Convert hex to RGB and apply opacity
+            const rgb = parseInt(color.slice(1), 16);
+            const r = (rgb >> 16) & 255;
+            const g = (rgb >> 8) & 255;
+            const b = rgb & 255;
+
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        function getFillOpacity(index) {
+            // Fill opacity increases for recent years (very subtle to prominent)
+            const fillOpacities = [0.06, 0.10, 0.15, 0.22];
+            return fillOpacities[Math.min(index, fillOpacities.length - 1)];
+        }
+
+        function getColorBase(index) {
+            // Get base color without opacity for use in creating fill colors
+            const colorPalette = ['#B0BEC5', '#FFB74D', '#FF7043', '#EF5350'];
+            return colorPalette[Math.min(index, colorPalette.length - 1)];
         }
 
         function sortLabels(labels, groupBy, dateMap) {
@@ -785,18 +795,26 @@
             let labels = sortLabels(allKeys, groupBy, dateMap);
 
             let datasets = yearsSet.map((year, index) => {
-                // Dynamic stroke width: older years thinner, recent years thicker
-                let strokeWidth = 2 + (index * 0.6);
+                const lineColor = getGradientColor(index, yearsSet.length);
+                const baseColor = getColorBase(index);
+                const fillOpacity = getFillOpacity(index);
+
+                // Convert hex to RGB for fill
+                const rgb = parseInt(baseColor.slice(1), 16);
+                const r = (rgb >> 16) & 255;
+                const g = (rgb >> 8) & 255;
+                const b = rgb & 255;
+                const fillColor = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
 
                 return {
                     label: `Year ${year}`,
                     data: labels.map(label => grouped[label][year] || 0),
-                    borderColor: getGradientColor(index, yearsSet.length),
-                    backgroundColor: getGradientColor(index, yearsSet.length),
-                    pointBackgroundColor: getGradientColor(index, yearsSet.length),
-                    borderWidth: strokeWidth,
+                    borderColor: lineColor,
+                    backgroundColor: fillColor,
+                    pointBackgroundColor: lineColor,
+                    borderWidth: 3,
                     tension: 0.4,
-                    fill: false,
+                    fill: true,
                     pointRadius: 2,
                     pointBorderColor: '#fff',
                     pointBorderWidth: 1,
@@ -839,18 +857,26 @@
             let labels = sortLabels(allKeys, groupBy, dateMap);
 
             let datasets = yearsSet.map((year, index) => {
-                // Dynamic stroke width: older years thinner, recent years thicker
-                let strokeWidth = 2 + (index * 0.6);
+                const lineColor = getGradientColor(index, yearsSet.length);
+                const baseColor = getColorBase(index);
+                const fillOpacity = getFillOpacity(index);
+
+                // Convert hex to RGB for fill
+                const rgb = parseInt(baseColor.slice(1), 16);
+                const r = (rgb >> 16) & 255;
+                const g = (rgb >> 8) & 255;
+                const b = rgb & 255;
+                const fillColor = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
 
                 return {
                     label: `Year ${year}`,
                     data: labels.map(label => grouped[label][year] || 0),
-                    borderColor: getGradientColor(index, yearsSet.length),
-                    backgroundColor: getGradientColor(index, yearsSet.length),
-                    pointBackgroundColor: getGradientColor(index, yearsSet.length),
-                    borderWidth: strokeWidth,
+                    borderColor: lineColor,
+                    backgroundColor: fillColor,
+                    pointBackgroundColor: lineColor,
+                    borderWidth: 3,
                     tension: 0.4,
-                    fill: false,
+                    fill: true,
                     pointRadius: 2,
                     pointBorderColor: '#fff',
                     pointBorderWidth: 1,
