@@ -85,43 +85,81 @@
             let profits = [];
             let today = new Date();
 
-            for (let i = 12; i >= 0; i--) {
-                let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            // Generate the last 18 months, including the current month
+            for (let i = 17; i >= 0; i--) {
+                let date = new Date(
+                    today.getFullYear(),
+                    today.getMonth() - i,
+                    1
+                );
+
                 let key = `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
-                profits.push({ key: key, value: 0 });
+
+                profits.push({
+                    key: key,
+                    value: 0
+                });
             }
 
+            // Add profit values to their respective months
             data[0].content.forEach(entry => {
                 if (!entry.profit || entry.profit === "#N/A") return;
+
                 let date = new Date(entry.date);
+
+                // Skip invalid dates
+                if (isNaN(date.getTime())) return;
+
                 let key = `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
+
                 let profitEntry = profits.find(p => p.key === key);
+
                 if (profitEntry) {
-                    profitEntry.value += parseFloat(entry.profit);
+                    profitEntry.value += parseFloat(entry.profit) || 0;
                 }
             });
 
             let labels = profits.map(p => p.key);
             let values = profits.map(p => p.value);
-            let currentMonth = `${getMonthName(today.getMonth())} ${today.getFullYear()}`;
+
+            let currentMonth =
+                `${getMonthName(today.getMonth())} ${today.getFullYear()}`;
 
             let ctx = document.getElementById('profitChart').getContext('2d');
+
             new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Profit (Last 12 Months)',
+                        label: 'Profit (Last 18 Months)',
                         data: values,
-                        backgroundColor: labels.map(label => label === currentMonth ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'),
-                        borderColor: labels.map(label => label === currentMonth ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'),
+
+                        backgroundColor: labels.map(label =>
+                            label === currentMonth
+                                ? 'rgba(255, 99, 132, 0.6)'
+                                : 'rgba(75, 192, 192, 0.6)'
+                        ),
+
+                        borderColor: labels.map(label =>
+                            label === currentMonth
+                                ? 'rgba(255, 99, 132, 1)'
+                                : 'rgba(75, 192, 192, 1)'
+                        ),
+
                         borderWidth: 1
                     }]
                 },
+
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } }
+
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
                 }
             });
         }
