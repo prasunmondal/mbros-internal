@@ -3,86 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profit Report</title>
+    <title>Business Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="config.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 20px;
-            text-align: center;
+            min-height: 100vh;
         }
-        .container {
-            max-width: 100%;
-            margin: auto;
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
         }
-        .card {
+
+        /* Header Section */
+        .dashboard-header {
             background: white;
-            padding: 20px;
-            margin: 10px 0;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
         }
-        .collapsible {
-            background: #007bff;
+
+        .dashboard-header h1 {
+            color: #333;
+            margin-bottom: 25px;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             cursor: pointer;
-            padding: 10px;
-            width: 100%;
-            border: none;
-            text-align: left;
-            font-size: 16px;
-            border-radius: 5px;
-            transition: background 0.3s;
         }
-        .collapsible:hover {
-            background: #0056b3;
+
+        .kpi-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
         }
-        .content {
-            display: none;
-            padding: 10px;
+
+        .kpi-card.kpi-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
-        .grouping-controls {
+
+        .kpi-card.kpi-tertiary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .kpi-card.kpi-quaternary {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .kpi-card.kpi-quinary {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(700px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1400px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .chart-card:hover {
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .chart-card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 12px;
+        }
+
+        .chart-controls {
             display: flex;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             flex-wrap: wrap;
             justify-content: center;
         }
-        .group-btn {
+
+        .control-btn {
             padding: 8px 16px;
-            border: 2px solid #007bff;
+            border: 2px solid #667eea;
             background: white;
-            color: #007bff;
-            border-radius: 5px;
+            color: #667eea;
+            border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 13px;
         }
-        .group-btn:hover {
-            background: #e7f1ff;
+
+        .control-btn:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
         }
-        .group-btn.active {
-            background: #007bff;
+
+        .control-btn.active {
+            background: #667eea;
             color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
+
         canvas {
             width: 100% !important;
             height: 300px !important;
         }
+
         .chart-wrapper {
             position: relative;
+            min-height: 350px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-header h1 {
+                font-size: 24px;
+                margin-bottom: 20px;
+            }
+
+            .kpi-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .kpi-card {
+                padding: 18px;
+            }
+
+            .kpi-value {
+                font-size: 22px;
+            }
+
+            .chart-controls {
+                gap: 8px;
+            }
+
+            .control-btn {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .dashboard-header {
+                padding: 15px;
+            }
+
+            .kpi-container {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                padding: 15px;
+            }
         }
     </style>
     <script>
-        let chartInstances = {
-            profitChart: null,
-            kgChart: null,
-            profitYearChart: null
-        };
-
+        let chartInstances = {};
         let rawData = null;
 
         async function fetchData() {
@@ -100,15 +237,20 @@
                 });
 
                 rawData = await response.json();
-
-                // Initial render with default grouping
-                updateProfitChart('month');
-                updateKgChart('week');
-                updateProfitByYearChart('week');
+                updateDashboard();
 
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
+        }
+
+        function updateDashboard() {
+            updateKPIs();
+            updateProfitChart('month');
+            updateExpensesChart('month');
+            updateDueBalanceChart('month');
+            updateProfitPerKgChart('month');
+            updateTotalExpensesChart('month');
         }
 
         function getMonthName(monthIndex) {
@@ -120,17 +262,14 @@
             return Math.ceil((((date - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
         }
 
-        function formatDate(date, groupBy, includeYear = true) {
+        function formatDate(date, groupBy) {
             switch(groupBy) {
                 case 'day':
-                    let dayStr = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                    return includeYear ? `${date.getFullYear()}-${dayStr}` : dayStr;
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                 case 'week':
-                    let weekStr = `W${getWeek(date)}`;
-                    return includeYear ? `${date.getFullYear()} ${weekStr}` : weekStr;
+                    return `${date.getFullYear()} W${getWeek(date)}`;
                 case 'month':
-                    let monthStr = `${getMonthName(date.getMonth())}`;
-                    return includeYear ? `${monthStr} ${date.getFullYear()}` : monthStr;
+                    return `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
                 case 'year':
                     return `${date.getFullYear()}`;
                 default:
@@ -138,399 +277,524 @@
             }
         }
 
-        function groupDataByPeriod(data, groupBy) {
+        function updateKPIs() {
+            if (!rawData) return;
+
+            let totalDeliveredKg = 0;
+            let latestDueBalance = 0;
+            let totalProfit = 0;
+            let totalKg = 0;
+            let totalTrips = 0;
+
+            rawData[0].content.forEach(entry => {
+                if (entry.deliveredKg && entry.deliveredKg !== "#N/A") totalDeliveredKg += parseFloat(entry.deliveredKg) || 0;
+                if (entry.new_due_balance && entry.new_due_balance !== "#N/A") latestDueBalance = parseFloat(entry.new_due_balance) || 0;
+                if (entry.profit && entry.profit !== "#N/A") totalProfit += parseFloat(entry.profit) || 0;
+                if (entry.kg && entry.kg !== "#N/A") totalKg += parseFloat(entry.kg) || 0;
+                totalTrips++;
+            });
+
+            let soldAmount = 0;
+            rawData[0].content.forEach(entry => {
+                if (entry.sold_amount && entry.sold_amount !== "#N/A") soldAmount += parseFloat(entry.sold_amount) || 0;
+            });
+
+            let profitMargin = soldAmount > 0 ? ((totalProfit / soldAmount) * 100).toFixed(2) : 0;
+
+            document.getElementById('deliveredKg').textContent = `${totalDeliveredKg.toLocaleString('en-IN', {maximumFractionDigits: 1})} KG`;
+            document.getElementById('dueBalance').textContent = `₹${latestDueBalance.toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
+            document.getElementById('profitMargin').textContent = `${profitMargin}%`;
+            document.getElementById('totalKgHandled').textContent = `${totalKg.toLocaleString('en-IN', {maximumFractionDigits: 1})} KG`;
+            document.getElementById('totalTrips').textContent = `${totalTrips}`;
+        }
+
+        function groupDataByPeriod(groupBy, field) {
             let grouped = {};
             let dateMap = {};
 
-            data[0].content.forEach(entry => {
-                if (!entry.date || !entry.profit || entry.profit === "#N/A") return;
+            rawData[0].content.forEach(entry => {
+                if (!entry.date) return;
 
                 let date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
 
                 let key = formatDate(date, groupBy);
-                let year = date.getFullYear();
-
                 if (!grouped[key]) {
                     grouped[key] = 0;
                     dateMap[key] = date;
                 }
 
-                grouped[key] += parseFloat(entry.profit) || 0;
+                let value = parseFloat(entry[field]) || 0;
+                if (entry[field] !== "#N/A") {
+                    grouped[key] += value;
+                }
             });
 
-            return { grouped, dateMap };
+            let labels = Object.keys(grouped).sort((a, b) => dateMap[a] - dateMap[b]);
+            let values = labels.map(label => grouped[label]);
+
+            return { labels, values, dateMap };
         }
 
-        function groupDataByPeriodMultiYear(data, groupBy) {
-            let grouped = {};
-            let yearsSet = new Set();
-            let keyToDate = {};
-
-            data[0].content.forEach(entry => {
-                if (!entry.date || !entry.profit || entry.profit === "#N/A") return;
-
-                let date = new Date(entry.date);
-                if (isNaN(date.getTime())) return;
-
-                let key = formatDate(date, groupBy, false); // Without year for overlapping
-                let year = date.getFullYear();
-
-                yearsSet.add(year);
-
-                if (!keyToDate[key]) {
-                    keyToDate[key] = date;
-                }
-
-                if (!grouped[key]) {
-                    grouped[key] = {};
-                }
-                if (!grouped[key][year]) {
-                    grouped[key][year] = 0;
-                }
-
-                grouped[key][year] += parseFloat(entry.profit) || 0;
-            });
-
-            return { grouped, yearsSet: [...yearsSet].sort(), keyToDate };
-        }
-
-        function groupKgByPeriodMultiYear(data, groupBy) {
-            let grouped = {};
-            let yearsSet = new Set();
-            let keyToDate = {};
-
-            data[0].content.forEach(entry => {
-                if (!entry.date || !entry.kg || entry.kg === "#N/A") return;
-
-                let date = new Date(entry.date);
-                if (isNaN(date.getTime())) return;
-
-                let key = formatDate(date, groupBy, false); // Without year for overlapping
-                let year = date.getFullYear();
-
-                yearsSet.add(year);
-
-                if (!keyToDate[key]) {
-                    keyToDate[key] = date;
-                }
-
-                if (!grouped[key]) {
-                    grouped[key] = {};
-                }
-                if (!grouped[key][year]) {
-                    grouped[key][year] = 0;
-                }
-
-                grouped[key][year] += parseFloat(entry.kg) || 0;
-            });
-
-            return { grouped, yearsSet: [...yearsSet].sort(), keyToDate };
+        function destroyChart(chartId) {
+            if (chartInstances[chartId]) {
+                chartInstances[chartId].destroy();
+            }
         }
 
         function updateProfitChart(groupBy) {
             if (!rawData) return;
 
-            let grouped = {};
-            let dateMap = {};
+            let { labels, values } = groupDataByPeriod(groupBy, 'profit');
 
-            rawData[0].content.forEach(entry => {
-                if (!entry.date || !entry.profit || entry.profit === "#N/A") return;
+            let ctx = document.getElementById('profitChart');
+            if (!ctx) return;
 
-                let date = new Date(entry.date);
-                if (isNaN(date.getTime())) return;
+            destroyChart('profitChart');
 
-                // Use full date format with year for first chart
-                let key = formatDate(date, groupBy, true);
-
-                if (!grouped[key]) {
-                    grouped[key] = 0;
-                    dateMap[key] = date;
-                }
-
-                grouped[key] += parseFloat(entry.profit) || 0;
-            });
-
-            // Sort labels based on groupBy type
-            let labels = Object.keys(grouped).sort((a, b) => {
-                if (groupBy === 'day' || groupBy === 'month') {
-                    return dateMap[a] - dateMap[b];
-                } else if (groupBy === 'week') {
-                    let aParts = a.split(' ');
-                    let bParts = b.split(' ');
-                    let aYear = parseInt(aParts[0]);
-                    let bYear = parseInt(bParts[0]);
-                    if (aYear !== bYear) return aYear - bYear;
-                    let aWeek = parseInt(aParts[1].substring(1));
-                    let bWeek = parseInt(bParts[1].substring(1));
-                    return aWeek - bWeek;
-                } else if (groupBy === 'year') {
-                    return parseInt(a) - parseInt(b);
-                }
-                return 0;
-            });
-
-            let values = labels.map(label => grouped[label]);
-
-            let ctx = document.getElementById('profitChart').getContext('2d');
-
-            if (chartInstances.profitChart) {
-                chartInstances.profitChart.destroy();
-            }
-
-            chartInstances.profitChart = new Chart(ctx, {
-                type: 'bar',
+            chartInstances['profitChart'] = new Chart(ctx, {
+                type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: `Profit (Grouped by ${groupBy})`,
+                        label: 'Profit',
                         data: values,
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 7
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12, weight: 'bold' } }
                         }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { drawBorder: false } }
                     }
                 }
             });
         }
 
-        function updateKgChart(groupBy) {
+        function updateExpensesChart(groupBy) {
             if (!rawData) return;
 
-            let { grouped, yearsSet, keyToDate } = groupKgByPeriodMultiYear(rawData, groupBy);
+            let groupedCar = {};
+            let groupedLabour = {};
+            let groupedExtra = {};
+            let dateMap = {};
 
-            let allKeys = Object.keys(grouped);
-            let labels = allKeys.sort((a, b) => {
-                if (groupBy === 'day') {
-                    let monthDayA = a.split('-');
-                    let monthDayB = b.split('-');
-                    let monthA = parseInt(monthDayA[0]);
-                    let monthB = parseInt(monthDayB[0]);
-                    if (monthA !== monthB) return monthA - monthB;
-                    return parseInt(monthDayA[1]) - parseInt(monthDayB[1]);
-                } else if (groupBy === 'week') {
-                    let aWeek = parseInt(a.substring(1));
-                    let bWeek = parseInt(b.substring(1));
-                    return aWeek - bWeek;
-                } else if (groupBy === 'month') {
-                    let monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    return monthOrder.indexOf(a) - monthOrder.indexOf(b);
-                } else if (groupBy === 'year') {
-                    return parseInt(a) - parseInt(b);
+            rawData[0].content.forEach(entry => {
+                if (!entry.date) return;
+                let date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                let key = formatDate(date, groupBy);
+                if (!groupedCar[key]) {
+                    groupedCar[key] = 0;
+                    groupedLabour[key] = 0;
+                    groupedExtra[key] = 0;
+                    dateMap[key] = date;
                 }
-                return 0;
+
+                groupedCar[key] += parseFloat(entry.car_expense) || 0;
+                groupedLabour[key] += parseFloat(entry.labour_expense) || 0;
+                groupedExtra[key] += parseFloat(entry.extra_expenses) || 0;
             });
 
-            function getGradientColor(index, total) {
-                if (total === 1) return "rgb(255, 165, 0)";
-                let ratio = index / (total - 1);
-                let r = Math.round(255);
-                let g = Math.round(255 * (1 - ratio));
-                let b = 0;
-                return `rgb(${r}, ${g}, ${b})`;
-            }
+            let labels = Object.keys(groupedCar).sort((a, b) => dateMap[a] - dateMap[b]);
 
-            let datasets = yearsSet.map((year, index) => ({
-                label: `Year ${year}`,
-                data: labels.map(label => grouped[label][year] || 0),
-                borderColor: getGradientColor(index, yearsSet.length),
-                backgroundColor: getGradientColor(index, yearsSet.length),
-                pointBackgroundColor: getGradientColor(index, yearsSet.length),
-                fill: false,
-                tension: 0.1
-            }));
+            let ctx = document.getElementById('expensesChart');
+            if (!ctx) return;
 
-            let ctx = document.getElementById('kgChart').getContext('2d');
+            destroyChart('expensesChart');
 
-            if (chartInstances.kgChart) {
-                chartInstances.kgChart.destroy();
-            }
-
-            chartInstances.kgChart = new Chart(ctx, {
+            chartInstances['expensesChart'] = new Chart(ctx, {
                 type: 'line',
-                data: { labels: labels, datasets: datasets },
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Car Expense',
+                            data: labels.map(l => groupedCar[l]),
+                            borderColor: 'rgba(245, 87, 108, 1)',
+                            backgroundColor: 'rgba(245, 87, 108, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointBackgroundColor: 'rgba(245, 87, 108, 1)'
+                        },
+                        {
+                            label: 'Labour Expense',
+                            data: labels.map(l => groupedLabour[l]),
+                            borderColor: 'rgba(255, 165, 0, 1)',
+                            backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointBackgroundColor: 'rgba(255, 165, 0, 1)'
+                        },
+                        {
+                            label: 'Extra Expense',
+                            data: labels.map(l => groupedExtra[l]),
+                            borderColor: 'rgba(155, 89, 182, 1)',
+                            backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointBackgroundColor: 'rgba(155, 89, 182, 1)'
+                        }
+                    ]
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } }
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12, weight: 'bold' } }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { drawBorder: false } }
+                    }
                 }
             });
         }
 
-        function updateProfitByYearChart(groupBy) {
+        function updateDueBalanceChart(groupBy) {
             if (!rawData) return;
 
-            let { grouped, yearsSet, keyToDate } = groupDataByPeriodMultiYear(rawData, groupBy);
+            let dueBalances = [];
+            let dateMap = {};
 
-            let allKeys = Object.keys(grouped);
-            let labels = allKeys.sort((a, b) => {
-                if (groupBy === 'day') {
-                    let monthDayA = a.split('-');
-                    let monthDayB = b.split('-');
-                    let monthA = parseInt(monthDayA[0]);
-                    let monthB = parseInt(monthDayB[0]);
-                    if (monthA !== monthB) return monthA - monthB;
-                    return parseInt(monthDayA[1]) - parseInt(monthDayB[1]);
-                } else if (groupBy === 'week') {
-                    let aWeek = parseInt(a.substring(1));
-                    let bWeek = parseInt(b.substring(1));
-                    return aWeek - bWeek;
-                } else if (groupBy === 'month') {
-                    let monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    return monthOrder.indexOf(a) - monthOrder.indexOf(b);
-                } else if (groupBy === 'year') {
-                    return parseInt(a) - parseInt(b);
-                }
-                return 0;
+            rawData[0].content.forEach(entry => {
+                if (!entry.date || !entry.new_due_balance || entry.new_due_balance === "#N/A") return;
+
+                let date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                dueBalances.push({
+                    date: date,
+                    balance: parseFloat(entry.new_due_balance) || 0
+                });
             });
 
-            function getGradientColor(index, total) {
-                if (total === 1) return "rgb(255, 165, 0)";
-                let ratio = index / (total - 1);
-                let r = 255;
-                let g = Math.round(255 * (1 - ratio));
-                let b = 0;
-                return `rgb(${r}, ${g}, ${b})`;
-            }
+            dueBalances.sort((a, b) => a.date - b.date);
 
-            let datasets = yearsSet.map((year, index) => ({
-                label: `Year ${year}`,
-                data: labels.map(label => grouped[label][year] || 0),
-                borderColor: getGradientColor(index, yearsSet.length),
-                backgroundColor: getGradientColor(index, yearsSet.length),
-                pointBackgroundColor: getGradientColor(index, yearsSet.length),
-                fill: false,
-                tension: 0.1
-            }));
+            let labels = dueBalances.map(d => formatDate(d.date, groupBy));
+            let values = dueBalances.map(d => d.balance);
 
-            let ctx = document.getElementById('profitYearChart').getContext('2d');
+            let ctx = document.getElementById('dueBalanceChart');
+            if (!ctx) return;
 
-            if (chartInstances.profitYearChart) {
-                chartInstances.profitYearChart.destroy();
-            }
+            destroyChart('dueBalanceChart');
 
-            chartInstances.profitYearChart = new Chart(ctx, {
+            chartInstances['dueBalanceChart'] = new Chart(ctx, {
                 type: 'line',
-                data: { labels: labels, datasets: datasets },
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Due Balance',
+                        data: values,
+                        borderColor: 'rgba(240, 147, 251, 1)',
+                        backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: 'rgba(240, 147, 251, 1)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 7
+                    }]
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } }
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12, weight: 'bold' } }
+                        }
+                    },
+                    scales: { y: { beginAtZero: false, grid: { drawBorder: false } } }
                 }
             });
         }
 
-        function setupGroupingControls() {
-            document.querySelectorAll('.group-btn').forEach(btn => {
+        function updateProfitPerKgChart(groupBy) {
+            if (!rawData) return;
+
+            let groupedProfit = {};
+            let groupedKg = {};
+            let dateMap = {};
+
+            rawData[0].content.forEach(entry => {
+                if (!entry.date) return;
+                let date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                let key = formatDate(date, groupBy);
+                if (!groupedProfit[key]) {
+                    groupedProfit[key] = 0;
+                    groupedKg[key] = 0;
+                    dateMap[key] = date;
+                }
+
+                groupedProfit[key] += parseFloat(entry.profit) || 0;
+                groupedKg[key] += parseFloat(entry.kg) || 0;
+            });
+
+            let labels = Object.keys(groupedProfit).sort((a, b) => dateMap[a] - dateMap[b]);
+            let profitPerKg = labels.map(l => groupedKg[l] > 0 ? (groupedProfit[l] / groupedKg[l]).toFixed(2) : 0);
+
+            let ctx = document.getElementById('profitPerKgChart');
+            if (!ctx) return;
+
+            destroyChart('profitPerKgChart');
+
+            chartInstances['profitPerKgChart'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit per KG',
+                        data: profitPerKg,
+                        borderColor: 'rgba(76, 175, 80, 1)',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: 'rgba(76, 175, 80, 1)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12, weight: 'bold' } }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: false, grid: { drawBorder: false } }
+                    }
+                }
+            });
+        }
+
+        function updateTotalExpensesChart(groupBy) {
+            if (!rawData) return;
+
+            let groupedTotal = {};
+            let dateMap = {};
+
+            rawData[0].content.forEach(entry => {
+                if (!entry.date) return;
+                let date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                let key = formatDate(date, groupBy);
+                if (!groupedTotal[key]) {
+                    groupedTotal[key] = 0;
+                    dateMap[key] = date;
+                }
+
+                let car = parseFloat(entry.car_expense) || 0;
+                let labour = parseFloat(entry.labour_expense) || 0;
+                let extra = parseFloat(entry.extra_expenses) || 0;
+                groupedTotal[key] += car + labour + extra;
+            });
+
+            let labels = Object.keys(groupedTotal).sort((a, b) => dateMap[a] - dateMap[b]);
+            let values = labels.map(l => groupedTotal[l]);
+
+            let ctx = document.getElementById('totalExpensesChart');
+            if (!ctx) return;
+
+            destroyChart('totalExpensesChart');
+
+            chartInstances['totalExpensesChart'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Expenses',
+                        data: values,
+                        borderColor: 'rgba(229, 57, 53, 1)',
+                        backgroundColor: 'rgba(229, 57, 53, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: 'rgba(229, 57, 53, 1)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12, weight: 'bold' } }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { drawBorder: false } }
+                    }
+                }
+            });
+        }
+
+        function setupControls() {
+            document.querySelectorAll('.control-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    let chartId = this.dataset.chart;
+                    let chartType = this.dataset.chart;
                     let groupBy = this.dataset.group;
 
-                    // Update active state
-                    document.querySelectorAll(`.group-btn[data-chart="${chartId}"]`).forEach(b => {
+                    document.querySelectorAll(`.control-btn[data-chart="${chartType}"]`).forEach(b => {
                         b.classList.remove('active');
                     });
                     this.classList.add('active');
 
-                    // Update chart
-                    if (chartId === 'profit') {
-                        updateProfitChart(groupBy);
-                    } else if (chartId === 'kg') {
-                        updateKgChart(groupBy);
-                    } else if (chartId === 'profitYear') {
-                        updateProfitByYearChart(groupBy);
-                    }
+                    if (chartType === 'profit') updateProfitChart(groupBy);
+                    else if (chartType === 'expenses') updateExpensesChart(groupBy);
+                    else if (chartType === 'dueBalance') updateDueBalanceChart(groupBy);
+                    else if (chartType === 'profitPerKg') updateProfitPerKgChart(groupBy);
+                    else if (chartType === 'totalExpenses') updateTotalExpensesChart(groupBy);
                 });
             });
         }
 
-        document.addEventListener("DOMContentLoaded", function () {
-            // Setup collapsibles
-            let collapsibles = document.querySelectorAll(".collapsible");
-            collapsibles.forEach(button => {
-                button.addEventListener("click", function () {
-                    let content = this.nextElementSibling;
-                    content.style.display = content.style.display === "block" ? "none" : "block";
-                });
-            });
-
-            // Setup grouping controls
-            setupGroupingControls();
+        document.addEventListener("DOMContentLoaded", function() {
+            setupControls();
         });
     </script>
 </head>
 <body onload="fetchData()">
-<div class="container">
+<div class="dashboard-container">
+    <!-- Header with KPI Cards -->
+    <div class="dashboard-header">
+        <h1>📊 Business Dashboard</h1>
+        <div class="kpi-container">
+            <div class="kpi-card">
+                <div class="kpi-label">Delivered KG</div>
+                <div class="kpi-value" id="deliveredKg">0 KG</div>
+            </div>
+            <div class="kpi-card kpi-secondary">
+                <div class="kpi-label">Due Balance</div>
+                <div class="kpi-value" id="dueBalance">₹0</div>
+            </div>
+            <div class="kpi-card kpi-tertiary">
+                <div class="kpi-label">Profit Margin %</div>
+                <div class="kpi-value" id="profitMargin">0%</div>
+            </div>
+            <div class="kpi-card kpi-quaternary">
+                <div class="kpi-label">Total KG Handled</div>
+                <div class="kpi-value" id="totalKgHandled">0 KG</div>
+            </div>
+            <div class="kpi-card kpi-quinary">
+                <div class="kpi-label">Total Trips</div>
+                <div class="kpi-value" id="totalTrips">0</div>
+            </div>
+        </div>
+    </div>
 
-    <h1>Profit Report</h1>
-
-    <!-- Last 18 Months Profit -->
-    <div class="card">
-        <button class="collapsible">
-            Toggle Profit Chart
-        </button>
-
-        <div class="content">
-            <div class="grouping-controls">
-                <button class="group-btn active" data-chart="profit" data-group="day">Day</button>
-                <button class="group-btn" data-chart="profit" data-group="week">Week</button>
-                <button class="group-btn active" data-chart="profit" data-group="month">Month</button>
-                <button class="group-btn" data-chart="profit" data-group="year">Year</button>
+    <!-- Charts Section -->
+    <div class="charts-grid">
+        <!-- Profit Trend Chart -->
+        <div class="chart-card">
+            <h3>💰 Profit Trend</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="profit" data-group="day">Day</button>
+                <button class="control-btn" data-chart="profit" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="profit" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profit" data-group="year">Year</button>
             </div>
             <div class="chart-wrapper">
                 <canvas id="profitChart"></canvas>
             </div>
         </div>
-    </div>
 
-
-    <!-- KG Comparison -->
-    <div class="card">
-        <button class="collapsible">
-            Toggle KG Chart
-        </button>
-
-        <div class="content">
-            <div class="grouping-controls">
-                <button class="group-btn" data-chart="kg" data-group="day">Day</button>
-                <button class="group-btn active" data-chart="kg" data-group="week">Week</button>
-                <button class="group-btn" data-chart="kg" data-group="month">Month</button>
-                <button class="group-btn" data-chart="kg" data-group="year">Year</button>
+        <!-- Expenses Breakdown Chart -->
+        <div class="chart-card">
+            <h3>💸 Expenses Breakdown</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="expenses" data-group="day">Day</button>
+                <button class="control-btn" data-chart="expenses" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="expenses" data-group="month">Month</button>
+                <button class="control-btn" data-chart="expenses" data-group="year">Year</button>
             </div>
             <div class="chart-wrapper">
-                <canvas id="kgChart"></canvas>
+                <canvas id="expensesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Due Balance Trend Chart -->
+        <div class="chart-card">
+            <h3>📈 Due Balance Trend</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="dueBalance" data-group="day">Day</button>
+                <button class="control-btn" data-chart="dueBalance" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="dueBalance" data-group="month">Month</button>
+                <button class="control-btn" data-chart="dueBalance" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="dueBalanceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Profit per KG Chart -->
+        <div class="chart-card">
+            <h3>₹ Profit per KG</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="profitPerKg" data-group="day">Day</button>
+                <button class="control-btn" data-chart="profitPerKg" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="profitPerKg" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profitPerKg" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="profitPerKgChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Total Expenses Chart -->
+        <div class="chart-card">
+            <h3>💹 Total Expenses Trend</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="totalExpenses" data-group="day">Day</button>
+                <button class="control-btn" data-chart="totalExpenses" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="totalExpenses" data-group="month">Month</button>
+                <button class="control-btn" data-chart="totalExpenses" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="totalExpensesChart"></canvas>
             </div>
         </div>
     </div>
-
-
-    <!-- Profit Comparison Across Years -->
-    <div class="card">
-        <button class="collapsible">
-            Toggle Profit Comparison by Year
-        </button>
-
-        <div class="content">
-            <div class="grouping-controls">
-                <button class="group-btn" data-chart="profitYear" data-group="day">Day</button>
-                <button class="group-btn active" data-chart="profitYear" data-group="week">Week</button>
-                <button class="group-btn" data-chart="profitYear" data-group="month">Month</button>
-                <button class="group-btn" data-chart="profitYear" data-group="year">Year</button>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="profitYearChart"></canvas>
-            </div>
-        </div>
-    </div>
-
 </div>
 </body>
 </html>
