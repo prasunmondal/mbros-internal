@@ -306,9 +306,9 @@
 
             let profitMargin = soldAmount > 0 ? ((totalProfit / soldAmount) * 100).toFixed(2) : 0;
 
-            document.getElementById('deliveredKg').textContent = `${totalDeliveredKg.toLocaleString('en-IN', {maximumFractionDigits: 1})} KG`;
+<!--            document.getElementById('deliveredKg').textContent = `${totalDeliveredKg.toLocaleString('en-IN', {maximumFractionDigits: 1})} KG`;-->
             document.getElementById('dueBalance').textContent = `₹${latestDueBalance.toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
-            document.getElementById('profitMargin').textContent = `${profitMargin}%`;
+<!--            document.getElementById('profitMargin').textContent = `${profitMargin}%`;-->
             document.getElementById('totalKgHandled').textContent = `${totalKg.toLocaleString('en-IN', {maximumFractionDigits: 1})} KG`;
             document.getElementById('totalTrips').textContent = `${totalTrips}`;
         }
@@ -943,18 +943,18 @@
     <div class="dashboard-header">
         <h1>📊 Business Dashboard</h1>
         <div class="kpi-container">
-            <div class="kpi-card">
-                <div class="kpi-label">Delivered KG</div>
-                <div class="kpi-value" id="deliveredKg">0 KG</div>
-            </div>
+<!--            <div class="kpi-card">-->
+<!--                <div class="kpi-label">Delivered KG</div>-->
+<!--                <div class="kpi-value" id="deliveredKg">0 KG</div>-->
+<!--            </div>-->
             <div class="kpi-card kpi-secondary">
                 <div class="kpi-label">Due Balance</div>
                 <div class="kpi-value" id="dueBalance">₹0</div>
             </div>
-            <div class="kpi-card kpi-tertiary">
-                <div class="kpi-label">Profit Margin %</div>
-                <div class="kpi-value" id="profitMargin">0%</div>
-            </div>
+<!--            <div class="kpi-card kpi-tertiary">-->
+<!--                <div class="kpi-label">Profit Margin %</div>-->
+<!--                <div class="kpi-value" id="profitMargin">0%</div>-->
+<!--            </div>-->
             <div class="kpi-card kpi-quaternary">
                 <div class="kpi-label">Total KG Handled</div>
                 <div class="kpi-value" id="totalKgHandled">0 KG</div>
