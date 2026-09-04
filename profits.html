@@ -129,7 +129,8 @@
                     let weekStr = `W${getWeek(date)}`;
                     return includeYear ? `${date.getFullYear()} ${weekStr}` : weekStr;
                 case 'month':
-                    return `${getMonthName(date.getMonth())}`;
+                    let monthStr = `${getMonthName(date.getMonth())}`;
+                    return includeYear ? `${monthStr} ${date.getFullYear()}` : monthStr;
                 case 'year':
                     return `${date.getFullYear()}`;
                 default:
@@ -230,7 +231,25 @@
         function updateProfitChart(groupBy) {
             if (!rawData) return;
 
-            let { grouped, dateMap } = groupDataByPeriod(rawData, groupBy);
+            let grouped = {};
+            let dateMap = {};
+
+            rawData[0].content.forEach(entry => {
+                if (!entry.date || !entry.profit || entry.profit === "#N/A") return;
+
+                let date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                // Use full date format with year for first chart
+                let key = formatDate(date, groupBy, true);
+
+                if (!grouped[key]) {
+                    grouped[key] = 0;
+                    dateMap[key] = date;
+                }
+
+                grouped[key] += parseFloat(entry.profit) || 0;
+            });
 
             // Sort labels based on groupBy type
             let labels = Object.keys(grouped).sort((a, b) => {
