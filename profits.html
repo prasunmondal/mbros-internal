@@ -65,8 +65,16 @@
                 });
 
                 let data = await response.json();
+
+                // Last 18 months profit
                 processProfitData(data);
+
+                // KG comparison across years
                 processKgData(data);
+
+                // Profit comparison across years
+                processProfitByYearData(data);
+
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
@@ -164,6 +172,147 @@
             });
         }
 
+        function processProfitByYearData(data) {
+            let profitData = {};
+            let yearsSet = new Set();
+
+            // Populate profitData with actual data and track all years
+            data[0].content.forEach(entry => {
+
+                if (!entry.profit || entry.profit === "#N/A") return;
+
+                let date = new Date(entry.date);
+
+                // Skip invalid dates
+                if (isNaN(date.getTime())) return;
+
+                let profit = parseFloat(entry.profit);
+
+                // Skip invalid profit values
+                if (isNaN(profit)) return;
+
+                let key = `Week ${getWeek(date)}`;
+                let year = date.getFullYear();
+
+                yearsSet.add(year);
+
+                if (!profitData[key]) {
+                    profitData[key] = {};
+                }
+
+                if (!profitData[key][year]) {
+                    profitData[key][year] = 0;
+                }
+
+                profitData[key][year] += profit;
+            });
+
+            // Collect all weeks
+            let allWeeks = new Set(Object.keys(profitData));
+
+            // Ensure every year has data for every week
+            allWeeks.forEach(week => {
+
+                if (!profitData[week]) {
+                    profitData[week] = {};
+                }
+
+                yearsSet.forEach(year => {
+
+                    if (!profitData[week][year]) {
+                        profitData[week][year] = 0;
+                    }
+
+                });
+            });
+
+            // Sort weeks numerically
+            let labels = [...allWeeks].sort((a, b) =>
+                parseInt(a.split(' ')[1]) -
+                parseInt(b.split(' ')[1])
+            );
+
+            // Sort years
+            let sortedYears = [...yearsSet].sort();
+
+            // Generate gradient colors
+            function getGradientColor(index, total) {
+
+                // Handle only one year
+                if (total === 1) {
+                    return "rgb(255, 165, 0)";
+                }
+
+                let ratio = index / (total - 1);
+
+                let r = 255;
+                let g = Math.round(255 * (1 - ratio));
+                let b = 0;
+
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            // Prepare datasets
+            let datasets = sortedYears.map((year, index) => ({
+
+                label: `Year ${year}`,
+
+                data: labels.map(label =>
+                    profitData[label][year] || 0
+                ),
+
+                borderColor: getGradientColor(
+                    index,
+                    sortedYears.length
+                ),
+
+                backgroundColor: getGradientColor(
+                    index,
+                    sortedYears.length
+                ),
+
+                pointBackgroundColor: getGradientColor(
+                    index,
+                    sortedYears.length
+                ),
+
+                fill: false,
+
+                tension: 0.1
+
+            }));
+
+            // Create chart
+            let ctx = document
+                .getElementById('profitYearChart')
+                .getContext('2d');
+
+            new Chart(ctx, {
+
+                type: 'line',
+
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+
+                }
+
+            });
+        }
+
         function processKgData(data) {
             let kgData = {};
             let yearsSet = new Set();
@@ -245,15 +394,44 @@
 </head>
 <body onload="fetchData()">
 <div class="container">
+
     <h1>Profit Report</h1>
+
+    <!-- Last 18 Months Profit -->
     <div class="card">
-        <button class="collapsible">Toggle Profit Chart</button>
-        <div class="content"><canvas id="profitChart"></canvas></div>
+        <button class="collapsible">
+            Toggle Profit Chart
+        </button>
+
+        <div class="content">
+            <canvas id="profitChart"></canvas>
+        </div>
     </div>
+
+
+    <!-- KG Comparison -->
     <div class="card">
-        <button class="collapsible">Toggle KG Chart</button>
-        <div class="content"><canvas id="kgChart"></canvas></div>
+        <button class="collapsible">
+            Toggle KG Chart
+        </button>
+
+        <div class="content">
+            <canvas id="kgChart"></canvas>
+        </div>
     </div>
+
+
+    <!-- Profit Comparison Across Years -->
+    <div class="card">
+        <button class="collapsible">
+            Toggle Profit Comparison by Year
+        </button>
+
+        <div class="content">
+            <canvas id="profitYearChart"></canvas>
+        </div>
+    </div>
+
 </div>
 </body>
 </html>
