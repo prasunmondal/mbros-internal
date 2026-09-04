@@ -251,6 +251,8 @@
             updateDueBalanceChart('month');
             updateProfitPerKgChart('month');
             updateTotalExpensesChart('month');
+            updateKgComparisonChart('week');
+            updateProfitComparisonChart('week');
         }
 
         function getMonthName(monthIndex) {
@@ -262,14 +264,17 @@
             return Math.ceil((((date - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
         }
 
-        function formatDate(date, groupBy) {
+        function formatDate(date, groupBy, includeYear = true) {
             switch(groupBy) {
                 case 'day':
-                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    let dayStr = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    return includeYear ? `${date.getFullYear()}-${dayStr}` : dayStr;
                 case 'week':
-                    return `${date.getFullYear()} W${getWeek(date)}`;
+                    let weekStr = `W${getWeek(date)}`;
+                    return includeYear ? `${date.getFullYear()} ${weekStr}` : weekStr;
                 case 'month':
-                    return `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
+                    let monthStr = `${getMonthName(date.getMonth())}`;
+                    return includeYear ? `${monthStr} ${date.getFullYear()}` : monthStr;
                 case 'year':
                     return `${date.getFullYear()}`;
                 default:
@@ -669,6 +674,162 @@
             });
         }
 
+        function groupDataByPeriodMultiYear(groupBy, field) {
+            let grouped = {};
+            let yearsSet = new Set();
+            let dateMap = {};
+
+            rawData[0].content.forEach(entry => {
+                if (!entry.date || !entry[field] || entry[field] === "#N/A") return;
+
+                let date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                // Use formatDate without year for overlapping dates across years
+                let key = formatDate(date, groupBy, false);
+                let year = date.getFullYear();
+
+                yearsSet.add(year);
+
+                if (!dateMap[key]) {
+                    dateMap[key] = date;
+                }
+
+                if (!grouped[key]) {
+                    grouped[key] = {};
+                }
+                if (!grouped[key][year]) {
+                    grouped[key][year] = 0;
+                }
+
+                grouped[key][year] += parseFloat(entry[field]) || 0;
+            });
+
+            return { grouped, yearsSet: [...yearsSet].sort(), dateMap };
+        }
+
+        function getGradientColor(index, total) {
+            if (total === 1) return "rgb(255, 165, 0)";
+            let ratio = index / (total - 1);
+            let r = Math.round(255);
+            let g = Math.round(255 * (1 - ratio));
+            let b = 0;
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function sortLabels(labels, groupBy, dateMap) {
+            return labels.sort((a, b) => {
+                if (groupBy === 'day') {
+                    let monthDayA = a.split('-');
+                    let monthDayB = b.split('-');
+                    let monthA = parseInt(monthDayA[0]);
+                    let monthB = parseInt(monthDayB[0]);
+                    if (monthA !== monthB) return monthA - monthB;
+                    return parseInt(monthDayA[1]) - parseInt(monthDayB[1]);
+                } else if (groupBy === 'week') {
+                    let aWeek = parseInt(a.substring(1));
+                    let bWeek = parseInt(b.substring(1));
+                    return aWeek - bWeek;
+                } else if (groupBy === 'month') {
+                    let monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    return monthOrder.indexOf(a) - monthOrder.indexOf(b);
+                } else if (groupBy === 'year') {
+                    return parseInt(a) - parseInt(b);
+                }
+                return 0;
+            });
+        }
+
+        function updateKgComparisonChart(groupBy) {
+            if (!rawData) return;
+
+            let { grouped, yearsSet, dateMap } = groupDataByPeriodMultiYear(groupBy, 'kg');
+
+            let allKeys = Object.keys(grouped);
+            let labels = sortLabels(allKeys, groupBy, dateMap);
+
+            let datasets = yearsSet.map((year, index) => ({
+                label: `Year ${year}`,
+                data: labels.map(label => grouped[label][year] || 0),
+                borderColor: getGradientColor(index, yearsSet.length),
+                backgroundColor: getGradientColor(index, yearsSet.length),
+                pointBackgroundColor: getGradientColor(index, yearsSet.length),
+                borderWidth: 3,
+                tension: 0.4,
+                fill: false,
+                pointRadius: 5,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverRadius: 7
+            }));
+
+            let ctx = document.getElementById('kgComparisonChart');
+            if (!ctx) return;
+
+            destroyChart('kgComparisonChart');
+
+            chartInstances['kgComparisonChart'] = new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12, weight: 'bold' } }
+                        }
+                    },
+                    scales: { y: { beginAtZero: true, grid: { drawBorder: false } } }
+                }
+            });
+        }
+
+        function updateProfitComparisonChart(groupBy) {
+            if (!rawData) return;
+
+            let { grouped, yearsSet, dateMap } = groupDataByPeriodMultiYear(groupBy, 'profit');
+
+            let allKeys = Object.keys(grouped);
+            let labels = sortLabels(allKeys, groupBy, dateMap);
+
+            let datasets = yearsSet.map((year, index) => ({
+                label: `Year ${year}`,
+                data: labels.map(label => grouped[label][year] || 0),
+                borderColor: getGradientColor(index, yearsSet.length),
+                backgroundColor: getGradientColor(index, yearsSet.length),
+                pointBackgroundColor: getGradientColor(index, yearsSet.length),
+                borderWidth: 3,
+                tension: 0.4,
+                fill: false,
+                pointRadius: 5,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverRadius: 7
+            }));
+
+            let ctx = document.getElementById('profitComparisonChart');
+            if (!ctx) return;
+
+            destroyChart('profitComparisonChart');
+
+            chartInstances['profitComparisonChart'] = new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12, weight: 'bold' } }
+                        }
+                    },
+                    scales: { y: { beginAtZero: true, grid: { drawBorder: false } } }
+                }
+            });
+        }
+
         function setupControls() {
             document.querySelectorAll('.control-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -685,6 +846,8 @@
                     else if (chartType === 'dueBalance') updateDueBalanceChart(groupBy);
                     else if (chartType === 'profitPerKg') updateProfitPerKgChart(groupBy);
                     else if (chartType === 'totalExpenses') updateTotalExpensesChart(groupBy);
+                    else if (chartType === 'kgComparison') updateKgComparisonChart(groupBy);
+                    else if (chartType === 'profitComparison') updateProfitComparisonChart(groupBy);
                 });
             });
         }
@@ -792,6 +955,34 @@
             </div>
             <div class="chart-wrapper">
                 <canvas id="totalExpensesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- KG Comparison Chart (Multi-Year Overlapped) -->
+        <div class="chart-card">
+            <h3>📦 KG Volume Comparison (Year-over-Year)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="kgComparison" data-group="day">Day</button>
+                <button class="control-btn active" data-chart="kgComparison" data-group="week">Week</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="kgComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Profit Comparison by Year (Multi-Year Overlapped) -->
+        <div class="chart-card">
+            <h3>💰 Profit Comparison (Year-over-Year)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="profitComparison" data-group="day">Day</button>
+                <button class="control-btn active" data-chart="profitComparison" data-group="week">Week</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="profitComparisonChart"></canvas>
             </div>
         </div>
     </div>
