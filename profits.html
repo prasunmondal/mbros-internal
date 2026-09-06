@@ -1,11 +1,16 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    ```
     <title>Business Dashboard</title>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="config.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -25,7 +30,6 @@
             margin: 0 auto;
         }
 
-        /* Header Section */
         .dashboard-header {
             background: white;
             padding: 30px;
@@ -95,7 +99,6 @@
             line-height: 1.2;
         }
 
-        /* Charts Section */
         .charts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(700px, 1fr));
@@ -136,6 +139,7 @@
             margin-bottom: 20px;
             flex-wrap: wrap;
             justify-content: center;
+            align-items: center;
         }
 
         .control-btn {
@@ -161,6 +165,29 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
+        .axis-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #555;
+        }
+
+        .axis-select {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #333;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            min-width: 140px;
+        }
+
+        .axis-select:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
+
         canvas {
             width: 100% !important;
             height: 300px !important;
@@ -171,11 +198,18 @@
             min-height: 350px;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
             .dashboard-header h1 {
                 font-size: 24px;
                 margin-bottom: 20px;
+            }
+
+            .dashboard-header {
+                padding: 20px;
             }
 
             .kpi-container {
@@ -190,6 +224,10 @@
                 font-size: 22px;
             }
 
+            .chart-card {
+                padding: 15px;
+            }
+
             .chart-controls {
                 gap: 8px;
             }
@@ -198,26 +236,25 @@
                 padding: 6px 12px;
                 font-size: 11px;
             }
+
+            .axis-select {
+                min-width: 110px;
+                font-size: 12px;
+                padding: 7px 9px;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-
-            .dashboard-header {
-                padding: 15px;
-            }
-
             .kpi-container {
                 grid-template-columns: 1fr;
             }
-
-            .chart-card {
-                padding: 15px;
-            }
         }
     </style>
+
     <script>
         let chartInstances = {};
         let rawData = null;
@@ -237,6 +274,9 @@
                 });
 
                 rawData = await response.json();
+
+                console.log("Profit data:", rawData);
+
                 updateDashboard();
 
             } catch (error) {
@@ -245,7 +285,10 @@
         }
 
         function updateDashboard() {
+            if (!rawData || !rawData[0] || !rawData[0].content) return;
+
             updateKPIs();
+
             updateProfitChart('month');
             updateExpensesChart('month');
             updateDueBalanceChart('month');
@@ -253,114 +296,161 @@
             updateTotalExpensesChart('month');
             updateKgComparisonChart('week');
             updateProfitComparisonChart('week');
+
+            populateCustomGraphDropdowns();
+
+            updateCustomOverlapChart();
+            updateCustomLinearChart();
         }
 
         function getMonthName(monthIndex) {
-            return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][monthIndex];
+            return [
+                "Jan", "Feb", "Mar", "Apr",
+                "May", "Jun", "Jul", "Aug",
+                "Sep", "Oct", "Nov", "Dec"
+            ][monthIndex];
         }
 
         function getWeek(date) {
-            let firstDay = new Date(date.getFullYear(), 0, 1);
-            return Math.ceil((((date - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
+            const firstDay = new Date(date.getFullYear(), 0, 1);
+
+            return Math.ceil(
+                (((date - firstDay) / 86400000) + firstDay.getDay() + 1) / 7
+            );
         }
 
         function formatDate(date, groupBy, includeYear = true) {
-            switch(groupBy) {
-                case 'day':
-                    let dayStr = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                    return includeYear ? `${date.getFullYear()}-${dayStr}` : dayStr;
-                case 'week':
-                    let weekStr = `W${getWeek(date)}`;
-                    return includeYear ? `${date.getFullYear()} ${weekStr}` : weekStr;
-                case 'month':
-                    let monthStr = `${getMonthName(date.getMonth())}`;
-                    return includeYear ? `${monthStr} ${date.getFullYear()}` : monthStr;
+            switch (groupBy) {
+                case 'day': {
+                    const dayStr = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+                    return includeYear
+                        ? `${date.getFullYear()}-${dayStr}`
+                        : dayStr;
+                }
+
+                case 'week': {
+                    const weekStr = `W${getWeek(date)}`;
+
+                    return includeYear
+                        ? `${date.getFullYear()} ${weekStr}`
+                        : weekStr;
+                }
+
+                case 'month': {
+                    const monthStr = getMonthName(date.getMonth());
+
+                    return includeYear
+                        ? `${monthStr} ${date.getFullYear()}`
+                        : monthStr;
+                }
+
                 case 'year':
                     return `${date.getFullYear()}`;
+
                 default:
                     return '';
             }
         }
 
-        function updateKPIs() {
-            if (!rawData) return;
+        function destroyChart(chartId) {
+            if (chartInstances[chartId]) {
+                chartInstances[chartId].destroy();
+                chartInstances[chartId] = null;
+            }
+        }
 
-            let totalDeliveredKg = 0;
+        function updateKPIs() {
+            if (!rawData || !rawData[0] || !rawData[0].content) return;
+
             let latestDueBalance = 0;
-            let totalProfit = 0;
             let totalKg = 0;
             let totalTrips = 0;
+            let latestDate = null;
 
             rawData[0].content.forEach(entry => {
-                if (entry.deliveredKg && entry.deliveredKg !== "#N/A") totalDeliveredKg += parseFloat(entry.deliveredKg) || 0;
-                if (entry.new_due_balance && entry.new_due_balance !== "#N/A") latestDueBalance = parseFloat(entry.new_due_balance) || 0;
-                if (entry.profit && entry.profit !== "#N/A") totalProfit += parseFloat(entry.profit) || 0;
-                if (entry.kg && entry.kg !== "#N/A") totalKg += parseFloat(entry.kg) || 0;
+                totalKg += parseFloat(entry.kg) || 0;
                 totalTrips++;
+
+                if (entry.date && entry.new_due_balance !== undefined && entry.new_due_balance !== "#N/A") {
+                    const date = new Date(entry.date);
+
+                    if (!isNaN(date.getTime())) {
+                        if (!latestDate || date > latestDate) {
+                            latestDate = date;
+                            latestDueBalance = parseFloat(entry.new_due_balance) || 0;
+                        }
+                    }
+                }
             });
 
-            let soldAmount = 0;
-            rawData[0].content.forEach(entry => {
-                if (entry.sold_amount && entry.sold_amount !== "#N/A") soldAmount += parseFloat(entry.sold_amount) || 0;
-            });
+            const dueBalanceElement = document.getElementById('dueBalance');
+            const totalKgElement = document.getElementById('totalKgHandled');
+            const totalTripsElement = document.getElementById('totalTrips');
 
-            let profitMargin = soldAmount > 0 ? ((totalProfit / soldAmount) * 100).toFixed(2) : 0;
+            if (dueBalanceElement) {
+                dueBalanceElement.textContent = `₹${latestDueBalance.toLocaleString('en-IN', {
+                    maximumFractionDigits: 0
+                })}`;
+            }
 
-<!--            document.getElementById('deliveredKg').textContent = `${totalDeliveredKg.toLocaleString('en-IN', {maximumFractionDigits: 1})} KG`;-->
-            document.getElementById('dueBalance').textContent = `₹${latestDueBalance.toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
-<!--            document.getElementById('profitMargin').textContent = `${profitMargin}%`;-->
-            document.getElementById('totalKgHandled').textContent = `${totalKg.toLocaleString('en-IN', {maximumFractionDigits: 1})} KG`;
-            document.getElementById('totalTrips').textContent = `${totalTrips}`;
+            if (totalKgElement) {
+                totalKgElement.textContent = `${totalKg.toLocaleString('en-IN', {
+                    maximumFractionDigits: 2
+                })} KG`;
+            }
+
+            if (totalTripsElement) {
+                totalTripsElement.textContent = totalTrips;
+            }
         }
 
         function groupDataByPeriod(groupBy, field) {
-            let grouped = {};
-            let dateMap = {};
+            const grouped = {};
+            const dateMap = {};
 
             rawData[0].content.forEach(entry => {
                 if (!entry.date) return;
 
-                let date = new Date(entry.date);
+                const date = new Date(entry.date);
+
                 if (isNaN(date.getTime())) return;
 
-                let key = formatDate(date, groupBy);
+                const key = formatDate(date, groupBy);
+
                 if (!grouped[key]) {
                     grouped[key] = 0;
                     dateMap[key] = date;
                 }
 
-                let value = parseFloat(entry[field]) || 0;
-                if (entry[field] !== "#N/A") {
-                    grouped[key] += value;
-                }
+                grouped[key] += parseFloat(entry[field]) || 0;
             });
 
-            let labels = Object.keys(grouped).sort((a, b) => dateMap[a] - dateMap[b]);
-            let values = labels.map(label => grouped[label]);
+            const labels = Object.keys(grouped)
+                .sort((a, b) => dateMap[a] - dateMap[b]);
 
-            return { labels, values, dateMap };
-        }
-
-        function destroyChart(chartId) {
-            if (chartInstances[chartId]) {
-                chartInstances[chartId].destroy();
-            }
+            return {
+                labels,
+                values: labels.map(label => grouped[label])
+            };
         }
 
         function updateProfitChart(groupBy) {
             if (!rawData) return;
 
-            let { labels, values } = groupDataByPeriod(groupBy, 'profit');
+            const { labels, values } = groupDataByPeriod(groupBy, 'profit');
 
-            let ctx = document.getElementById('profitChart');
+            const ctx = document.getElementById('profitChart');
             if (!ctx) return;
 
             destroyChart('profitChart');
 
             chartInstances['profitChart'] = new Chart(ctx, {
                 type: 'line',
+
                 data: {
                     labels: labels,
+
                     datasets: [{
                         label: 'Profit',
                         data: values,
@@ -370,27 +460,38 @@
                         tension: 0.4,
                         fill: true,
                         pointRadius: 2,
-                        pointBackgroundColor: 'rgba(102, 126, 234, 1)',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 1,
-                        pointHoverRadius: 4
+                        pointBackgroundColor: 'rgba(102, 126, 234, 1)'
                     }]
                 },
+
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+
                     interaction: {
                         mode: 'index',
                         intersect: false
                     },
+
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { font: { size: 12, weight: 'bold' } }
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
                         }
                     },
+
                     scales: {
-                        y: { beginAtZero: true, grid: { drawBorder: false } }
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
                     }
                 }
             });
@@ -399,17 +500,19 @@
         function updateExpensesChart(groupBy) {
             if (!rawData) return;
 
-            let groupedCar = {};
-            let groupedLabour = {};
-            let groupedExtra = {};
-            let dateMap = {};
+            const groupedCar = {};
+            const groupedLabour = {};
+            const groupedExtra = {};
+            const dateMap = {};
 
             rawData[0].content.forEach(entry => {
                 if (!entry.date) return;
-                let date = new Date(entry.date);
+
+                const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
 
-                let key = formatDate(date, groupBy);
+                const key = formatDate(date, groupBy);
+
                 if (!groupedCar[key]) {
                     groupedCar[key] = 0;
                     groupedLabour[key] = 0;
@@ -422,68 +525,82 @@
                 groupedExtra[key] += parseFloat(entry.extra_expenses) || 0;
             });
 
-            let labels = Object.keys(groupedCar).sort((a, b) => dateMap[a] - dateMap[b]);
+            const labels = Object.keys(groupedCar)
+                .sort((a, b) => dateMap[a] - dateMap[b]);
 
-            let ctx = document.getElementById('expensesChart');
+            const ctx = document.getElementById('expensesChart');
             if (!ctx) return;
 
             destroyChart('expensesChart');
 
             chartInstances['expensesChart'] = new Chart(ctx, {
                 type: 'line',
+
                 data: {
                     labels: labels,
+
                     datasets: [
                         {
                             label: 'Car Expense',
-                            data: labels.map(l => groupedCar[l]),
+                            data: labels.map(label => groupedCar[label]),
                             borderColor: 'rgba(245, 87, 108, 1)',
                             backgroundColor: 'rgba(245, 87, 108, 0.1)',
                             borderWidth: 3,
                             tension: 0.4,
                             fill: true,
-                            pointRadius: 2,
-                            pointBackgroundColor: 'rgba(245, 87, 108, 1)'
+                            pointRadius: 2
                         },
                         {
                             label: 'Labour Expense',
-                            data: labels.map(l => groupedLabour[l]),
+                            data: labels.map(label => groupedLabour[label]),
                             borderColor: 'rgba(255, 165, 0, 1)',
                             backgroundColor: 'rgba(255, 165, 0, 0.1)',
                             borderWidth: 3,
                             tension: 0.4,
                             fill: true,
-                            pointRadius: 2,
-                            pointBackgroundColor: 'rgba(255, 165, 0, 1)'
+                            pointRadius: 2
                         },
                         {
                             label: 'Extra Expense',
-                            data: labels.map(l => groupedExtra[l]),
+                            data: labels.map(label => groupedExtra[label]),
                             borderColor: 'rgba(155, 89, 182, 1)',
                             backgroundColor: 'rgba(155, 89, 182, 0.1)',
                             borderWidth: 3,
                             tension: 0.4,
                             fill: true,
-                            pointRadius: 2,
-                            pointBackgroundColor: 'rgba(155, 89, 182, 1)'
+                            pointRadius: 2
                         }
                     ]
                 },
+
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+
                     interaction: {
                         mode: 'index',
                         intersect: false
                     },
+
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { font: { size: 12, weight: 'bold' } }
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
                         }
                     },
+
                     scales: {
-                        y: { beginAtZero: true, grid: { drawBorder: false } }
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
                     }
                 }
             });
@@ -492,64 +609,85 @@
         function updateDueBalanceChart(groupBy) {
             if (!rawData) return;
 
-            let dueBalances = [];
-            let dateMap = {};
+            const grouped = {};
+            const dateMap = {};
 
             rawData[0].content.forEach(entry => {
-                if (!entry.date || !entry.new_due_balance || entry.new_due_balance === "#N/A") return;
+                if (!entry.date) return;
 
-                let date = new Date(entry.date);
+                const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
 
-                dueBalances.push({
-                    date: date,
-                    balance: parseFloat(entry.new_due_balance) || 0
-                });
+                const key = formatDate(date, groupBy);
+                const value = parseFloat(entry.new_due_balance);
+
+                if (isNaN(value)) return;
+
+                if (!grouped[key] || date > grouped[key].date) {
+                    grouped[key] = {
+                        value: value,
+                        date: date
+                    };
+
+                    dateMap[key] = date;
+                }
             });
 
-            dueBalances.sort((a, b) => a.date - b.date);
+            const labels = Object.keys(grouped)
+                .sort((a, b) => dateMap[a] - dateMap[b]);
 
-            let labels = dueBalances.map(d => formatDate(d.date, groupBy));
-            let values = dueBalances.map(d => d.balance);
-
-            let ctx = document.getElementById('dueBalanceChart');
+            const ctx = document.getElementById('dueBalanceChart');
             if (!ctx) return;
 
             destroyChart('dueBalanceChart');
 
             chartInstances['dueBalanceChart'] = new Chart(ctx, {
                 type: 'line',
+
                 data: {
                     labels: labels,
+
                     datasets: [{
                         label: 'Due Balance',
-                        data: values,
-                        borderColor: 'rgba(240, 147, 251, 1)',
-                        backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                        data: labels.map(label => grouped[label].value),
+                        borderColor: 'rgba(79, 172, 254, 1)',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
                         borderWidth: 3,
                         tension: 0.4,
                         fill: true,
-                        pointRadius: 2,
-                        pointBackgroundColor: 'rgba(240, 147, 251, 1)',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 1,
-                        pointHoverRadius: 4
+                        pointRadius: 2
                     }]
                 },
+
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+
                     interaction: {
                         mode: 'index',
                         intersect: false
                     },
+
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { font: { size: 12, weight: 'bold' } }
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
                         }
                     },
-                    scales: { y: { beginAtZero: false, grid: { drawBorder: false } } }
+
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -557,16 +695,18 @@
         function updateProfitPerKgChart(groupBy) {
             if (!rawData) return;
 
-            let groupedProfit = {};
-            let groupedKg = {};
-            let dateMap = {};
+            const groupedProfit = {};
+            const groupedKg = {};
+            const dateMap = {};
 
             rawData[0].content.forEach(entry => {
                 if (!entry.date) return;
-                let date = new Date(entry.date);
+
+                const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
 
-                let key = formatDate(date, groupBy);
+                const key = formatDate(date, groupBy);
+
                 if (!groupedProfit[key]) {
                     groupedProfit[key] = 0;
                     groupedKg[key] = 0;
@@ -577,48 +717,65 @@
                 groupedKg[key] += parseFloat(entry.kg) || 0;
             });
 
-            let labels = Object.keys(groupedProfit).sort((a, b) => dateMap[a] - dateMap[b]);
-            let profitPerKg = labels.map(l => groupedKg[l] > 0 ? (groupedProfit[l] / groupedKg[l]).toFixed(2) : 0);
+            const labels = Object.keys(groupedProfit)
+                .sort((a, b) => dateMap[a] - dateMap[b]);
 
-            let ctx = document.getElementById('profitPerKgChart');
+            const values = labels.map(label => {
+                if (!groupedKg[label]) return 0;
+                return groupedProfit[label] / groupedKg[label];
+            });
+
+            const ctx = document.getElementById('profitPerKgChart');
             if (!ctx) return;
 
             destroyChart('profitPerKgChart');
 
             chartInstances['profitPerKgChart'] = new Chart(ctx, {
                 type: 'line',
+
                 data: {
                     labels: labels,
+
                     datasets: [{
                         label: 'Profit per KG',
-                        data: profitPerKg,
-                        borderColor: 'rgba(76, 175, 80, 1)',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        data: values,
+                        borderColor: 'rgba(67, 233, 123, 1)',
+                        backgroundColor: 'rgba(67, 233, 123, 0.1)',
                         borderWidth: 3,
                         tension: 0.4,
                         fill: true,
-                        pointRadius: 2,
-                        pointBackgroundColor: 'rgba(76, 175, 80, 1)',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 1,
-                        pointHoverRadius: 4
+                        pointRadius: 2
                     }]
                 },
+
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+
                     interaction: {
                         mode: 'index',
                         intersect: false
                     },
+
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { font: { size: 12, weight: 'bold' } }
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
                         }
                     },
+
                     scales: {
-                        y: { beginAtZero: false, grid: { drawBorder: false } }
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
                     }
                 }
             });
@@ -627,87 +784,104 @@
         function updateTotalExpensesChart(groupBy) {
             if (!rawData) return;
 
-            let groupedTotal = {};
-            let dateMap = {};
+            const grouped = {};
+            const dateMap = {};
 
             rawData[0].content.forEach(entry => {
                 if (!entry.date) return;
-                let date = new Date(entry.date);
+
+                const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
 
-                let key = formatDate(date, groupBy);
-                if (!groupedTotal[key]) {
-                    groupedTotal[key] = 0;
+                const key = formatDate(date, groupBy);
+
+                if (!grouped[key]) {
+                    grouped[key] = 0;
                     dateMap[key] = date;
                 }
 
-                let car = parseFloat(entry.car_expense) || 0;
-                let labour = parseFloat(entry.labour_expense) || 0;
-                let extra = parseFloat(entry.extra_expenses) || 0;
-                groupedTotal[key] += car + labour + extra;
+                const car = parseFloat(entry.car_expense) || 0;
+                const labour = parseFloat(entry.labour_expense) || 0;
+                const extra = parseFloat(entry.extra_expenses) || 0;
+
+                grouped[key] += car + labour + extra;
             });
 
-            let labels = Object.keys(groupedTotal).sort((a, b) => dateMap[a] - dateMap[b]);
-            let values = labels.map(l => groupedTotal[l]);
+            const labels = Object.keys(grouped)
+                .sort((a, b) => dateMap[a] - dateMap[b]);
 
-            let ctx = document.getElementById('totalExpensesChart');
+            const ctx = document.getElementById('totalExpensesChart');
             if (!ctx) return;
 
             destroyChart('totalExpensesChart');
 
             chartInstances['totalExpensesChart'] = new Chart(ctx, {
                 type: 'line',
+
                 data: {
                     labels: labels,
+
                     datasets: [{
                         label: 'Total Expenses',
-                        data: values,
+                        data: labels.map(label => grouped[label]),
                         borderColor: 'rgba(229, 57, 53, 1)',
                         backgroundColor: 'rgba(229, 57, 53, 0.1)',
                         borderWidth: 3,
                         tension: 0.4,
                         fill: true,
-                        pointRadius: 2,
-                        pointBackgroundColor: 'rgba(229, 57, 53, 1)',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 1,
-                        pointHoverRadius: 4
+                        pointRadius: 2
                     }]
                 },
+
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+
                     interaction: {
                         mode: 'index',
                         intersect: false
                     },
+
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { font: { size: 12, weight: 'bold' } }
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
                         }
                     },
+
                     scales: {
-                        y: { beginAtZero: true, grid: { drawBorder: false } }
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
                     }
                 }
             });
         }
 
         function groupDataByPeriodMultiYear(groupBy, field) {
-            let grouped = {};
-            let yearsSet = new Set();
-            let dateMap = {};
+            const grouped = {};
+            const yearsSet = new Set();
+            const dateMap = {};
 
             rawData[0].content.forEach(entry => {
-                if (!entry.date || !entry[field] || entry[field] === "#N/A") return;
+                if (!entry.date || entry[field] === "#N/A") return;
 
-                let date = new Date(entry.date);
+                const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
 
-                // Use formatDate without year for overlapping dates across years
-                let key = formatDate(date, groupBy, false);
-                let year = date.getFullYear();
+                const value = parseFloat(entry[field]);
+                if (isNaN(value)) return;
+
+                const key = formatDate(date, groupBy, false);
+                const year = date.getFullYear();
 
                 yearsSet.add(year);
 
@@ -718,70 +892,88 @@
                 if (!grouped[key]) {
                     grouped[key] = {};
                 }
-                if (!grouped[key][year]) {
+
+                if (grouped[key][year] === undefined) {
                     grouped[key][year] = 0;
                 }
 
-                grouped[key][year] += parseFloat(entry[field]) || 0;
+                grouped[key][year] += value;
             });
 
-            return { grouped, yearsSet: [...yearsSet].sort(), dateMap };
+            return {
+                grouped,
+                yearsSet: [...yearsSet].sort(),
+                dateMap
+            };
         }
 
-        function getGradientColor(index, total) {
-            // Option 3: Opacity Gradient for Criss-Crossing Lines
-            // Recent years more opaque (bolder), older years faded
-            // Gray → Gold → Orange → Red with progressive opacity
-
+        function getGradientColor(index) {
             const colorPalette = ['#B0BEC5', '#FFB74D', '#FF7043', '#EF5350'];
             const opacities = [0.4, 0.65, 0.85, 1.0];
 
-            let colorIndex = Math.min(index, colorPalette.length - 1);
-            let opacityIndex = Math.min(index, opacities.length - 1);
+            const color = colorPalette[Math.min(index, colorPalette.length - 1)];
+            const opacity = opacities[Math.min(index, opacities.length - 1)];
 
-            const color = colorPalette[colorIndex];
-            const opacity = opacities[opacityIndex];
+            return hexToRgba(color, opacity);
+        }
 
-            // Convert hex to RGB and apply opacity
-            const rgb = parseInt(color.slice(1), 16);
-            const r = (rgb >> 16) & 255;
-            const g = (rgb >> 8) & 255;
-            const b = rgb & 255;
+        function getFillOpacity(index) {
+            const fillOpacities = [0.06, 0.10, 0.15, 0.22];
+
+            return fillOpacities[
+                Math.min(index, fillOpacities.length - 1)
+            ];
+        }
+
+        function getColorBase(index) {
+            const colorPalette = ['#B0BEC5', '#FFB74D', '#FF7043', '#EF5350'];
+
+            return colorPalette[
+                Math.min(index, colorPalette.length - 1)
+            ];
+        }
+
+        function hexToRgba(hex, opacity) {
+            const value = hex.replace('#', '');
+            const bigint = parseInt(value, 16);
+
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
 
             return `rgba(${r}, ${g}, ${b}, ${opacity})`;
         }
 
-        function getFillOpacity(index) {
-            // Fill opacity increases for recent years (very subtle to prominent)
-            const fillOpacities = [0.06, 0.10, 0.15, 0.22];
-            return fillOpacities[Math.min(index, fillOpacities.length - 1)];
-        }
-
-        function getColorBase(index) {
-            // Get base color without opacity for use in creating fill colors
-            const colorPalette = ['#B0BEC5', '#FFB74D', '#FF7043', '#EF5350'];
-            return colorPalette[Math.min(index, colorPalette.length - 1)];
-        }
-
-        function sortLabels(labels, groupBy, dateMap) {
+        function sortLabels(labels, groupBy) {
             return labels.sort((a, b) => {
                 if (groupBy === 'day') {
-                    let monthDayA = a.split('-');
-                    let monthDayB = b.split('-');
-                    let monthA = parseInt(monthDayA[0]);
-                    let monthB = parseInt(monthDayB[0]);
-                    if (monthA !== monthB) return monthA - monthB;
-                    return parseInt(monthDayA[1]) - parseInt(monthDayB[1]);
-                } else if (groupBy === 'week') {
-                    let aWeek = parseInt(a.substring(1));
-                    let bWeek = parseInt(b.substring(1));
-                    return aWeek - bWeek;
-                } else if (groupBy === 'month') {
-                    let monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const aParts = a.split('-');
+                    const bParts = b.split('-');
+
+                    const aValue = parseInt(aParts[0]) * 100 + parseInt(aParts[1]);
+                    const bValue = parseInt(bParts[0]) * 100 + parseInt(bParts[1]);
+
+                    return aValue - bValue;
+                }
+
+                if (groupBy === 'week') {
+                    return parseInt(a.substring(1)) - parseInt(b.substring(1));
+                }
+
+                if (groupBy === 'month') {
+                    const monthOrder = [
+                        "Jan", "Feb", "Mar", "Apr",
+                        "May", "Jun", "Jul", "Aug",
+                        "Sep", "Oct", "Nov", "Dec"
+                    ];
+
                     return monthOrder.indexOf(a) - monthOrder.indexOf(b);
-                } else if (groupBy === 'year') {
+                }
+
+                if (groupBy === 'year') {
                     return parseInt(a) - parseInt(b);
                 }
+
                 return 0;
             });
         }
@@ -789,22 +981,20 @@
         function updateKgComparisonChart(groupBy) {
             if (!rawData) return;
 
-            let { grouped, yearsSet, dateMap } = groupDataByPeriodMultiYear(groupBy, 'kg');
+            const { grouped, yearsSet } = groupDataByPeriodMultiYear(groupBy, 'kg');
 
-            let allKeys = Object.keys(grouped);
-            let labels = sortLabels(allKeys, groupBy, dateMap);
+            const labels = sortLabels(
+                Object.keys(grouped),
+                groupBy
+            );
 
-            let datasets = yearsSet.map((year, index) => {
-                const lineColor = getGradientColor(index, yearsSet.length);
+            const datasets = yearsSet.map((year, index) => {
+                const lineColor = getGradientColor(index);
                 const baseColor = getColorBase(index);
-                const fillOpacity = getFillOpacity(index);
-
-                // Convert hex to RGB for fill
-                const rgb = parseInt(baseColor.slice(1), 16);
-                const r = (rgb >> 16) & 255;
-                const g = (rgb >> 8) & 255;
-                const b = rgb & 255;
-                const fillColor = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
+                const fillColor = hexToRgba(
+                    baseColor,
+                    getFillOpacity(index)
+                );
 
                 return {
                     label: `Year ${year}`,
@@ -822,28 +1012,48 @@
                 };
             });
 
-            let ctx = document.getElementById('kgComparisonChart');
+            const ctx = document.getElementById('kgComparisonChart');
             if (!ctx) return;
 
             destroyChart('kgComparisonChart');
 
             chartInstances['kgComparisonChart'] = new Chart(ctx, {
                 type: 'line',
-                data: { labels: labels, datasets: datasets },
+
+                data: {
+                    labels,
+                    datasets
+                },
+
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+
                     interaction: {
                         mode: 'index',
                         intersect: false
                     },
+
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { font: { size: 12, weight: 'bold' } }
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
                         }
                     },
-                    scales: { y: { beginAtZero: true, grid: { drawBorder: false } } }
+
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -851,22 +1061,20 @@
         function updateProfitComparisonChart(groupBy) {
             if (!rawData) return;
 
-            let { grouped, yearsSet, dateMap } = groupDataByPeriodMultiYear(groupBy, 'profit');
+            const { grouped, yearsSet } = groupDataByPeriodMultiYear(groupBy, 'profit');
 
-            let allKeys = Object.keys(grouped);
-            let labels = sortLabels(allKeys, groupBy, dateMap);
+            const labels = sortLabels(
+                Object.keys(grouped),
+                groupBy
+            );
 
-            let datasets = yearsSet.map((year, index) => {
-                const lineColor = getGradientColor(index, yearsSet.length);
+            const datasets = yearsSet.map((year, index) => {
+                const lineColor = getGradientColor(index);
                 const baseColor = getColorBase(index);
-                const fillOpacity = getFillOpacity(index);
-
-                // Convert hex to RGB for fill
-                const rgb = parseInt(baseColor.slice(1), 16);
-                const r = (rgb >> 16) & 255;
-                const g = (rgb >> 8) & 255;
-                const b = rgb & 255;
-                const fillColor = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
+                const fillColor = hexToRgba(
+                    baseColor,
+                    getFillOpacity(index)
+                );
 
                 return {
                     label: `Year ${year}`,
@@ -884,28 +1092,617 @@
                 };
             });
 
-            let ctx = document.getElementById('profitComparisonChart');
+            const ctx = document.getElementById('profitComparisonChart');
             if (!ctx) return;
 
             destroyChart('profitComparisonChart');
 
             chartInstances['profitComparisonChart'] = new Chart(ctx, {
                 type: 'line',
-                data: { labels: labels, datasets: datasets },
+
+                data: {
+                    labels,
+                    datasets
+                },
+
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+
                     interaction: {
                         mode: 'index',
                         intersect: false
                     },
+
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { font: { size: 12, weight: 'bold' } }
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
                         }
                     },
-                    scales: { y: { beginAtZero: true, grid: { drawBorder: false } } }
+
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // NEW CUSTOM GRAPH SYSTEM
+        // ============================================================
+
+        const CUSTOM_GRAPH_FIELD_LABELS = {
+            kg: 'KG',
+            profit: 'Profit',
+            car_expense: 'Car Expense',
+            labour_expense: 'Labour Expense',
+            extra_expenses: 'Extra Expenses',
+            new_due_balance: 'Due Balance'
+        };
+
+        function getCustomGraphContent() {
+            if (!rawData || !rawData[0] || !Array.isArray(rawData[0].content)) {
+                return [];
+            }
+
+            return rawData[0].content;
+        }
+
+        function getCustomGraphFields() {
+            const content = getCustomGraphContent();
+            if (!content.length) return [];
+
+            const fields = new Set();
+
+            content.forEach(entry => {
+                Object.keys(entry).forEach(field => {
+                    if (field === 'date') return;
+
+                    const value = entry[field];
+
+                    if (
+                        value === null ||
+                        value === undefined ||
+                        value === '' ||
+                        value === '#N/A'
+                    ) {
+                        return;
+                    }
+
+                    if (!isNaN(parseFloat(value))) {
+                        fields.add(field);
+                    }
+                });
+            });
+
+            return [...fields].sort();
+        }
+
+        function getCustomGraphFieldLabel(field) {
+            if (CUSTOM_GRAPH_FIELD_LABELS[field]) {
+                return CUSTOM_GRAPH_FIELD_LABELS[field];
+            }
+
+            return field
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, char => char.toUpperCase());
+        }
+
+        function populateCustomGraphDropdowns() {
+            const fields = getCustomGraphFields();
+
+            [
+                'overlapYAxis',
+                'linearYAxis'
+            ].forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+
+                const previousValue = select.value;
+
+                select.innerHTML = '';
+
+                fields.forEach(field => {
+                    const option = document.createElement('option');
+
+                    option.value = field;
+                    option.textContent = getCustomGraphFieldLabel(field);
+
+                    select.appendChild(option);
+                });
+
+                if (fields.includes(previousValue)) {
+                    select.value = previousValue;
+                } else if (fields.includes('profit')) {
+                    select.value = 'profit';
+                }
+            });
+        }
+
+        function getISOWeekData(date) {
+            const target = new Date(
+                Date.UTC(
+                    date.getFullYear(),
+                    date.getMonth(),
+                    date.getDate()
+                )
+            );
+
+            const dayNumber = target.getUTCDay() || 7;
+
+            target.setUTCDate(
+                target.getUTCDate() + 4 - dayNumber
+            );
+
+            const yearStart = new Date(
+                Date.UTC(
+                    target.getUTCFullYear(),
+                    0,
+                    1
+                )
+            );
+
+            const week = Math.ceil(
+                (((target - yearStart) / 86400000) + 1) / 7
+            );
+
+            return {
+                year: target.getUTCFullYear(),
+                week
+            };
+        }
+
+        function getCustomOverlapTimeKey(date, groupBy) {
+            switch (groupBy) {
+                case 'day': {
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+
+                    return `${month}-${day}`;
+                }
+
+                case 'week':
+                    return `W${getISOWeekData(date).week}`;
+
+                case 'month':
+                    return String(date.getMonth() + 1).padStart(2, '0');
+
+                case 'year':
+                    return String(date.getFullYear());
+
+                default:
+                    return date.toISOString();
+            }
+        }
+
+        function getCustomOverlapLabel(key, groupBy) {
+            if (groupBy === 'day') {
+                const [month, day] = key.split('-');
+
+                return `${day} ${getMonthName(parseInt(month) - 1)}`;
+            }
+
+            if (groupBy === 'week') {
+                return `Week ${key.replace('W', '')}`;
+            }
+
+            if (groupBy === 'month') {
+                return getMonthName(parseInt(key) - 1);
+            }
+
+            return key;
+        }
+
+        function sortCustomOverlapKeys(keys, groupBy) {
+            return keys.sort((a, b) => {
+                if (groupBy === 'day') {
+                    const [aMonth, aDay] = a.split('-').map(Number);
+                    const [bMonth, bDay] = b.split('-').map(Number);
+
+                    return (aMonth * 100 + aDay) - (bMonth * 100 + bDay);
+                }
+
+                if (groupBy === 'week') {
+                    return parseInt(a.substring(1)) - parseInt(b.substring(1));
+                }
+
+                return parseInt(a) - parseInt(b);
+            });
+        }
+
+        function updateCustomOverlapChart() {
+            const content = getCustomGraphContent();
+            if (!content.length) return;
+
+            const timeSelect = document.getElementById('overlapTimeGroup');
+            const ySelect = document.getElementById('overlapYAxis');
+
+            if (!timeSelect || !ySelect || !ySelect.value) return;
+
+            const groupBy = timeSelect.value;
+            const field = ySelect.value;
+
+            if (groupBy === 'year') {
+                const grouped = {};
+
+                content.forEach(entry => {
+                    if (!entry.date) return;
+
+                    const date = new Date(entry.date);
+                    const value = parseFloat(entry[field]);
+
+                    if (isNaN(date.getTime()) || isNaN(value)) return;
+
+                    const year = String(date.getFullYear());
+
+                    if (!grouped[year]) grouped[year] = 0;
+
+                    grouped[year] += value;
+                });
+
+                const labels = Object.keys(grouped)
+                    .sort((a, b) => parseInt(a) - parseInt(b));
+
+                createCustomOverlapChart(
+                    labels,
+                    [{
+                        label: getCustomGraphFieldLabel(field),
+                        data: labels.map(label => grouped[label]),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.12)',
+                        borderWidth: 3,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 3
+                    }],
+                    field,
+                    groupBy
+                );
+
+                return;
+            }
+
+            const grouped = {};
+            const yearsSet = new Set();
+
+            content.forEach(entry => {
+                if (!entry.date) return;
+
+                const date = new Date(entry.date);
+                const value = parseFloat(entry[field]);
+
+                if (isNaN(date.getTime()) || isNaN(value)) return;
+
+                const year = date.getFullYear();
+                const key = getCustomOverlapTimeKey(date, groupBy);
+
+                yearsSet.add(year);
+
+                if (!grouped[key]) grouped[key] = {};
+                if (grouped[key][year] === undefined) grouped[key][year] = 0;
+
+                grouped[key][year] += value;
+            });
+
+            const years = [...yearsSet].sort((a, b) => a - b);
+
+            const keys = sortCustomOverlapKeys(
+                Object.keys(grouped),
+                groupBy
+            );
+
+            const labels = keys.map(key =>
+                getCustomOverlapLabel(key, groupBy)
+            );
+
+            const datasets = years.map((year, index) => {
+                const lineColor = getGradientColor(index);
+
+                return {
+                    label: `Year ${year}`,
+                    data: keys.map(key => grouped[key][year] || 0),
+                    borderColor: lineColor,
+                    backgroundColor: hexToRgba(
+                        getColorBase(index),
+                        getFillOpacity(index)
+                    ),
+                    pointBackgroundColor: lineColor,
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 2,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 4
+                };
+            });
+
+            createCustomOverlapChart(
+                labels,
+                datasets,
+                field,
+                groupBy
+            );
+        }
+
+        function createCustomOverlapChart(labels, datasets, field, groupBy) {
+            const ctx = document.getElementById('customOverlapChart');
+            if (!ctx) return;
+
+            destroyChart('customOverlapChart');
+
+            chartInstances['customOverlapChart'] = new Chart(ctx, {
+                type: 'line',
+
+                data: {
+                    labels,
+                    datasets
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+
+                        title: {
+                            display: true,
+                            text: `${getCustomGraphFieldLabel(field)} by ${groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}`
+                        }
+                    },
+
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: groupBy.charAt(0).toUpperCase() + groupBy.slice(1)
+                            },
+
+                            ticks: {
+                                autoSkip: true,
+                                maxTicksLimit: 25
+                            }
+                        },
+
+                        y: {
+                            beginAtZero: true,
+
+                            title: {
+                                display: true,
+                                text: getCustomGraphFieldLabel(field)
+                            },
+
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getCustomLinearTimeData(date, groupBy) {
+            switch (groupBy) {
+                case 'day': {
+                    const normalized = new Date(
+                        date.getFullYear(),
+                        date.getMonth(),
+                        date.getDate()
+                    );
+
+                    return {
+                        key: `${normalized.getFullYear()}-${String(normalized.getMonth() + 1).padStart(2, '0')}-${String(normalized.getDate()).padStart(2, '0')}`,
+                        label: normalized.toLocaleDateString('en-GB'),
+                        timestamp: normalized.getTime()
+                    };
+                }
+
+                case 'week': {
+                    const weekData = getISOWeekData(date);
+
+                    const normalized = new Date(date);
+
+                    const day = normalized.getDay();
+                    const diff = normalized.getDate() - day + (day === 0 ? -6 : 1);
+
+                    normalized.setDate(diff);
+                    normalized.setHours(0, 0, 0, 0);
+
+                    return {
+                        key: `${weekData.year}-W${String(weekData.week).padStart(2, '0')}`,
+                        label: `W${weekData.week} ${weekData.year}`,
+                        timestamp: normalized.getTime()
+                    };
+                }
+
+                case 'month': {
+                    const normalized = new Date(
+                        date.getFullYear(),
+                        date.getMonth(),
+                        1
+                    );
+
+                    return {
+                        key: `${normalized.getFullYear()}-${String(normalized.getMonth() + 1).padStart(2, '0')}`,
+                        label: normalized.toLocaleDateString('en-US', {
+                            month: 'short',
+                            year: 'numeric'
+                        }),
+                        timestamp: normalized.getTime()
+                    };
+                }
+
+                case 'year': {
+                    const normalized = new Date(
+                        date.getFullYear(),
+                        0,
+                        1
+                    );
+
+                    return {
+                        key: String(normalized.getFullYear()),
+                        label: String(normalized.getFullYear()),
+                        timestamp: normalized.getTime()
+                    };
+                }
+
+                default:
+                    return {
+                        key: date.toISOString(),
+                        label: date.toLocaleDateString(),
+                        timestamp: date.getTime()
+                    };
+            }
+        }
+
+        function updateCustomLinearChart() {
+            const content = getCustomGraphContent();
+            if (!content.length) return;
+
+            const timeSelect = document.getElementById('linearTimeGroup');
+            const ySelect = document.getElementById('linearYAxis');
+
+            if (!timeSelect || !ySelect || !ySelect.value) return;
+
+            const groupBy = timeSelect.value;
+            const field = ySelect.value;
+
+            const grouped = {};
+
+            content.forEach(entry => {
+                if (!entry.date) return;
+
+                const date = new Date(entry.date);
+                const value = parseFloat(entry[field]);
+
+                if (isNaN(date.getTime()) || isNaN(value)) return;
+
+                const timeData = getCustomLinearTimeData(
+                    date,
+                    groupBy
+                );
+
+                if (!grouped[timeData.key]) {
+                    grouped[timeData.key] = {
+                        label: timeData.label,
+                        timestamp: timeData.timestamp,
+                        value: 0
+                    };
+                }
+
+                grouped[timeData.key].value += value;
+            });
+
+            const points = Object.values(grouped)
+                .sort((a, b) => a.timestamp - b.timestamp);
+
+            const labels = points.map(point => point.label);
+            const values = points.map(point => point.value);
+
+            const ctx = document.getElementById('customLinearChart');
+            if (!ctx) return;
+
+            destroyChart('customLinearChart');
+
+            chartInstances['customLinearChart'] = new Chart(ctx, {
+                type: 'line',
+
+                data: {
+                    labels,
+
+                    datasets: [{
+                        label: getCustomGraphFieldLabel(field),
+                        data: values,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.12)',
+                        pointBackgroundColor: '#667eea',
+                        borderWidth: 3,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+
+                        title: {
+                            display: true,
+                            text: `${getCustomGraphFieldLabel(field)} Across Time`
+                        }
+                    },
+
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: groupBy.charAt(0).toUpperCase() + groupBy.slice(1)
+                            },
+
+                            ticks: {
+                                autoSkip: true,
+                                maxTicksLimit: 25,
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        },
+
+                        y: {
+                            beginAtZero: true,
+
+                            title: {
+                                display: true,
+                                text: getCustomGraphFieldLabel(field)
+                            },
+
+                            grid: {
+                                drawBorder: false
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -913,159 +1710,273 @@
         function setupControls() {
             document.querySelectorAll('.control-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    let chartType = this.dataset.chart;
-                    let groupBy = this.dataset.group;
+                    const chartType = this.dataset.chart;
+                    const groupBy = this.dataset.group;
 
-                    document.querySelectorAll(`.control-btn[data-chart="${chartType}"]`).forEach(b => {
-                        b.classList.remove('active');
-                    });
+                    document
+                        .querySelectorAll(`.control-btn[data-chart="${chartType}"]`)
+                        .forEach(button => button.classList.remove('active'));
+
                     this.classList.add('active');
 
-                    if (chartType === 'profit') updateProfitChart(groupBy);
-                    else if (chartType === 'expenses') updateExpensesChart(groupBy);
-                    else if (chartType === 'dueBalance') updateDueBalanceChart(groupBy);
-                    else if (chartType === 'profitPerKg') updateProfitPerKgChart(groupBy);
-                    else if (chartType === 'totalExpenses') updateTotalExpensesChart(groupBy);
-                    else if (chartType === 'kgComparison') updateKgComparisonChart(groupBy);
-                    else if (chartType === 'profitComparison') updateProfitComparisonChart(groupBy);
+                    switch (chartType) {
+                        case 'profit':
+                            updateProfitChart(groupBy);
+                            break;
+
+                        case 'expenses':
+                            updateExpensesChart(groupBy);
+                            break;
+
+                        case 'dueBalance':
+                            updateDueBalanceChart(groupBy);
+                            break;
+
+                        case 'profitPerKg':
+                            updateProfitPerKgChart(groupBy);
+                            break;
+
+                        case 'totalExpenses':
+                            updateTotalExpensesChart(groupBy);
+                            break;
+
+                        case 'kgComparison':
+                            updateKgComparisonChart(groupBy);
+                            break;
+
+                        case 'profitComparison':
+                            updateProfitComparisonChart(groupBy);
+                            break;
+                    }
                 });
             });
+
+            document
+                .getElementById('overlapTimeGroup')
+                ?.addEventListener('change', updateCustomOverlapChart);
+
+            document
+                .getElementById('overlapYAxis')
+                ?.addEventListener('change', updateCustomOverlapChart);
+
+            document
+                .getElementById('linearTimeGroup')
+                ?.addEventListener('change', updateCustomLinearChart);
+
+            document
+                .getElementById('linearYAxis')
+                ?.addEventListener('change', updateCustomLinearChart);
         }
 
         document.addEventListener("DOMContentLoaded", function() {
             setupControls();
         });
     </script>
+    ```
+
 </head>
+
 <body onload="fetchData()">
+
 <div class="dashboard-container">
-    <!-- Header with KPI Cards -->
+
+    ```
+    <!-- Header -->
     <div class="dashboard-header">
+
         <h1>📊 Business Dashboard</h1>
+
         <div class="kpi-container">
-<!--            <div class="kpi-card">-->
-<!--                <div class="kpi-label">Delivered KG</div>-->
-<!--                <div class="kpi-value" id="deliveredKg">0 KG</div>-->
-<!--            </div>-->
+
             <div class="kpi-card kpi-secondary">
                 <div class="kpi-label">Due Balance</div>
                 <div class="kpi-value" id="dueBalance">₹0</div>
             </div>
-<!--            <div class="kpi-card kpi-tertiary">-->
-<!--                <div class="kpi-label">Profit Margin %</div>-->
-<!--                <div class="kpi-value" id="profitMargin">0%</div>-->
-<!--            </div>-->
+
             <div class="kpi-card kpi-quaternary">
                 <div class="kpi-label">Total KG Handled</div>
                 <div class="kpi-value" id="totalKgHandled">0 KG</div>
             </div>
+
             <div class="kpi-card kpi-quinary">
                 <div class="kpi-label">Total Trips</div>
                 <div class="kpi-value" id="totalTrips">0</div>
             </div>
+
         </div>
     </div>
 
-    <!-- Charts Section -->
+    <!-- Charts -->
     <div class="charts-grid">
-        <!-- Profit Trend Chart -->
+
+        <!-- Profit Trend -->
         <div class="chart-card">
             <h3>💰 Profit Trend</h3>
+
             <div class="chart-controls">
                 <button class="control-btn" data-chart="profit" data-group="day">Day</button>
                 <button class="control-btn" data-chart="profit" data-group="week">Week</button>
                 <button class="control-btn active" data-chart="profit" data-group="month">Month</button>
                 <button class="control-btn" data-chart="profit" data-group="year">Year</button>
             </div>
+
             <div class="chart-wrapper">
                 <canvas id="profitChart"></canvas>
             </div>
         </div>
 
-        <!-- Expenses Breakdown Chart -->
+        <!-- Expenses -->
         <div class="chart-card">
             <h3>💸 Expenses Breakdown</h3>
+
             <div class="chart-controls">
                 <button class="control-btn" data-chart="expenses" data-group="day">Day</button>
                 <button class="control-btn" data-chart="expenses" data-group="week">Week</button>
                 <button class="control-btn active" data-chart="expenses" data-group="month">Month</button>
                 <button class="control-btn" data-chart="expenses" data-group="year">Year</button>
             </div>
+
             <div class="chart-wrapper">
                 <canvas id="expensesChart"></canvas>
             </div>
         </div>
 
-        <!-- Due Balance Trend Chart -->
+        <!-- Due Balance -->
         <div class="chart-card">
             <h3>📈 Due Balance Trend</h3>
+
             <div class="chart-controls">
                 <button class="control-btn" data-chart="dueBalance" data-group="day">Day</button>
                 <button class="control-btn" data-chart="dueBalance" data-group="week">Week</button>
                 <button class="control-btn active" data-chart="dueBalance" data-group="month">Month</button>
                 <button class="control-btn" data-chart="dueBalance" data-group="year">Year</button>
             </div>
+
             <div class="chart-wrapper">
                 <canvas id="dueBalanceChart"></canvas>
             </div>
         </div>
 
-        <!-- Profit per KG Chart -->
+        <!-- Profit Per KG -->
         <div class="chart-card">
             <h3>₹ Profit per KG</h3>
+
             <div class="chart-controls">
                 <button class="control-btn" data-chart="profitPerKg" data-group="day">Day</button>
                 <button class="control-btn" data-chart="profitPerKg" data-group="week">Week</button>
                 <button class="control-btn active" data-chart="profitPerKg" data-group="month">Month</button>
                 <button class="control-btn" data-chart="profitPerKg" data-group="year">Year</button>
             </div>
+
             <div class="chart-wrapper">
                 <canvas id="profitPerKgChart"></canvas>
             </div>
         </div>
 
-        <!-- Total Expenses Chart -->
+        <!-- Total Expenses -->
         <div class="chart-card">
             <h3>💹 Total Expenses Trend</h3>
+
             <div class="chart-controls">
                 <button class="control-btn" data-chart="totalExpenses" data-group="day">Day</button>
                 <button class="control-btn" data-chart="totalExpenses" data-group="week">Week</button>
                 <button class="control-btn active" data-chart="totalExpenses" data-group="month">Month</button>
                 <button class="control-btn" data-chart="totalExpenses" data-group="year">Year</button>
             </div>
+
             <div class="chart-wrapper">
                 <canvas id="totalExpensesChart"></canvas>
             </div>
         </div>
 
-        <!-- KG Comparison Chart (Multi-Year Overlapped) -->
+        <!-- KG Comparison -->
         <div class="chart-card">
-            <h3>📦 KG Volume Comparison (Year-over-Year)</h3>
+            <h3>⚖️ KG Comparison (Year-over-Year)</h3>
+
             <div class="chart-controls">
                 <button class="control-btn" data-chart="kgComparison" data-group="day">Day</button>
                 <button class="control-btn active" data-chart="kgComparison" data-group="week">Week</button>
                 <button class="control-btn" data-chart="kgComparison" data-group="month">Month</button>
                 <button class="control-btn" data-chart="kgComparison" data-group="year">Year</button>
             </div>
+
             <div class="chart-wrapper">
                 <canvas id="kgComparisonChart"></canvas>
             </div>
         </div>
 
-        <!-- Profit Comparison by Year (Multi-Year Overlapped) -->
+        <!-- Profit Comparison -->
         <div class="chart-card">
             <h3>💰 Profit Comparison (Year-over-Year)</h3>
+
             <div class="chart-controls">
                 <button class="control-btn" data-chart="profitComparison" data-group="day">Day</button>
                 <button class="control-btn active" data-chart="profitComparison" data-group="week">Week</button>
                 <button class="control-btn" data-chart="profitComparison" data-group="month">Month</button>
                 <button class="control-btn" data-chart="profitComparison" data-group="year">Year</button>
             </div>
+
             <div class="chart-wrapper">
                 <canvas id="profitComparisonChart"></canvas>
             </div>
         </div>
+
+        <!-- NEW CUSTOM OVERLAPPED GRAPH -->
+        <div class="chart-card">
+            <h3>🔀 Custom Year Comparison</h3>
+
+            <div class="chart-controls">
+
+                <span class="axis-label">Time:</span>
+
+                <select id="overlapTimeGroup" class="axis-select">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month" selected>Month</option>
+                    <option value="year">Year</option>
+                </select>
+
+                <span class="axis-label">Y Axis:</span>
+
+                <select id="overlapYAxis" class="axis-select"></select>
+
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="customOverlapChart"></canvas>
+            </div>
+        </div>
+
+        <!-- NEW CUSTOM LINEAR GRAPH -->
+        <div class="chart-card">
+            <h3>📈 Custom Timeline</h3>
+
+            <div class="chart-controls">
+
+                <span class="axis-label">Time:</span>
+
+                <select id="linearTimeGroup" class="axis-select">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month" selected>Month</option>
+                    <option value="year">Year</option>
+                </select>
+
+                <span class="axis-label">Y Axis:</span>
+
+                <select id="linearYAxis" class="axis-select"></select>
+
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="customLinearChart"></canvas>
+            </div>
+        </div>
+
     </div>
+    ```
+
 </div>
+
 </body>
 </html>
