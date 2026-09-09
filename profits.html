@@ -730,23 +730,59 @@
             });
         }
 
+        function generateGrayGradient(count) {
+            if (count <= 0) return [];
+
+            // Dark gray to medium gray (not too light/faded)
+            const darkGray = { r: 75, g: 85, b: 99 };    // #4b5563
+            const mediumGray = { r: 156, g: 163, b: 175 }; // #9ca3af
+
+            const gradient = [];
+            for (let i = 0; i < count; i++) {
+                const ratio = count === 1 ? 0.5 : i / (count - 1);
+                const r = Math.round(darkGray.r + (mediumGray.r - darkGray.r) * ratio);
+                const g = Math.round(darkGray.g + (mediumGray.g - darkGray.g) * ratio);
+                const b = Math.round(darkGray.b + (mediumGray.b - darkGray.b) * ratio);
+
+                const hex = '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+                gradient.push(hex);
+            }
+            return gradient;
+        }
+
         function updateKgComparisonChart(groupBy) {
             if (!rawData) return;
 
             const { grouped, yearsSet } = groupDataByPeriodMultiYear(groupBy, 'kg');
             const labels = sortLabelsByPeriod(Object.keys(grouped), groupBy);
 
-            const colors = ['#e5e7eb', '#f59e0b', '#ef4444'];
-            const datasets = yearsSet.map((year, index) => ({
-                label: `${year}`,
-                data: labels.map(label => grouped[label][year] || 0),
-                borderColor: colors[Math.min(index, colors.length - 1)],
-                backgroundColor: colors[Math.min(index, colors.length - 1)] + '15',
-                borderWidth: 2,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 2
-            }));
+            const sortedYears = [...yearsSet].sort((a, b) => b - a); // Newest first
+            const olderYearsCount = Math.max(0, sortedYears.length - 2);
+            const grayGradient = generateGrayGradient(olderYearsCount);
+
+            const datasets = sortedYears.map((year, index) => {
+                let color;
+                if (index === 0) {
+                    color = '#ef4444'; // Current: Red
+                } else if (index === 1) {
+                    color = '#f59e0b'; // Previous: Amber
+                } else {
+                    // Older years: dark gray → light gray
+                    const grayIndex = Math.min(index - 2, grayGradient.length - 1);
+                    color = grayGradient[grayIndex];
+                }
+
+                return {
+                    label: `${year}`,
+                    data: labels.map(label => grouped[label][year] || 0),
+                    borderColor: color,
+                    backgroundColor: color + '15',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 2
+                };
+            });
 
             const ctx = document.getElementById('kgComparisonChart');
             if (!ctx) return;
@@ -765,17 +801,33 @@
             const { grouped, yearsSet } = groupDataByPeriodMultiYear(groupBy, 'profit');
             const labels = sortLabelsByPeriod(Object.keys(grouped), groupBy);
 
-            const colors = ['#d1d5db', '#f59e0b', '#3b82f6'];
-            const datasets = yearsSet.map((year, index) => ({
-                label: `${year}`,
-                data: labels.map(label => grouped[label][year] || 0),
-                borderColor: colors[Math.min(index, colors.length - 1)],
-                backgroundColor: colors[Math.min(index, colors.length - 1)] + '15',
-                borderWidth: 2,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 2
-            }));
+            const sortedYears = [...yearsSet].sort((a, b) => b - a); // Newest first
+            const olderYearsCount = Math.max(0, sortedYears.length - 2);
+            const grayGradient = generateGrayGradient(olderYearsCount);
+
+            const datasets = sortedYears.map((year, index) => {
+                let color;
+                if (index === 0) {
+                    color = '#ef4444'; // Current: Red
+                } else if (index === 1) {
+                    color = '#f59e0b'; // Previous: Amber
+                } else {
+                    // Older years: dark gray → light gray
+                    const grayIndex = Math.min(index - 2, grayGradient.length - 1);
+                    color = grayGradient[grayIndex];
+                }
+
+                return {
+                    label: `${year}`,
+                    data: labels.map(label => grouped[label][year] || 0),
+                    borderColor: color,
+                    backgroundColor: color + '15',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 2
+                };
+            });
 
             const ctx = document.getElementById('profitComparisonChart');
             if (!ctx) return;
@@ -877,20 +929,34 @@
                 grouped[key][year] += value;
             });
 
-            const years = [...yearsSet].sort();
+            const sortedYears = [...yearsSet].sort((a, b) => b - a); // Newest first
             const keys = sortLabelsByPeriod(Object.keys(grouped), groupBy);
-            const colors = ['#d1d5db', '#f59e0b', '#3b82f6'];
+            const olderYearsCount = Math.max(0, sortedYears.length - 2);
+            const grayGradient = generateGrayGradient(olderYearsCount);
 
-            const datasets = years.map((year, index) => ({
-                label: `${year}`,
-                data: keys.map(key => grouped[key][year] || 0),
-                borderColor: colors[Math.min(index, colors.length - 1)],
-                backgroundColor: colors[Math.min(index, colors.length - 1)] + '15',
-                borderWidth: 2,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 2
-            }));
+            const datasets = sortedYears.map((year, index) => {
+                let color;
+                if (index === 0) {
+                    color = '#ef4444'; // Current: Red
+                } else if (index === 1) {
+                    color = '#f59e0b'; // Previous: Amber
+                } else {
+                    // Older years: dark gray → light gray
+                    const grayIndex = Math.min(index - 2, grayGradient.length - 1);
+                    color = grayGradient[grayIndex];
+                }
+
+                return {
+                    label: `${year}`,
+                    data: keys.map(key => grouped[key][year] || 0),
+                    borderColor: color,
+                    backgroundColor: color + '15',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 2
+                };
+            });
 
             const ctx = document.getElementById('customOverlapChart');
             if (!ctx) return;
