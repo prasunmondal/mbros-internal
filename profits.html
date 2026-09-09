@@ -1825,19 +1825,35 @@
             </div>
         </div>
 
-        <!-- Expenses -->
+        <!-- KG Comparison -->
         <div class="chart-card">
-            <h3>💸 Expenses Breakdown</h3>
+            <h3>⚖️ KG Comparison (Year-over-Year)</h3>
 
             <div class="chart-controls">
-                <button class="control-btn" data-chart="expenses" data-group="day">Day</button>
-                <button class="control-btn" data-chart="expenses" data-group="week">Week</button>
-                <button class="control-btn active" data-chart="expenses" data-group="month">Month</button>
-                <button class="control-btn" data-chart="expenses" data-group="year">Year</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="day">Day</button>
+                <button class="control-btn active" data-chart="kgComparison" data-group="week">Week</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="year">Year</button>
             </div>
 
             <div class="chart-wrapper">
-                <canvas id="expensesChart"></canvas>
+                <canvas id="kgComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Profit Comparison -->
+        <div class="chart-card">
+            <h3>💰 Profit Comparison (Year-over-Year)</h3>
+
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="profitComparison" data-group="day">Day</button>
+                <button class="control-btn active" data-chart="profitComparison" data-group="week">Week</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="year">Year</button>
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="profitComparisonChart"></canvas>
             </div>
         </div>
 
@@ -1854,6 +1870,22 @@
 
             <div class="chart-wrapper">
                 <canvas id="dueBalanceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Expenses -->
+        <div class="chart-card">
+            <h3>💸 Expenses Breakdown</h3>
+
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="expenses" data-group="day">Day</button>
+                <button class="control-btn" data-chart="expenses" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="expenses" data-group="month">Month</button>
+                <button class="control-btn" data-chart="expenses" data-group="year">Year</button>
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="expensesChart"></canvas>
             </div>
         </div>
 
@@ -1886,38 +1918,6 @@
 
             <div class="chart-wrapper">
                 <canvas id="totalExpensesChart"></canvas>
-            </div>
-        </div>
-
-        <!-- KG Comparison -->
-        <div class="chart-card">
-            <h3>⚖️ KG Comparison (Year-over-Year)</h3>
-
-            <div class="chart-controls">
-                <button class="control-btn" data-chart="kgComparison" data-group="day">Day</button>
-                <button class="control-btn active" data-chart="kgComparison" data-group="week">Week</button>
-                <button class="control-btn" data-chart="kgComparison" data-group="month">Month</button>
-                <button class="control-btn" data-chart="kgComparison" data-group="year">Year</button>
-            </div>
-
-            <div class="chart-wrapper">
-                <canvas id="kgComparisonChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Profit Comparison -->
-        <div class="chart-card">
-            <h3>💰 Profit Comparison (Year-over-Year)</h3>
-
-            <div class="chart-controls">
-                <button class="control-btn" data-chart="profitComparison" data-group="day">Day</button>
-                <button class="control-btn active" data-chart="profitComparison" data-group="week">Week</button>
-                <button class="control-btn" data-chart="profitComparison" data-group="month">Month</button>
-                <button class="control-btn" data-chart="profitComparison" data-group="year">Year</button>
-            </div>
-
-            <div class="chart-wrapper">
-                <canvas id="profitComparisonChart"></canvas>
             </div>
         </div>
 
