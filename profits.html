@@ -311,9 +311,9 @@
             populateBarChartYearFilters();
             updateActualMoneyBarChart('month');
             updateActualMoneyLast12MonthsChart();
-            updateKgComparisonChart('week');
-            updateProfitComparisonChart('week');
-            updateActualMoneyComparisonChart('week');
+            updateKgComparisonChart('month');
+            updateProfitComparisonChart('month');
+            updateActualMoneyComparisonChart('month');
 
             populateCustomGraphDropdowns();
             updateCustomOverlapChart();
@@ -1136,7 +1136,7 @@
                         legend: baseConfig.plugins.legend,
                         datalabels: {
                             display: true,
-                            color: '#1a1f36',
+                            color: '#9ca3af',
                             font: { weight: 'bold', size: 11 },
                             anchor: 'end',
                             align: 'end',
@@ -1611,8 +1611,8 @@
             <h3>KG Comparison (Year-over-Year)</h3>
             <div class="chart-controls">
                 <button class="control-btn" data-chart="kgComparison" data-group="day">Day</button>
-                <button class="control-btn active" data-chart="kgComparison" data-group="week">Week</button>
-                <button class="control-btn" data-chart="kgComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="kgComparison" data-group="month">Month</button>
                 <button class="control-btn" data-chart="kgComparison" data-group="year">Year</button>
             </div>
             <div class="chart-wrapper">
@@ -1624,8 +1624,8 @@
             <h3>Profit Comparison (Year-over-Year)</h3>
             <div class="chart-controls">
                 <button class="control-btn" data-chart="profitComparison" data-group="day">Day</button>
-                <button class="control-btn active" data-chart="profitComparison" data-group="week">Week</button>
-                <button class="control-btn" data-chart="profitComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="profitComparison" data-group="month">Month</button>
                 <button class="control-btn" data-chart="profitComparison" data-group="year">Year</button>
             </div>
             <div class="chart-wrapper">
