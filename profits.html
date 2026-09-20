@@ -304,6 +304,7 @@
             updateProfitPerKgChart('month');
             updateTotalExpensesChart('month');
             updateActualMoneyChart('month');
+            updateActualMoneyBarChart('month');
             updateKgComparisonChart('week');
             updateProfitComparisonChart('week');
             updateActualMoneyComparisonChart('week');
@@ -733,6 +734,81 @@
                     }]
                 },
                 options: getChartConfig()
+            });
+        }
+
+        function updateActualMoneyBarChart(groupBy) {
+            if (!rawData) return;
+
+            const grouped = {}, dateMap = {};
+            const periodData = {}; // Track transactions per period
+
+            rawData[0].content.forEach(entry => {
+                if (!entry.date) return;
+                const date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                const key = formatDate(date, groupBy);
+                if (!periodData[key]) {
+                    periodData[key] = [];
+                    dateMap[key] = date;
+                }
+                periodData[key].push(entry);
+            });
+
+            // Calculate actualMoney at period level
+            Object.keys(periodData).forEach(key => {
+                const transactions = periodData[key];
+
+                // Sum profits for the period
+                const totalProfit = transactions.reduce((sum, t) => sum + (parseFloat(t.profit) || 0), 0);
+
+                // Get starting and ending due balances for the period
+                const firstTransaction = transactions[0];
+                const lastTransaction = transactions[transactions.length - 1];
+
+                const startingDueBalance = parseFloat(firstTransaction.prev_due_balance) || 0;
+                const endingDueBalance = parseFloat(lastTransaction.new_due_balance) || 0;
+
+                // Debt change = how much due balance increased/decreased
+                const debtChange = endingDueBalance - startingDueBalance;
+
+                // Actual money = profit - debt change
+                // (negative debt change = customer payments reducing balance = more cash in)
+                grouped[key] = totalProfit - debtChange;
+            });
+
+            const labels = Object.keys(grouped).sort((a, b) => dateMap[a] - dateMap[b]);
+            const ctx = document.getElementById('actualMoneyBarChart');
+            if (!ctx) return;
+
+            destroyChart('actualMoneyBarChart');
+            chartInstances['actualMoneyBarChart'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Actual Money Received',
+                        data: labels.map(label => grouped[label]),
+                        backgroundColor: '#8b5cf6',
+                        borderColor: '#7c3aed',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    ...getChartConfig(),
+                    scales: {
+                        ...getChartConfig().scales,
+                        x: {
+                            ...getChartConfig().scales.x,
+                            stacked: false
+                        },
+                        y: {
+                            ...getChartConfig().scales.y,
+                            stacked: false
+                        }
+                    }
+                }
             });
         }
 
@@ -1191,6 +1267,7 @@
                         profitPerKg: updateProfitPerKgChart,
                         totalExpenses: updateTotalExpensesChart,
                         actualMoney: updateActualMoneyChart,
+                        actualMoneyBar: updateActualMoneyBarChart,
                         kgComparison: updateKgComparisonChart,
                         profitComparison: updateProfitComparisonChart,
                         actualMoneyComparison: updateActualMoneyComparisonChart
@@ -1339,7 +1416,7 @@
         </div>
 
         <div class="chart-card">
-            <h3>Actual Money Received</h3>
+            <h3>Actual Money Received (Line Chart)</h3>
             <div class="chart-controls">
                 <button class="control-btn" data-chart="actualMoney" data-group="day">Day</button>
                 <button class="control-btn" data-chart="actualMoney" data-group="week">Week</button>
@@ -1348,6 +1425,19 @@
             </div>
             <div class="chart-wrapper">
                 <canvas id="actualMoneyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Actual Money Received (Bar Chart)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="actualMoneyBar" data-group="day">Day</button>
+                <button class="control-btn" data-chart="actualMoneyBar" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="actualMoneyBar" data-group="month">Month</button>
+                <button class="control-btn" data-chart="actualMoneyBar" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="actualMoneyBarChart"></canvas>
             </div>
         </div>
 
