@@ -1588,41 +1588,9 @@
     <div class="charts-grid">
 
         <div class="chart-card">
-            <h3>KG Comparison (Year-over-Year)</h3>
-            <div class="chart-controls">
-                <button class="control-btn" data-chart="kgComparison" data-group="day">Day</button>
-                <button class="control-btn active" data-chart="kgComparison" data-group="week">Week</button>
-                <button class="control-btn" data-chart="kgComparison" data-group="month">Month</button>
-                <button class="control-btn" data-chart="kgComparison" data-group="year">Year</button>
-            </div>
+            <h3>Actual Money Received (Last 12 Months)</h3>
             <div class="chart-wrapper">
-                <canvas id="kgComparisonChart"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-card">
-            <h3>Actual Money Received Comparison (Year-over-Year)</h3>
-            <div class="chart-controls">
-                <button class="control-btn" data-chart="actualMoneyComparison" data-group="day">Day</button>
-                <button class="control-btn active" data-chart="actualMoneyComparison" data-group="week">Week</button>
-                <button class="control-btn" data-chart="actualMoneyComparison" data-group="month">Month</button>
-                <button class="control-btn" data-chart="actualMoneyComparison" data-group="year">Year</button>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="actualMoneyComparisonChart"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-card">
-            <h3>Profit Comparison (Year-over-Year)</h3>
-            <div class="chart-controls">
-                <button class="control-btn" data-chart="profitComparison" data-group="day">Day</button>
-                <button class="control-btn active" data-chart="profitComparison" data-group="week">Week</button>
-                <button class="control-btn" data-chart="profitComparison" data-group="month">Month</button>
-                <button class="control-btn" data-chart="profitComparison" data-group="year">Year</button>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="profitComparisonChart"></canvas>
+                <canvas id="actualMoneyLast12MonthsChart"></canvas>
             </div>
         </div>
 
@@ -1636,6 +1604,32 @@
             </div>
             <div class="chart-wrapper">
                 <canvas id="profitChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>KG Comparison (Year-over-Year)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="kgComparison" data-group="day">Day</button>
+                <button class="control-btn active" data-chart="kgComparison" data-group="week">Week</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="kgComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Profit Comparison (Year-over-Year)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="profitComparison" data-group="day">Day</button>
+                <button class="control-btn active" data-chart="profitComparison" data-group="week">Week</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="profitComparisonChart"></canvas>
             </div>
         </div>
 
@@ -1692,19 +1686,6 @@
         </div>
 
         <div class="chart-card">
-            <h3>Actual Money Received (Line Chart)</h3>
-            <div class="chart-controls">
-                <button class="control-btn" data-chart="actualMoney" data-group="day">Day</button>
-                <button class="control-btn" data-chart="actualMoney" data-group="week">Week</button>
-                <button class="control-btn active" data-chart="actualMoney" data-group="month">Month</button>
-                <button class="control-btn" data-chart="actualMoney" data-group="year">Year</button>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="actualMoneyChart"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-card">
             <h3>Actual Money Received (Bar Chart)</h3>
             <div class="chart-controls">
                 <button class="control-btn" data-chart="actualMoneyBar" data-group="day">Day</button>
@@ -1722,13 +1703,6 @@
             <div id="barChartYearFilters" style="padding: 12px 0; border-top: 1px solid #e5e7eb; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 12px;"></div>
             <div class="chart-wrapper">
                 <canvas id="actualMoneyBarChart"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-card">
-            <h3>Actual Money Received (Last 12 Months)</h3>
-            <div class="chart-wrapper">
-                <canvas id="actualMoneyLast12MonthsChart"></canvas>
             </div>
         </div>
 
