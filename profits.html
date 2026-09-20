@@ -303,8 +303,10 @@
             updateDueBalanceChart('month');
             updateProfitPerKgChart('month');
             updateTotalExpensesChart('month');
+            updateActualMoneyChart('month');
             updateKgComparisonChart('week');
             updateProfitComparisonChart('week');
+            updateActualMoneyComparisonChart('week');
 
             populateCustomGraphDropdowns();
             updateCustomOverlapChart();
@@ -664,6 +666,163 @@
                         pointRadius: 2
                     }]
                 },
+                options: getChartConfig()
+            });
+        }
+
+        function updateActualMoneyChart(groupBy) {
+            if (!rawData) return;
+
+            const grouped = {}, dateMap = {};
+            const periodData = {}; // Track transactions per period
+
+            rawData[0].content.forEach(entry => {
+                if (!entry.date) return;
+                const date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                const key = formatDate(date, groupBy);
+                if (!periodData[key]) {
+                    periodData[key] = [];
+                    dateMap[key] = date;
+                }
+                periodData[key].push(entry);
+            });
+
+            // Calculate actualMoney at period level
+            Object.keys(periodData).forEach(key => {
+                const transactions = periodData[key];
+
+                // Sum profits for the period
+                const totalProfit = transactions.reduce((sum, t) => sum + (parseFloat(t.profit) || 0), 0);
+
+                // Get starting and ending due balances for the period
+                const firstTransaction = transactions[0];
+                const lastTransaction = transactions[transactions.length - 1];
+
+                const startingDueBalance = parseFloat(firstTransaction.prev_due_balance) || 0;
+                const endingDueBalance = parseFloat(lastTransaction.new_due_balance) || 0;
+
+                // Debt change = how much due balance increased/decreased
+                const debtChange = endingDueBalance - startingDueBalance;
+
+                // Actual money = profit - debt change
+                // (negative debt change = customer payments reducing balance = more cash in)
+                grouped[key] = totalProfit - debtChange;
+            });
+
+            const labels = Object.keys(grouped).sort((a, b) => dateMap[a] - dateMap[b]);
+            const ctx = document.getElementById('actualMoneyChart');
+            if (!ctx) return;
+
+            destroyChart('actualMoneyChart');
+            chartInstances['actualMoneyChart'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Actual Money Received',
+                        data: labels.map(label => grouped[label]),
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#8b5cf6'
+                    }]
+                },
+                options: getChartConfig()
+            });
+        }
+
+        function updateActualMoneyComparisonChart(groupBy) {
+            if (!rawData) return;
+
+            const grouped = {}, yearsSet = new Set(), dateMap = {};
+            const periodTransactions = {}; // Track transactions per period-year
+
+            // First, group transactions by period (without year) and collect all
+            const transactionsByPeriod = {};
+            rawData[0].content.forEach(entry => {
+                if (!entry.date) return;
+                const date = new Date(entry.date);
+                if (isNaN(date.getTime())) return;
+
+                const key = formatDate(date, groupBy, false); // Period without year
+                const year = date.getFullYear();
+
+                if (!transactionsByPeriod[key]) {
+                    transactionsByPeriod[key] = {};
+                }
+                if (!transactionsByPeriod[key][year]) {
+                    transactionsByPeriod[key][year] = [];
+                }
+                transactionsByPeriod[key][year].push(entry);
+
+                yearsSet.add(year);
+                if (!dateMap[key]) dateMap[key] = date;
+            });
+
+            // Calculate actualMoney at period-year level
+            Object.keys(transactionsByPeriod).forEach(key => {
+                if (!grouped[key]) grouped[key] = {};
+
+                Object.keys(transactionsByPeriod[key]).forEach(year => {
+                    const transactions = transactionsByPeriod[key][year];
+
+                    // Sum profits for the period-year
+                    const totalProfit = transactions.reduce((sum, t) => sum + (parseFloat(t.profit) || 0), 0);
+
+                    // Get starting and ending due balances
+                    const firstTransaction = transactions[0];
+                    const lastTransaction = transactions[transactions.length - 1];
+
+                    const startingDueBalance = parseFloat(firstTransaction.prev_due_balance) || 0;
+                    const endingDueBalance = parseFloat(lastTransaction.new_due_balance) || 0;
+
+                    // Debt change and actual money
+                    const debtChange = endingDueBalance - startingDueBalance;
+                    grouped[key][year] = totalProfit - debtChange;
+                });
+            });
+
+            const sortedYears = [...yearsSet].sort((a, b) => b - a); // Newest first
+            const labels = sortLabelsByPeriod(Object.keys(grouped), groupBy);
+            const olderYearsCount = Math.max(0, sortedYears.length - 2);
+            const grayGradient = generateGrayGradient(olderYearsCount);
+
+            const datasets = sortedYears.map((year, index) => {
+                let color;
+                if (index === 0) {
+                    color = '#8b5cf6'; // Current: Purple
+                } else if (index === 1) {
+                    color = '#a78bfa'; // Previous: Light Purple
+                } else {
+                    // Older years: dark gray → light gray
+                    const grayIndex = Math.min(index - 2, grayGradient.length - 1);
+                    color = grayGradient[grayIndex];
+                }
+
+                return {
+                    label: `${year}`,
+                    data: labels.map(label => grouped[label][year] || 0),
+                    borderColor: color,
+                    backgroundColor: color + '15',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 2
+                };
+            });
+
+            const ctx = document.getElementById('actualMoneyComparisonChart');
+            if (!ctx) return;
+
+            destroyChart('actualMoneyComparisonChart');
+            chartInstances['actualMoneyComparisonChart'] = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
                 options: getChartConfig()
             });
         }
@@ -1031,8 +1190,10 @@
                         dueBalance: updateDueBalanceChart,
                         profitPerKg: updateProfitPerKgChart,
                         totalExpenses: updateTotalExpensesChart,
+                        actualMoney: updateActualMoneyChart,
                         kgComparison: updateKgComparisonChart,
-                        profitComparison: updateProfitComparisonChart
+                        profitComparison: updateProfitComparisonChart,
+                        actualMoneyComparison: updateActualMoneyComparisonChart
                     };
 
                     if (chartUpdaters[chartType]) {
@@ -1083,6 +1244,19 @@
             </div>
             <div class="chart-wrapper">
                 <canvas id="kgComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Actual Money Received Comparison (Year-over-Year)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="actualMoneyComparison" data-group="day">Day</button>
+                <button class="control-btn active" data-chart="actualMoneyComparison" data-group="week">Week</button>
+                <button class="control-btn" data-chart="actualMoneyComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="actualMoneyComparison" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="actualMoneyComparisonChart"></canvas>
             </div>
         </div>
 
@@ -1161,6 +1335,19 @@
             </div>
             <div class="chart-wrapper">
                 <canvas id="totalExpensesChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Actual Money Received</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="actualMoney" data-group="day">Day</button>
+                <button class="control-btn" data-chart="actualMoney" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="actualMoney" data-group="month">Month</button>
+                <button class="control-btn" data-chart="actualMoney" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="actualMoneyChart"></canvas>
             </div>
         </div>
 
