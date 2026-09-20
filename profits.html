@@ -304,6 +304,7 @@
             updateProfitPerKgChart('month');
             updateTotalExpensesChart('month');
             updateActualMoneyChart('month');
+            populateBarChartYearFilters();
             updateActualMoneyBarChart('month');
             updateKgComparisonChart('week');
             updateProfitComparisonChart('week');
@@ -737,48 +738,153 @@
             });
         }
 
+        function getAvailableYearsForBar() {
+            if (!rawData || !rawData[0] || !rawData[0].content) return [];
+
+            const yearsSet = new Set();
+            rawData[0].content.forEach(entry => {
+                if (!entry.date) return;
+                const date = new Date(entry.date);
+                if (!isNaN(date.getTime())) {
+                    yearsSet.add(date.getFullYear());
+                }
+            });
+
+            return [...yearsSet].sort((a, b) => b - a); // Newest first
+        }
+
+        function populateBarChartYearFilters() {
+            const years = getAvailableYearsForBar();
+            const container = document.getElementById('barChartYearFilters');
+            if (!container) return;
+
+            container.innerHTML = '';
+            years.forEach(year => {
+                const label = document.createElement('label');
+                label.style.display = 'inline-flex';
+                label.style.alignItems = 'center';
+                label.style.marginRight = '15px';
+                label.style.cursor = 'pointer';
+                label.style.gap = '6px';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = year;
+                checkbox.checked = true;
+                checkbox.dataset.year = year;
+                checkbox.style.cursor = 'pointer';
+
+                const text = document.createElement('span');
+                text.textContent = year;
+                text.style.fontSize = '13px';
+                text.style.fontWeight = '500';
+                text.style.color = '#6b7280';
+
+                label.appendChild(checkbox);
+                label.appendChild(text);
+                container.appendChild(label);
+
+                checkbox.addEventListener('change', updateActualMoneyBarChart);
+            });
+        }
+
         function updateActualMoneyBarChart(groupBy) {
             if (!rawData) return;
 
-            const grouped = {}, dateMap = {};
-            const periodData = {}; // Track transactions per period
+            // Get selected years
+            const yearCheckboxes = document.querySelectorAll('#barChartYearFilters input[type="checkbox"]');
+            const selectedYears = new Set();
+            yearCheckboxes.forEach(cb => {
+                if (cb.checked) {
+                    selectedYears.add(parseInt(cb.value));
+                }
+            });
+
+            if (selectedYears.size === 0) {
+                // If no years selected, show all
+                getAvailableYearsForBar().forEach(year => selectedYears.add(year));
+            }
+
+            // Handle both click event (has groupBy) and checkbox change (no groupBy)
+            if (typeof groupBy !== 'string') {
+                const timeSelect = document.getElementById('barTimeGroup');
+                groupBy = timeSelect ? timeSelect.value : 'month';
+            }
+
+            const periodByYear = {}, dateMap = {}, yearsSet = new Set();
 
             rawData[0].content.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
 
-                const key = formatDate(date, groupBy);
-                if (!periodData[key]) {
-                    periodData[key] = [];
+                const year = date.getFullYear();
+                if (!selectedYears.has(year)) return;
+
+                const key = formatDate(date, groupBy, false); // Period without year
+                if (!periodByYear[key]) {
+                    periodByYear[key] = {};
                     dateMap[key] = date;
                 }
-                periodData[key].push(entry);
+                if (!periodByYear[key][year]) {
+                    periodByYear[key][year] = [];
+                }
+                periodByYear[key][year].push(entry);
+                yearsSet.add(year);
             });
 
-            // Calculate actualMoney at period level
-            Object.keys(periodData).forEach(key => {
-                const transactions = periodData[key];
+            // Calculate actualMoney for each period-year
+            const grouped = {};
+            Object.keys(periodByYear).forEach(key => {
+                if (!grouped[key]) grouped[key] = {};
 
-                // Sum profits for the period
-                const totalProfit = transactions.reduce((sum, t) => sum + (parseFloat(t.profit) || 0), 0);
+                Object.keys(periodByYear[key]).forEach(year => {
+                    const transactions = periodByYear[key][year];
 
-                // Get starting and ending due balances for the period
-                const firstTransaction = transactions[0];
-                const lastTransaction = transactions[transactions.length - 1];
+                    // Sum profits for the period
+                    const totalProfit = transactions.reduce((sum, t) => sum + (parseFloat(t.profit) || 0), 0);
 
-                const startingDueBalance = parseFloat(firstTransaction.prev_due_balance) || 0;
-                const endingDueBalance = parseFloat(lastTransaction.new_due_balance) || 0;
+                    // Get starting and ending due balances for the period
+                    const firstTransaction = transactions[0];
+                    const lastTransaction = transactions[transactions.length - 1];
 
-                // Debt change = how much due balance increased/decreased
-                const debtChange = endingDueBalance - startingDueBalance;
+                    const startingDueBalance = parseFloat(firstTransaction.prev_due_balance) || 0;
+                    const endingDueBalance = parseFloat(lastTransaction.new_due_balance) || 0;
 
-                // Actual money = profit - debt change
-                // (negative debt change = customer payments reducing balance = more cash in)
-                grouped[key] = totalProfit - debtChange;
+                    // Debt change = how much due balance increased/decreased
+                    const debtChange = endingDueBalance - startingDueBalance;
+
+                    // Actual money = profit - debt change
+                    grouped[key][year] = totalProfit - debtChange;
+                });
             });
 
-            const labels = Object.keys(grouped).sort((a, b) => dateMap[a] - dateMap[b]);
+            const sortedYears = [...yearsSet].sort((a, b) => b - a); // Newest first
+            const labels = sortLabelsByPeriod(Object.keys(grouped), groupBy);
+            const olderYearsCount = Math.max(0, sortedYears.length - 2);
+            const grayGradient = generateGrayGradient(olderYearsCount);
+
+            const datasets = sortedYears.map((year, index) => {
+                let color;
+                if (index === 0) {
+                    color = '#8b5cf6'; // Current: Purple
+                } else if (index === 1) {
+                    color = '#a78bfa'; // Previous: Light Purple
+                } else {
+                    // Older years: dark gray → light gray
+                    const grayIndex = Math.min(index - 2, grayGradient.length - 1);
+                    color = grayGradient[grayIndex];
+                }
+
+                return {
+                    label: `${year}`,
+                    data: labels.map(label => grouped[label][year] || 0),
+                    backgroundColor: color,
+                    borderColor: color,
+                    borderWidth: 1
+                };
+            });
+
             const ctx = document.getElementById('actualMoneyBarChart');
             if (!ctx) return;
 
@@ -787,13 +893,7 @@
                 type: 'bar',
                 data: {
                     labels,
-                    datasets: [{
-                        label: 'Actual Money Received',
-                        data: labels.map(label => grouped[label]),
-                        backgroundColor: '#8b5cf6',
-                        borderColor: '#7c3aed',
-                        borderWidth: 1
-                    }]
+                    datasets
                 },
                 options: {
                     ...getChartConfig(),
@@ -1283,6 +1383,7 @@
             document.getElementById('overlapYAxis')?.addEventListener('change', updateCustomOverlapChart);
             document.getElementById('linearTimeGroup')?.addEventListener('change', updateCustomLinearChart);
             document.getElementById('linearYAxis')?.addEventListener('change', updateCustomLinearChart);
+            document.getElementById('barTimeGroup')?.addEventListener('change', updateActualMoneyBarChart);
         }
 
         document.addEventListener("DOMContentLoaded", setupControls);
@@ -1435,7 +1536,15 @@
                 <button class="control-btn" data-chart="actualMoneyBar" data-group="week">Week</button>
                 <button class="control-btn active" data-chart="actualMoneyBar" data-group="month">Month</button>
                 <button class="control-btn" data-chart="actualMoneyBar" data-group="year">Year</button>
+                <span class="axis-label" style="margin-left: 20px;">Years:</span>
+                <select id="barTimeGroup" class="axis-select" style="margin-right: 10px;">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month" selected>Month</option>
+                    <option value="year">Year</option>
+                </select>
             </div>
+            <div id="barChartYearFilters" style="padding: 12px 0; border-top: 1px solid #e5e7eb; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 12px;"></div>
             <div class="chart-wrapper">
                 <canvas id="actualMoneyBarChart"></canvas>
             </div>
