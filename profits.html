@@ -425,6 +425,9 @@
                     legend: {
                         display: true,
                         labels: { font: { size: 12, weight: 600 }, color: '#6b7280' }
+                    },
+                    datalabels: {
+                        display: false
                     }
                 },
                 scales: {
@@ -917,16 +920,7 @@
                     plugins: {
                         legend: baseConfig.plugins.legend,
                         datalabels: {
-                            display: true,
-                            color: '#1a1f36',
-                            font: { weight: 'bold', size: 11 },
-                            anchor: 'end',
-                            align: 'end',
-                            offset: 4,
-                            formatter: (value) => {
-                                if (value === 0) return '';
-                                return value.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-                            }
+                            display: false
                         },
                         tooltip: {
                             backgroundColor: 'rgba(0, 0, 0, 0.8)',
