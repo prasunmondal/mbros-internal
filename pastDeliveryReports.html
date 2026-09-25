@@ -368,10 +368,11 @@
             color: #2563eb;
             font-weight: 700;
             cursor: pointer;
+            text-decoration: none;
         }
 
         .clickable-date:hover {
-            text-decoration: underline;
+            text-decoration: none;
         }
 
         .highlight-date-cell {
@@ -1438,24 +1439,23 @@
 
     function addHighlightedDate(date) {
 
-        if (!date) {
-            return;
-        }
-
-        if (
-            highlightedDates.includes(date)
-        ) {
-            return;
-        }
-
-        highlightedDates.push(date);
-
-        highlightedDates.sort();
-
-        renderHighlightedDates();
-
-        applyDateHighlights();
+    if (!date) {
+        return;
     }
+
+    if (highlightedDates.includes(date)) {
+        highlightedDates =
+            highlightedDates.filter(
+                d => d !== date
+            );
+    } else {
+        highlightedDates.push(date);
+        highlightedDates.sort();
+    }
+
+    renderHighlightedDates();
+    applyDateHighlights();
+}
 
 
     function removeHighlightedDate(date) {
@@ -2347,21 +2347,23 @@
        NUMBER FORMATTING
        ============================================================ */
 
-    function formatKg(value) {
+function formatKg(value) {
 
-        const number =
-            Number(value) || 0;
+    const number =
+        Number(value) || 0;
 
-
-        return number.toLocaleString(
-            "en-IN",
-            {
-                minimumFractionDigits: 3,
-                maximumFractionDigits: 3
-            }
-        );
+    if (number === 0) {
+        return "-";
     }
 
+    return number.toLocaleString(
+        "en-IN",
+        {
+            minimumFractionDigits: 3,
+            maximumFractionDigits: 3
+        }
+    );
+}
 
     /* ============================================================
        PRINT
