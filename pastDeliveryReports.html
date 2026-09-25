@@ -3,554 +3,2470 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Delivery Analysis</title>
 
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 1200px; margin: auto; text-align: center; }
-        input { margin: 5px; }
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, Arial, sans-serif;
+            background: #f3f5f8;
+            color: #222;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            min-width: 320px;
+            background: #151a23;
+            color: #fff;
+            padding: 24px;
+            min-height: 100vh;
+        }
+
+        .sidebar-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-bottom: 28px;
+        }
+
+        .control-section {
+            margin-bottom: 24px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .date-picker {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #374151;
+            border-radius: 7px;
+            background: #202733;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .date-picker:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+
+        .primary-button {
+            width: 100%;
+            padding: 10px 14px;
+            margin-top: 8px;
+            border: none;
+            border-radius: 7px;
+            background: #2563eb;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .primary-button:hover {
+            background: #1d4ed8;
+        }
+
+        .secondary-button {
+            width: 100%;
+            padding: 10px 14px;
+            margin-top: 8px;
+            border: 1px solid #374151;
+            border-radius: 7px;
+            background: #202733;
+            color: #e5e7eb;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .secondary-button:hover {
+            background: #2a3240;
+        }
+
+        /* Date Groups */
+        .date-groups {
+            margin-top: 10px;
+        }
+
+        .date-group {
+            margin-bottom: 16px;
+            padding: 10px;
+            border: 1px solid #374151;
+            border-radius: 7px;
+            background: #1b212c;
+        }
+
+        .date-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .date-group-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #d1d5db;
+        }
+
+        .delete-group-button {
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0;
+            font-size: 15px;
+        }
+
+        .delete-group-button:hover {
+            color: #ef4444;
+        }
+
+        .date-group-dates {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .date-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 8px;
+            border-radius: 14px;
+            background: #263449;
+            border: 1px solid #3b4b64;
+            color: #dbeafe;
+            font-size: 12px;
+        }
+
+        .remove-date {
+            border: none;
+            background: transparent;
+            color: #f87171;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            font-size: 15px;
+        }
+
+        .date-group-navigation {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+            margin-top: 7px;
+        }
+
+        .date-navigation-option {
+            flex: 1;
+            border: 1px dashed #4b5563;
+            background: transparent;
+            color: #60a5fa;
+            border-radius: 5px;
+            padding: 5px 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .date-navigation-option:hover {
+            background: #202733;
+        }
+
+        .add-group-date-button {
+            width: 100%;
+            margin-top: 8px;
+            padding: 7px 8px;
+            border: 1px dashed #4b5563;
+            border-radius: 5px;
+            background: transparent;
+            color: #60a5fa;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .add-group-date-button:hover {
+            background: #202733;
+        }
+
+        .no-selected-dates {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        /* Highlighted dates */
+        .highlighted-dates {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .highlighted-date-chip {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 10px;
+            border-radius: 6px;
+            background: #4a3f16;
+            border: 1px solid #806f20;
+            color: #ffe97f;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .remove-highlight {
+            border: none;
+            background: transparent;
+            color: #fca5a5;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .remove-highlight:hover {
+            color: #ef4444;
+        }
+
+        .no-highlighted-dates {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        /* Loading */
+        #loading {
+            display: none;
+            margin-top: 10px;
+            color: #60a5fa;
+            font-size: 12px;
+        }
+
+        /* Right content */
+        .content {
+            flex: 1;
+            min-width: 0;
+            padding: 28px;
+            overflow-x: auto;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .content-title {
+            font-size: 26px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .content-subtitle {
+            margin-top: 5px;
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        /* Report */
+        .report-banner {
+            margin-bottom: 20px;
+            padding: 14px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .year-report {
+            margin-bottom: 30px;
+            padding: 18px;
+            border: 1px solid #e1e5ea;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .year-title {
+            margin: 0 0 12px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 19px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
+            font-size: 13px;
         }
 
-        th, td {
-            border: 1px solid #ddd;
+        th,
+        td {
+            border: 1px solid #e1e5ea;
             padding: 8px;
             text-align: center;
+            white-space: nowrap;
         }
 
-        th { background-color: #f4f4f4; }
+        th {
+            background: #f6f7f9;
+            font-weight: 600;
+        }
 
-        .total-row, .total-col {
-            font-weight: bold;
-            background-color: #f4f4f4;
+        .customer-header {
+            text-align: left;
+        }
+
+        .customer-cell {
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .total-row,
+        .total-col {
+            font-weight: 700;
+            background: #f6f7f9;
+        }
+
+        .total-header {
+            text-align: center !important;
+        }
+
+        /* Highlight */
+        .clickable-date {
+            color: #2563eb;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .clickable-date:hover {
+            text-decoration: underline;
         }
 
         .highlight-date-cell {
-            background-color: #fffdd0;
-            font-weight: bold;
+            background-color: #fff7b8 !important;
+            font-weight: 700;
         }
 
         .highlight-date-header {
-            background-color: #ffe97f;
-            font-weight: bold;
+            background-color: #ffe36e !important;
+            font-weight: 700;
         }
 
-        #loading {
-            display: none;
-            color: blue;
-            font-size: 14px;
-        }
-
-        /* Banner */
-        .report-banner {
-            margin-top: 20px;
-            padding: 12px;
-            font-size: 20px;
-            font-weight: bold;
+        /* Empty state */
+        .empty-state {
+            padding: 80px 20px;
             text-align: center;
-            border: 2px dashed #ccc;
-            border-radius: 6px;
-            background-color: #fffef2;
+            color: #9ca3af;
         }
 
-        /* Pinned */
-        .pinned-block {
-            border: 2px solid #ccc;
-            padding: 15px;
-            margin: 30px 0;
-            position: relative;
-            background-color: #fafafa;
+        .empty-state-title {
+            font-size: 20px;
+            color: #6b7280;
+            margin-bottom: 6px;
         }
 
-        .remove-pin-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #ffdddd;
-            border: 1px solid #cc0000;
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: 12px;
+        /* Print */
+        @media print {
+
+            @page {
+                size: portrait;
+                margin: 18mm 15mm 18mm 15mm;
+            }
+
+            body {
+                margin: 0;
+                background: white;
+            }
+
+            .dashboard {
+                display: block;
+            }
+
+            .sidebar {
+                display: none !important;
+            }
+
+            .content {
+                padding: 0;
+                margin: 0;
+                overflow: visible;
+            }
+
+            .content-header {
+                display: none !important;
+            }
+
+            .report-banner {
+                display: none !important;
+            }
+
+            .year-report {
+                margin: 0 0 20mm 0;
+                padding: 0;
+                border: none;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .year-report + .year-report {
+                page-break-before: always;
+                break-before: page;
+            }
+
+            table {
+                width: 100%;
+                margin-top: 8mm;
+            }
+
+            table,
+            tr,
+            td,
+            th {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
 
-        /* ---------- PRINT RULES ---------- */
-        /* ---------- PRINT SCOPES ---------- */
-@media print {
+        /* Mobile */
+        @media (max-width: 800px) {
 
-    body.print-active-only #pinnedTables,
-    body.print-active-only h2,
-    body.print-active-only #dateInputs,
-    body.print-active-only button,
-    body.print-active-only select,
-    body.print-active-only input,
-    body.print-active-only hr,
-    body.print-active-only #loading {
-        display: none !important;
-    }
+            .dashboard {
+                flex-direction: column;
+            }
 
-    body.print-pinned-only #activeReport,
-    body.print-pinned-only h2,
-    body.print-pinned-only #dateInputs,
-    body.print-pinned-only button,
-    body.print-pinned-only select,
-    body.print-pinned-only input,
-    body.print-pinned-only hr,
-    body.print-pinned-only #loading {
-        display: none !important;
-    }
+            .sidebar {
+                width: 100%;
+                min-width: 0;
+                min-height: auto;
+            }
 
-    .remove-pin-btn {
-        display: none !important;
-    }
+            .content {
+                padding: 18px;
+            }
 
-    @page {
-        size: portrait;
-        margin: 15mm;
-    }
-
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    /* Each pinned report on a new page */
-    .pinned-block {
-        page-break-before: always;
-        break-before: page;
-    }
-
-    /* Do NOT force page break before first pinned report */
-    .pinned-block:first-child {
-        page-break-before: auto;
-        break-before: auto;
-    }
-
-    .pinned-block {
-        padding-top: 10px;
-    }
-
-    /* Do NOT split a report across pages */
-    .pinned-block {
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-
-    /* Do NOT split table rows */
-    table, tr, td, th {
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-
-    .pinned-block {
-        page-break-before: always;
-        break-before: page;
-    }
-
-    .pinned-block:first-child {
-        page-break-before: auto;
-        break-before: auto;
-    }
-
-    .pinned-block {
-        transform: scale(0.95);
-        transform-origin: top left;
-    }
-
-        .print-hide {
-        display: none !important;
-    }
-
-.pinned-block {
-        page-break-before: always;
-        break-before: page;
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-
-    .pinned-block:first-child {
-        page-break-before: auto;
-        break-before: auto;
-    }
-
-    /* Do not split tables or rows */
-    table, tr, td, th {
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-
-    /* Optional: scale slightly to fit portrait */
-    .pinned-block {
-        transform: scale(0.95);
-        transform-origin: top left;
-    }
-
-    /* Preserve colors */
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    .date-hint {
-    cursor: pointer;
-    color: #007bff;
-    font-weight: bold;
-    padding: 2px 6px;
-}
-
-.date-hint:hover {
-    text-decoration: underline;
-}
-
-}
-
+            .content-header {
+                align-items: flex-start;
+                gap: 10px;
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="dashboard">
 
-    <h2>Delivery Analysis</h2>
+    <!-- LEFT SIDEBAR -->
 
-    <label class="print-hide">Select dates:</label>
-    <div id="dateInputs">
-        <input type="date" class="date-picker" onchange="updateDateHints()">
-    </div>
+    <input
+            type="date"
+            id="calendarDate"
+            style="display: none;"
+    >
 
-    <div id="dateHints" style="margin-bottom:15px; margin-top:5px; font-size:13px; color:#555;">
-        Quick add:
-        <span id="prevDateHint" class="date-hint"></span>
-        |
-        <span id="nextDateHint" class="date-hint"></span>
-    </div>
+    <aside class="sidebar">
 
-    <button onclick="addDateInput()">+ Add Date</button>
-    <button onclick="fetchData()">Get Delivered KG</button>
+        <div class="sidebar-title">
+            Delivery Analysis
+        </div>
 
-    <label class="print-hide">Highlight Date:</label>
-    <select id="highlightDate" onchange="highlightSelectedDate()">
-        <option value="">-- Select --</option>
-    </select>
+        <div class="sidebar-subtitle">
+            Select dates and analyze delivered KG
+        </div>
 
-    <p id="loading">Fetching data...</p>
+        <!-- REPORT TITLE -->
 
-    <div style="margin-top:15px;">
-        <button onclick="pinCurrentTable()">📌 Pin Report</button>
-        <button onclick="printActiveReport()">🖨️ Print / Save Active</button>
-    </div>
+        <div class="control-section">
 
-    <!-- ACTIVE REPORT -->
-    <div id="activeReport">
-        <div id="reportBanner" contenteditable="true" class="report-banner">
+            <label class="control-label">
+                Report Title
+            </label>
+
+            <input
+                    type="text"
+                    id="reportTitle"
+                    class="date-picker"
+                    value="Durga Puja"
+                    placeholder="Enter report title"
+            >
+
+        </div>
+
+        <!-- DATE GROUPS -->
+
+        <div class="control-section">
+
+            <label class="control-label">
+                Selected Dates
+            </label>
+
+            <div
+                    id="dateGroups"
+                    class="date-groups"
+            ></div>
+
+            <button
+                    type="button"
+                    class="primary-button"
+                    onclick="createDateGroup()"
+            >
+                + Create Group
+            </button>
+
+        </div>
+
+        <!-- HIGHLIGHTED DATES -->
+
+        <div class="control-section">
+
+            <label class="control-label">
+                Highlighted Dates
+            </label>
+
+            <div
+                    id="highlightedDates"
+                    class="highlighted-dates"
+            >
+                <span class="no-highlighted-dates">
+                    Click a date in the report
+                </span>
+            </div>
+
+        </div>
+
+        <!-- ACTIONS -->
+
+        <div class="control-section">
+
+            <button
+                    class="primary-button"
+                    onclick="fetchData()"
+            >
+                Get Delivered KG
+            </button>
+
+            <button
+                    class="secondary-button"
+                    onclick="printReport()"
+            >
+                🖨 Print Report
+            </button>
+
+            <p id="loading">
+                Fetching data...
+            </p>
+
+        </div>
+
+    </aside>
+
+
+    <!-- RIGHT CONTENT -->
+
+    <main class="content">
+
+        <div class="content-header">
+
+            <div>
+
+                <h1 class="content-title">
+                    Delivery Report
+                </h1>
+
+                <div class="content-subtitle">
+                    Delivery quantities grouped by event period
+                </div>
+
+            </div>
+
+        </div>
+
+        <div
+                id="reportBanner"
+                class="report-banner"
+        >
             Delivered KG Report
         </div>
 
-        <table id="resultTable">
-            <thead><tr id="tableHeader"></tr></thead>
-            <tbody></tbody>
-            <tfoot><tr id="tableFooter"></tr></tfoot>
-        </table>
-    </div>
+        <div id="yearReports">
 
-    <hr style="margin:20px 0;">
+            <div class="empty-state">
 
-    <button onclick="printAllPinned()">🖨️ Print / Save ALL Pinned</button>
+                <div class="empty-state-title">
+                    No report generated
+                </div>
 
-    <h3 class="print-hide">📌 Pinned Reports</h3>
+                <div>
+                    Create one or more date groups from the left panel
+                    and click "Get Delivered KG".
+                </div>
 
-    <div id="pinnedTables"></div>
+            </div>
+
+        </div>
+
+    </main>
 
 </div>
 
+
 <script>
-    const apiUrl = 'https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec';
 
-    function addDateInput(value = "") {
-    const input = document.createElement("input");
-    input.type = "date";
-    input.className = "date-picker";
-    input.value = value;
+    /* ============================================================
+       CONFIGURATION
+       ============================================================ */
 
-    // ✅ Update hints immediately on change
-    input.addEventListener("change", updateDateHints);
+    const CONFIG = {
 
-    document.getElementById("dateInputs").appendChild(input);
+        apiUrl:
+            "https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec",
 
-    // Update hints after adding
-    updateDateHints();
-}
+        operations: [
+            {
+                opCode: "FETCH_ALL",
+                sheetId:
+                    "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw",
+                tabName: "deliveries.2023",
+                opId: "mbros-github-site-1"
+            },
+            {
+                opCode: "FETCH_ALL",
+                sheetId:
+                    "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
+                tabName: "db2.deliveries",
+                opId: "mbros-github-site-2"
+            }
+        ]
+    };
 
 
+    /* ============================================================
+       STATE
+       ============================================================ */
 
-    function formatDateToIST(d) {
-        const date = new Date(d);
-        date.setHours(date.getHours() + 5, date.getMinutes() + 30);
+    let dateGroups = [];
+
+    let highlightedDates = [];
+
+    let allTransactions = null;
+
+    let nextGroupId = 1;
+
+
+    /* ============================================================
+       REPORT TITLE
+       ============================================================ */
+
+    function getReportTitle() {
+
+        const input =
+            document.getElementById(
+                "reportTitle"
+            );
+
+        return (
+            input?.value.trim() ||
+            "Delivery Report"
+        );
+    }
+
+
+    /* ============================================================
+       DATE HELPERS
+       ============================================================ */
+
+    function formatDateToIST(timestamp) {
+
+        const date = new Date(timestamp);
+
+        date.setHours(
+            date.getHours() + 5,
+            date.getMinutes() + 30
+        );
+
         return date.toISOString().split("T")[0];
     }
 
-    function getDayName(d) {
-        return new Date(d + "T00:00:00")
-            .toLocaleDateString("en-US", { weekday: "long" });
+
+    function parseDate(dateString) {
+
+        const [year, month, day] =
+            dateString.split("-").map(Number);
+
+        return new Date(
+            year,
+            month - 1,
+            day
+        );
     }
 
-    async function fetchData() {
-    const dates = [...document.querySelectorAll(".date-picker")]
-        .map(i => i.value)
-        .filter(Boolean);
 
-    if (!dates.length) return alert("Select dates");
+    function formatDateDisplay(dateString) {
 
-    document.getElementById("loading").style.display = "block";
+        const date =
+            parseDate(dateString);
 
-    const formData = new FormData();
-    formData.append("operations", JSON.stringify([
-        {
-            opCode: "FETCH_ALL",
-            sheetId: "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw",
-            tabName: "deliveries.2023",
-            opId: "mbros-github-site-1"
-        },
-        {
-            opCode: "FETCH_ALL",
-            sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-            tabName: "db2.deliveries",
-            opId: "mbros-github-site-2"
-        }
-    ]));
+        return date.toLocaleDateString(
+            "en-IN",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }
+        );
+    }
 
-    try {
-        const res = await fetch(apiUrl, { method: "POST", body: formData });
-        const json = await res.json();
 
-        // ✅ Merge data from both sheets
-        const data1 = json[0]?.content || [];
-        const data2 = json[1]?.content || [];
-        const data = [...data1, ...data2];
+    function formatDateWithDay(dateString) {
 
-const formattedDates = dates
-    .map(formatDateToIST)
-    .sort(); // YYYY-MM-DD sorts correctly
+        const date =
+            parseDate(dateString);
 
-        const filtered = data.filter(e =>
-            formattedDates.includes(formatDateToIST(e.timestamp))
+        const dateText =
+            date.toLocaleDateString(
+                "en-IN",
+                {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric"
+                }
+            );
+
+        const dayText =
+            date.toLocaleDateString(
+                "en-IN",
+                {
+                    weekday: "long"
+                }
+            );
+
+        return {
+            date: dateText,
+            day: dayText
+        };
+    }
+
+
+    function addDays(dateString, days) {
+
+        const date =
+            parseDate(dateString);
+
+        date.setDate(
+            date.getDate() + days
         );
 
-        let customers = {};
-        let dateSums = {};
+        const year =
+            date.getFullYear();
 
-        filtered.forEach(e => {
-            const d = formatDateToIST(e.timestamp);
-            const n = e.name || "Unknown";
-            const kg = +e.deliveredKg || 0;
+        const month =
+            String(
+                date.getMonth() + 1
+            ).padStart(2, "0");
 
-            if (!customers[n]) customers[n] = {};
-            customers[n][d] = (customers[n][d] || 0) + kg;
-            dateSums[d] = (dateSums[d] || 0) + kg;
-        });
+        const day =
+            String(
+                date.getDate()
+            ).padStart(2, "0");
 
-        updateTable(formattedDates, customers, dateSums);
-
-        // Highlight dropdown
-        const sel = document.getElementById("highlightDate");
-        sel.innerHTML = '<option value="">-- Select --</option>';
-        formattedDates.forEach(d => {
-            const opt = document.createElement("option");
-            opt.value = d;
-            opt.textContent = d;
-            sel.appendChild(opt);
-        });
-
-    } catch (err) {
-        console.error("Fetch failed", err);
-        alert("Failed to fetch data");
-    } finally {
-        document.getElementById("loading").style.display = "none";
+        return `${year}-${month}-${day}`;
     }
 
-    updateDateHints();
-}
 
+    /* ============================================================
+       GROUP HELPERS
+       ============================================================ */
 
-    function updateTable(dates, customers, dateSums) {
-        const header = document.getElementById("tableHeader");
-        const body = document.querySelector("#resultTable tbody");
-        const footer = document.getElementById("tableFooter");
-        const highlight = document.getElementById("highlightDate").value;
+    function getGroup(groupId) {
 
-        header.innerHTML = "<th>Customer</th>";
-        dates.forEach(d => {
-            header.innerHTML += `
-                <th class="${d===highlight?'highlight-date-header':''}">
-                    ${d}<br><small>${getDayName(d)}</small>
-                </th>`;
-        });
-        header.innerHTML += "<th>Total</th>";
-
-        body.innerHTML = "";
-        let grand = 0;
-
-        Object.entries(customers).forEach(([name, vals]) => {
-            let sum = 0;
-            let row = `<tr><td>${name}</td>`;
-            dates.forEach(d => {
-                const v = (vals[d]||0).toFixed(3);
-                row += `<td class="${d===highlight?'highlight-date-cell':''}">${v}</td>`;
-                sum += +v;
-            });
-            row += `<td class="total-row">${sum.toFixed(3)}</td></tr>`;
-            body.innerHTML += row;
-            grand += sum;
-        });
-
-        footer.innerHTML = "<th>Total</th>";
-        dates.forEach(d => footer.innerHTML += `<td class="total-col">${(dateSums[d]||0).toFixed(3)}</td>`);
-        footer.innerHTML += `<td class="total-col">${grand.toFixed(3)}</td>`;
+        return dateGroups.find(
+            group =>
+                group.id === groupId
+        );
     }
 
-    function highlightSelectedDate() {
-    const highlightDate = document.getElementById("highlightDate").value;
 
-    // Clear previous highlights
-    document.querySelectorAll(".highlight-date-cell")
-        .forEach(el => el.classList.remove("highlight-date-cell"));
+    function getAllSelectedDates() {
 
-    document.querySelectorAll(".highlight-date-header")
-        .forEach(el => el.classList.remove("highlight-date-header"));
+        return dateGroups.flatMap(
+            group => group.dates
+        );
+    }
 
-    if (!highlightDate) return;
 
-    // Highlight header
-    document.querySelectorAll("#tableHeader th").forEach(th => {
-        if (th.innerText.includes(highlightDate)) {
-            th.classList.add("highlight-date-header");
+    function isDateSelectedInGroup(
+        group,
+        date
+    ) {
+
+        return group.dates.includes(date);
+    }
+
+
+    function isDateSelectedAnywhere(
+        date
+    ) {
+
+        return dateGroups.some(
+            group =>
+                group.dates.includes(date)
+        );
+    }
+
+
+    /* ============================================================
+       CREATE GROUP
+       ============================================================ */
+
+    function createDateGroup() {
+
+        const group = {
+            id: nextGroupId++,
+            dates: []
+        };
+
+        dateGroups.push(group);
+
+        renderDateGroups();
+
+        /*
+         * Focus the date picker so the user can
+         * immediately choose a date.
+         */
+        document
+            .getElementById("calendarDate")
+            ?.focus();
+    }
+
+
+    /* ============================================================
+       DELETE GROUP
+       ============================================================ */
+
+    function deleteDateGroup(groupId) {
+
+        const group =
+            getGroup(groupId);
+
+        if (!group) {
+            return;
         }
-    });
 
-    // Highlight column cells
-    const headers = [...document.querySelectorAll("#tableHeader th")];
-    const colIndex = headers.findIndex(th =>
-        th.innerText.includes(highlightDate)
+        /*
+         * Remove highlights belonging
+         * to this group.
+         */
+        highlightedDates =
+            highlightedDates.filter(
+                date =>
+                    !group.dates.includes(date)
+            );
+
+        dateGroups =
+            dateGroups.filter(
+                group =>
+                    group.id !== groupId
+            );
+
+        renderDateGroups();
+
+        renderHighlightedDates();
+
+        if (allTransactions !== null) {
+            renderReportFromCachedData();
+        }
+    }
+
+
+    /* ============================================================
+       ADD DATE TO GROUP
+       ============================================================ */
+
+    function addDateToGroup(groupId) {
+
+        const input =
+            document.getElementById("calendarDate");
+
+        if (!input) {
+            return;
+        }
+
+        /*
+         * Remember which group is waiting
+         * for a date selection.
+         */
+        input.dataset.groupId = groupId;
+
+        /*
+         * Clear the previous selection so
+         * the calendar can be used again.
+         */
+        input.value = "";
+
+        /*
+         * Open the native date picker.
+         */
+        if (typeof input.showPicker === "function") {
+            input.showPicker();
+        } else {
+            input.click();
+        }
+    }
+
+
+    function addDateValueToGroup(
+        groupId,
+        date
+    ) {
+
+        const group =
+            getGroup(groupId);
+
+        if (!group || !date) {
+            return;
+        }
+
+        /*
+         * Do not allow duplicate date
+         * inside the same group.
+         */
+        if (
+            isDateSelectedInGroup(
+                group,
+                date
+            )
+        ) {
+            return;
+        }
+
+        group.dates.push(date);
+
+        group.dates.sort();
+
+        renderDateGroups();
+
+        if (allTransactions !== null) {
+            renderReportFromCachedData();
+        }
+    }
+
+
+    /* ============================================================
+       REMOVE DATE FROM GROUP
+       ============================================================ */
+
+    function removeDateFromGroup(
+        groupId,
+        date
+    ) {
+
+        const group =
+            getGroup(groupId);
+
+        if (!group) {
+            return;
+        }
+
+        group.dates =
+            group.dates.filter(
+                d => d !== date
+            );
+
+        /*
+         * Removed date cannot remain highlighted.
+         */
+        highlightedDates =
+            highlightedDates.filter(
+                d => d !== date
+            );
+
+        renderDateGroups();
+
+        renderHighlightedDates();
+
+        if (allTransactions !== null) {
+            renderReportFromCachedData();
+        }
+    }
+
+
+    /* ============================================================
+       RENDER DATE GROUPS
+       ============================================================ */
+
+    function renderDateGroups() {
+
+        const container =
+            document.getElementById(
+                "dateGroups"
+            );
+
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = "";
+
+        if (!dateGroups.length) {
+
+            const empty =
+                document.createElement(
+                    "span"
+                );
+
+            empty.className =
+                "no-selected-dates";
+
+            empty.textContent =
+                "No groups created";
+
+            container.appendChild(
+                empty
+            );
+
+            return;
+        }
+
+
+        dateGroups.forEach(
+            (group, index) => {
+
+                const groupElement =
+                    document.createElement(
+                        "div"
+                    );
+
+                groupElement.className =
+                    "date-group";
+
+
+                /* -----------------------------
+                   GROUP HEADER
+                   ----------------------------- */
+
+                const header =
+                    document.createElement(
+                        "div"
+                    );
+
+                header.className =
+                    "date-group-header";
+
+
+                const title =
+                    document.createElement(
+                        "span"
+                    );
+
+                title.className =
+                    "date-group-title";
+
+                title.textContent =
+                    `Group ${index + 1}`;
+
+
+                const deleteButton =
+                    document.createElement(
+                        "button"
+                    );
+
+                deleteButton.type =
+                    "button";
+
+                deleteButton.className =
+                    "delete-group-button";
+
+                deleteButton.textContent =
+                    "🗑";
+
+                deleteButton.title =
+                    "Delete group";
+
+                deleteButton.addEventListener(
+                    "click",
+                    () => {
+
+                        if (
+                            confirm(
+                                `Delete Group ${index + 1}?`
+                            )
+                        ) {
+                            deleteDateGroup(
+                                group.id
+                            );
+                        }
+
+                    }
+                );
+
+
+                header.appendChild(title);
+
+                header.appendChild(
+                    deleteButton
+                );
+
+                groupElement.appendChild(
+                    header
+                );
+
+
+                /* -----------------------------
+                   DATES
+                   ----------------------------- */
+
+                const datesContainer =
+                    document.createElement(
+                        "div"
+                    );
+
+                datesContainer.className =
+                    "date-group-dates";
+
+
+                group.dates.forEach(
+                    date => {
+
+                        const chip =
+                            document.createElement(
+                                "div"
+                            );
+
+                        chip.className =
+                            "date-chip";
+
+
+                        const text =
+                            document.createElement(
+                                "span"
+                            );
+
+                        text.textContent =
+                            formatDateDisplay(
+                                date
+                            );
+
+
+                        const remove =
+                            document.createElement(
+                                "button"
+                            );
+
+                        remove.type =
+                            "button";
+
+                        remove.className =
+                            "remove-date";
+
+                        remove.textContent =
+                            "×";
+
+                        remove.title =
+                            `Remove ${formatDateDisplay(
+                                date
+                            )}`;
+
+
+                        remove.addEventListener(
+                            "click",
+                            () => {
+
+                                removeDateFromGroup(
+                                    group.id,
+                                    date
+                                );
+
+                            }
+                        );
+
+
+                        chip.appendChild(text);
+
+                        chip.appendChild(
+                            remove
+                        );
+
+                        datesContainer.appendChild(
+                            chip
+                        );
+                    }
+                );
+
+
+                groupElement.appendChild(
+                    datesContainer
+                );
+
+
+                /* -----------------------------
+                   PREVIOUS / NEXT SUGGESTIONS
+                   ----------------------------- */
+
+                if (group.dates.length) {
+
+                    const firstDate =
+                        group.dates[0];
+
+                    const lastDate =
+                        group.dates[
+                        group.dates.length - 1
+                            ];
+
+
+                    const previousDate =
+                        addDays(
+                            firstDate,
+                            -1
+                        );
+
+                    const nextDate =
+                        addDays(
+                            lastDate,
+                            1
+                        );
+
+
+                    const navigation =
+                        document.createElement(
+                            "div"
+                        );
+
+                    navigation.className =
+                        "date-group-navigation";
+
+
+                    /*
+                     * Previous date
+                     */
+
+                    if (
+                        !isDateSelectedInGroup(
+                            group,
+                            previousDate
+                        )
+                    ) {
+
+                        const button =
+                            document.createElement(
+                                "button"
+                            );
+
+                        button.type =
+                            "button";
+
+                        button.className =
+                            "date-navigation-option";
+
+                        button.textContent =
+                            `← ${formatDateDisplay(
+                                previousDate
+                            )}`;
+
+                        button.title =
+                            `Add ${formatDateDisplay(
+                                previousDate
+                            )}`;
+
+
+                        button.addEventListener(
+                            "click",
+                            () => {
+
+                                addDateValueToGroup(
+                                    group.id,
+                                    previousDate
+                                );
+
+                            }
+                        );
+
+
+                        navigation.appendChild(
+                            button
+                        );
+                    }
+
+
+                    /*
+                     * Next date
+                     */
+
+                    if (
+                        !isDateSelectedInGroup(
+                            group,
+                            nextDate
+                        )
+                    ) {
+
+                        const button =
+                            document.createElement(
+                                "button"
+                            );
+
+                        button.type =
+                            "button";
+
+                        button.className =
+                            "date-navigation-option";
+
+                        button.textContent =
+                            `${formatDateDisplay(
+                                nextDate
+                            )} →`;
+
+                        button.title =
+                            `Add ${formatDateDisplay(
+                                nextDate
+                            )}`;
+
+
+                        button.addEventListener(
+                            "click",
+                            () => {
+
+                                addDateValueToGroup(
+                                    group.id,
+                                    nextDate
+                                );
+
+                            }
+                        );
+
+
+                        navigation.appendChild(
+                            button
+                        );
+                    }
+
+
+                    if (
+                        navigation.children.length
+                    ) {
+
+                        groupElement.appendChild(
+                            navigation
+                        );
+                    }
+                }
+
+
+                /* -----------------------------
+                   ADD DATE BUTTON
+                   ----------------------------- */
+
+                const addButton =
+                    document.createElement(
+                        "button"
+                    );
+
+                addButton.type =
+                    "button";
+
+                addButton.className =
+                    "add-group-date-button";
+
+                addButton.textContent =
+                    "+ Add Date";
+
+
+                addButton.addEventListener(
+                    "click",
+                    () => {
+
+                        addDateToGroup(
+                            group.id
+                        );
+
+                    }
+                );
+
+
+                groupElement.appendChild(
+                    addButton
+                );
+
+
+                container.appendChild(
+                    groupElement
+                );
+            }
+        );
+    }
+
+
+    /* ============================================================
+       HIGHLIGHTED DATES
+       ============================================================ */
+
+    function addHighlightedDate(date) {
+
+        if (!date) {
+            return;
+        }
+
+        if (
+            highlightedDates.includes(date)
+        ) {
+            return;
+        }
+
+        highlightedDates.push(date);
+
+        highlightedDates.sort();
+
+        renderHighlightedDates();
+
+        applyDateHighlights();
+    }
+
+
+    function removeHighlightedDate(date) {
+
+        highlightedDates =
+            highlightedDates.filter(
+                d => d !== date
+            );
+
+        renderHighlightedDates();
+
+        applyDateHighlights();
+    }
+
+
+    function renderHighlightedDates() {
+
+        const container =
+            document.getElementById(
+                "highlightedDates"
+            );
+
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = "";
+
+
+        if (!highlightedDates.length) {
+
+            const empty =
+                document.createElement(
+                    "span"
+                );
+
+            empty.className =
+                "no-highlighted-dates";
+
+            empty.textContent =
+                "Click a date in the report";
+
+            container.appendChild(
+                empty
+            );
+
+            return;
+        }
+
+
+        highlightedDates.forEach(
+            date => {
+
+                const chip =
+                    document.createElement(
+                        "div"
+                    );
+
+                chip.className =
+                    "highlighted-date-chip";
+
+
+                const text =
+                    document.createElement(
+                        "span"
+                    );
+
+                text.textContent =
+                    formatDateDisplay(
+                        date
+                    );
+
+
+                const remove =
+                    document.createElement(
+                        "button"
+                    );
+
+                remove.type =
+                    "button";
+
+                remove.className =
+                    "remove-highlight";
+
+                remove.textContent =
+                    "×";
+
+                remove.title =
+                    `Remove ${formatDateDisplay(
+                        date
+                    )}`;
+
+
+                remove.addEventListener(
+                    "click",
+                    () => {
+
+                        removeHighlightedDate(
+                            date
+                        );
+
+                    }
+                );
+
+
+                chip.appendChild(text);
+
+                chip.appendChild(remove);
+
+                container.appendChild(
+                    chip
+                );
+            }
+        );
+    }
+
+
+    function applyDateHighlights() {
+
+        document
+            .querySelectorAll(
+                "#yearReports .highlight-date-header"
+            )
+            .forEach(
+                element => {
+
+                    element.classList.remove(
+                        "highlight-date-header"
+                    );
+
+                }
+            );
+
+
+        document
+            .querySelectorAll(
+                "#yearReports .highlight-date-cell"
+            )
+            .forEach(
+                element => {
+
+                    element.classList.remove(
+                        "highlight-date-cell"
+                    );
+
+                }
+            );
+
+
+        highlightedDates.forEach(
+            date => {
+
+                document
+                    .querySelectorAll(
+                        `#yearReports [data-date="${date}"]`
+                    )
+                    .forEach(
+                        element => {
+
+                            if (
+                                element.tagName === "TH"
+                            ) {
+
+                                element.classList.add(
+                                    "highlight-date-header"
+                                );
+
+                            } else {
+
+                                element.classList.add(
+                                    "highlight-date-cell"
+                                );
+
+                            }
+
+                        }
+                    );
+
+            }
+        );
+    }
+
+
+    /* ============================================================
+       API / DATA FETCHING
+       ============================================================ */
+
+    async function fetchData() {
+
+        const allSelectedDates =
+            getAllSelectedDates();
+
+        if (!allSelectedDates.length) {
+
+            alert(
+                "Create a group and select at least one date"
+            );
+
+            return;
+        }
+
+
+        document.getElementById(
+            "loading"
+        ).style.display = "block";
+
+
+        try {
+
+            const formData =
+                new FormData();
+
+            formData.append(
+                "operations",
+                JSON.stringify(
+                    CONFIG.operations
+                )
+            );
+
+
+            const response =
+                await fetch(
+                    CONFIG.apiUrl,
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const json =
+                await response.json();
+
+
+            const data1 =
+                json[0]?.content || [];
+
+            const data2 =
+                json[1]?.content || [];
+
+
+            allTransactions =
+                [
+                    ...data1,
+                    ...data2
+                ];
+
+
+            renderReportFromCachedData();
+
+
+        } catch (error) {
+
+            console.error(
+                "Fetch failed:",
+                error
+            );
+
+            alert(
+                "Failed to fetch data"
+            );
+
+        } finally {
+
+            document.getElementById(
+                "loading"
+            ).style.display = "none";
+        }
+    }
+
+
+    /* ============================================================
+       FILTER CACHED DATA
+       ============================================================ */
+
+    function renderReportFromCachedData() {
+
+        if (
+            allTransactions === null
+        ) {
+            return;
+        }
+
+
+        const allSelectedDates =
+            getAllSelectedDates();
+
+
+        const selectedSet =
+            new Set(
+                allSelectedDates
+            );
+
+
+        const filteredTransactions =
+            allTransactions.filter(
+                transaction => {
+
+                    if (
+                        !transaction.timestamp
+                    ) {
+                        return false;
+                    }
+
+
+                    const date =
+                        formatDateToIST(
+                            transaction.timestamp
+                        );
+
+
+                    return selectedSet.has(
+                        date
+                    );
+                }
+            );
+
+
+        renderDateGroupReports(
+            dateGroups,
+            filteredTransactions
+        );
+    }
+
+
+    /* ============================================================
+       RENDER GROUP REPORTS
+       ============================================================ */
+
+    function renderDateGroupReports(
+        groups,
+        transactions
+    ) {
+
+        const container =
+            document.getElementById(
+                "yearReports"
+            );
+
+
+        if (!container) {
+            return;
+        }
+
+
+        container.innerHTML = "";
+
+
+        const validGroups =
+            groups.filter(
+                group =>
+                    group.dates.length > 0
+            );
+
+
+        if (!validGroups.length) {
+
+            container.innerHTML = `
+                <div class="empty-state">
+
+                    <div class="empty-state-title">
+                        No report generated
+                    </div>
+
+                    <div>
+                        Create a group and add at least one date.
+                    </div>
+
+                </div>
+            `;
+
+            return;
+        }
+
+
+        validGroups.forEach(
+            (group, index) => {
+
+                const report =
+                    createGroupReport(
+                        group,
+                        transactions,
+                        index + 1
+                    );
+
+
+                container.appendChild(
+                    report
+                );
+            }
+        );
+
+
+        applyDateHighlights();
+    }
+
+
+    /* ============================================================
+       CREATE GROUP REPORT
+       ============================================================ */
+
+    function createGroupReport(
+        group,
+        transactions,
+        groupNumber
+    ) {
+
+        const report =
+            document.createElement(
+                "div"
+            );
+
+        report.className =
+            "year-report";
+
+
+        /* ========================================================
+           HEADING
+           ======================================================== */
+
+        const years = [
+            ...new Set(
+                group.dates.map(
+                    date =>
+                        date.substring(0, 4)
+                )
+            )
+        ];
+
+
+        const yearText =
+            years.join(" / ");
+
+
+        const heading =
+            document.createElement(
+                "h2"
+            );
+
+        heading.className =
+            "year-title";
+
+
+        heading.textContent =
+            `${getReportTitle()} - ${yearText} - Delivery Report`;
+
+
+        report.appendChild(
+            heading
+        );
+
+
+        /* ========================================================
+           TABLE
+           ======================================================== */
+
+        const table =
+            document.createElement(
+                "table"
+            );
+
+
+        const thead =
+            document.createElement(
+                "thead"
+            );
+
+
+        const headerRow =
+            document.createElement(
+                "tr"
+            );
+
+
+        /* Customer */
+
+        const customerHeader =
+            document.createElement(
+                "th"
+            );
+
+        customerHeader.textContent =
+            "Customer";
+
+        customerHeader.className =
+            "customer-header";
+
+
+        headerRow.appendChild(
+            customerHeader
+        );
+
+
+        /* Dates */
+
+        group.dates.forEach(
+            date => {
+
+                const th =
+                    document.createElement(
+                        "th"
+                    );
+
+
+                const dateInfo =
+                    formatDateWithDay(
+                        date
+                    );
+
+
+                th.innerHTML = `
+                    <div>
+                        ${dateInfo.date}
+                    </div>
+
+                    <div
+                        style="
+                            font-size: 11px;
+                            font-weight: 400;
+                            margin-top: 3px;
+                        "
+                    >
+                        ${dateInfo.day}
+                    </div>
+                `;
+
+
+                th.title =
+                    formatDateDisplay(
+                        date
+                    );
+
+
+                th.dataset.date =
+                    date;
+
+
+                th.className =
+                    "clickable-date";
+
+
+                th.addEventListener(
+                    "click",
+                    () => {
+
+                        addHighlightedDate(
+                            date
+                        );
+
+                    }
+                );
+
+
+                headerRow.appendChild(
+                    th
+                );
+            }
+        );
+
+
+        /* Total */
+
+        const totalHeader =
+            document.createElement(
+                "th"
+            );
+
+
+        totalHeader.textContent =
+            "Total";
+
+
+        totalHeader.className =
+            "total-header";
+
+
+        headerRow.appendChild(
+            totalHeader
+        );
+
+
+        thead.appendChild(
+            headerRow
+        );
+
+
+        table.appendChild(
+            thead
+        );
+
+
+        /* ========================================================
+           AGGREGATION
+           ======================================================== */
+
+        const customers = {};
+
+        const dateSums = {};
+
+
+        group.dates.forEach(
+            date => {
+
+                dateSums[date] = 0;
+
+            }
+        );
+
+
+        transactions.forEach(
+            transaction => {
+
+                const date =
+                    formatDateToIST(
+                        transaction.timestamp
+                    );
+
+
+                if (
+                    !group.dates.includes(
+                        date
+                    )
+                ) {
+                    return;
+                }
+
+
+                const name =
+                    transaction.name ||
+                    "Unknown";
+
+
+                const kg =
+                    Number(
+                        transaction.deliveredKg
+                    ) || 0;
+
+
+                if (
+                    !customers[name]
+                ) {
+
+                    customers[name] = {};
+
+                }
+
+
+                customers[name][date] =
+                    (
+                        customers[name][date] ||
+                        0
+                    ) + kg;
+
+
+                dateSums[date] =
+                    (
+                        dateSums[date] ||
+                        0
+                    ) + kg;
+            }
+        );
+
+
+        /* ========================================================
+           CUSTOMER ROWS
+           ======================================================== */
+
+        const tbody =
+            document.createElement(
+                "tbody"
+            );
+
+
+        const customerNames =
+            Object.keys(
+                customers
+            ).sort(
+                (a, b) =>
+                    a.localeCompare(b)
+            );
+
+
+        customerNames.forEach(
+            name => {
+
+                const row =
+                    document.createElement(
+                        "tr"
+                    );
+
+
+                const customerCell =
+                    document.createElement(
+                        "td"
+                    );
+
+
+                customerCell.textContent =
+                    name;
+
+
+                customerCell.className =
+                    "customer-cell";
+
+
+                row.appendChild(
+                    customerCell
+                );
+
+
+                let customerTotal = 0;
+
+
+                group.dates.forEach(
+                    date => {
+
+                        const kg =
+                            customers[name][date] ||
+                            0;
+
+
+                        customerTotal +=
+                            kg;
+
+
+                        const cell =
+                            document.createElement(
+                                "td"
+                            );
+
+
+                        cell.textContent =
+                            formatKg(
+                                kg
+                            );
+
+
+                        cell.dataset.date =
+                            date;
+
+
+                        row.appendChild(
+                            cell
+                        );
+                    }
+                );
+
+
+                const totalCell =
+                    document.createElement(
+                        "td"
+                    );
+
+
+                totalCell.textContent =
+                    formatKg(
+                        customerTotal
+                    );
+
+
+                totalCell.className =
+                    "total-col";
+
+
+                row.appendChild(
+                    totalCell
+                );
+
+
+                tbody.appendChild(
+                    row
+                );
+            }
+        );
+
+
+        /* ========================================================
+           GRAND TOTAL
+           ======================================================== */
+
+        const totalRow =
+            document.createElement(
+                "tr"
+            );
+
+
+        totalRow.className =
+            "total-row";
+
+
+        const totalLabel =
+            document.createElement(
+                "td"
+            );
+
+
+        totalLabel.textContent =
+            "Total";
+
+
+        totalLabel.className =
+            "customer-cell";
+
+
+        totalRow.appendChild(
+            totalLabel
+        );
+
+
+        let grandTotal = 0;
+
+
+        group.dates.forEach(
+            date => {
+
+                const value =
+                    dateSums[date] ||
+                    0;
+
+
+                grandTotal +=
+                    value;
+
+
+                const cell =
+                    document.createElement(
+                        "td"
+                    );
+
+
+                cell.textContent =
+                    formatKg(
+                        value
+                    );
+
+
+                cell.dataset.date =
+                    date;
+
+
+                totalRow.appendChild(
+                    cell
+                );
+            }
+        );
+
+
+        const grandTotalCell =
+            document.createElement(
+                "td"
+            );
+
+
+        grandTotalCell.textContent =
+            formatKg(
+                grandTotal
+            );
+
+
+        grandTotalCell.className =
+            "total-col";
+
+
+        totalRow.appendChild(
+            grandTotalCell
+        );
+
+
+        tbody.appendChild(
+            totalRow
+        );
+
+
+        table.appendChild(
+            tbody
+        );
+
+
+        report.appendChild(
+            table
+        );
+
+
+        return report;
+    }
+
+
+    /* ============================================================
+       NUMBER FORMATTING
+       ============================================================ */
+
+    function formatKg(value) {
+
+        const number =
+            Number(value) || 0;
+
+
+        return number.toLocaleString(
+            "en-IN",
+            {
+                minimumFractionDigits: 3,
+                maximumFractionDigits: 3
+            }
+        );
+    }
+
+
+    /* ============================================================
+       PRINT
+       ============================================================ */
+
+    function printReport() {
+
+        window.print();
+
+    }
+
+
+    /* ============================================================
+       INITIALIZATION
+       ============================================================ */
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+
+            const calendarDate =
+                document.getElementById("calendarDate");
+
+            if (calendarDate) {
+
+                calendarDate.addEventListener(
+                    "change",
+                    () => {
+
+                        const groupId =
+                            Number(
+                                calendarDate.dataset.groupId
+                            );
+
+                        const date =
+                            calendarDate.value;
+
+                        if (!groupId || !date) {
+                            return;
+                        }
+
+                        addDateValueToGroup(
+                            groupId,
+                            date
+                        );
+
+                        calendarDate.value = "";
+                        calendarDate.dataset.groupId = "";
+                    }
+                );
+            }
+
+            renderDateGroups();
+
+            renderHighlightedDates();
+
+
+            const banner =
+                document.getElementById(
+                    "reportBanner"
+                );
+
+
+            if (banner) {
+
+                banner.textContent =
+                    `${getReportTitle()} - Delivery Report`;
+
+            }
+
+
+            const reportTitleInput =
+                document.getElementById(
+                    "reportTitle"
+                );
+
+
+            if (reportTitleInput) {
+
+                reportTitleInput.addEventListener(
+                    "input",
+                    () => {
+
+                        if (banner) {
+
+                            banner.textContent =
+                                `${getReportTitle()} - Delivery Report`;
+
+                        }
+
+
+                        if (
+                            allTransactions !== null
+                        ) {
+
+                            renderReportFromCachedData();
+
+                        }
+
+                    }
+                );
+            }
+
+        }
     );
-
-    if (colIndex === -1) return;
-
-    document.querySelectorAll("#resultTable tbody tr").forEach(tr => {
-        const td = tr.children[colIndex];
-        if (td) td.classList.add("highlight-date-cell");
-    });
-}
-
-
-    /* ---------- PIN ---------- */
-    function pinCurrentTable() {
-        const wrap = document.createElement("div");
-        wrap.className = "pinned-block";
-
-        const btn = document.createElement("button");
-        btn.className = "remove-pin-btn";
-        btn.innerText = "❌ Remove";
-        btn.onclick = () => wrap.remove();
-
-        wrap.appendChild(btn);
-        wrap.appendChild(document.getElementById("reportBanner").cloneNode(true));
-        wrap.appendChild(document.getElementById("resultTable").cloneNode(true));
-
-        document.getElementById("pinnedTables").appendChild(wrap);
-    }
-
-    /* ---------- PRINT HELPERS ---------- */
-    function printActiveReport() {
-    document.body.classList.add("print-active-only");
-    window.print();
-    document.body.classList.remove("print-active-only");
-}
-
-
-    function printAllPinned() {
-    const pinned = document.getElementById("pinnedTables");
-    if (!pinned.children.length) {
-        alert("No pinned reports to print.");
-        return;
-    }
-
-    document.body.classList.add("print-pinned-only");
-    window.print();
-    document.body.classList.remove("print-pinned-only");
-}
-
-    function getLastSelectedDate() {
-    const dates = [...document.querySelectorAll(".date-picker")]
-        .map(i => i.value)
-        .filter(Boolean)
-        .sort();
-    return dates[dates.length - 1] || null;
-}
-
-function addDays(dateStr, days) {
-    const [y, m, d] = dateStr.split("-").map(Number);
-
-    // Create LOCAL date (no timezone shift)
-    const date = new Date(y, m - 1, d);
-    date.setDate(date.getDate() + days);
-
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-
-    return `${yyyy}-${mm}-${dd}`;
-}
-
-
-    function updateDateHints() {
-    const values = [...document.querySelectorAll(".date-picker")]
-        .map(i => i.value)
-        .filter(Boolean);
-
-    const prevHint = document.getElementById("prevDateHint");
-    const nextHint = document.getElementById("nextDateHint");
-
-    if (values.length === 0) {
-        prevHint.textContent = "";
-        nextHint.textContent = "";
-        return;
-    }
-
-    // Sort dates lexicographically (YYYY-MM-DD sorts correctly)
-    values.sort();
-
-    const minDate = values[0];
-    const maxDate = values[values.length - 1];
-
-    const prevDate = addDays(minDate, -1);
-    const nextDate = addDays(maxDate, 1);
-
-    prevHint.textContent = `◀ ${prevDate}`;
-    nextHint.textContent = `${nextDate} ▶`;
-
-    prevHint.onclick = () => addDateWithValue(prevDate);
-    nextHint.onclick = () => addDateWithValue(nextDate);
-}
-
-
-
-<!--    function addDateWithValue(dateValue) {-->
-<!--    const input = document.createElement("input");-->
-<!--    input.type = "date";-->
-<!--    input.className = "date-picker";-->
-<!--    input.value = dateValue;-->
-
-<!--    document.getElementById("dateInputs").appendChild(input);-->
-<!--    updateDateHints();-->
-<!--}-->
-
-    function addDateWithValue(dateValue) {
-    addDateInput(dateValue);
-}
-
 
 </script>
 
