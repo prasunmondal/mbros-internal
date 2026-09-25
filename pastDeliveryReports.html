@@ -2120,116 +2120,141 @@
 
 
         /* ========================================================
-           CUSTOMER ROWS
-           ======================================================== */
+   CUSTOMER ROWS
+   ======================================================== */
 
-        const tbody =
-            document.createElement(
-                "tbody"
-            );
+const tbody =
+    document.createElement(
+        "tbody"
+    );
 
-
-        const customerNames =
-            Object.keys(
-                customers
-            ).sort(
-                (a, b) =>
-                    a.localeCompare(b)
-            );
-
-
-        customerNames.forEach(
-            name => {
-
-                const row =
-                    document.createElement(
-                        "tr"
-                    );
+const customerNames =
+    Object.keys(
+        customers
+    ).sort(
+        (a, b) =>
+            a.localeCompare(b)
+    );
 
 
-                const customerCell =
-                    document.createElement(
-                        "td"
-                    );
+/*
+ * Sort customers by their total
+ * delivered KG in descending order.
+ */
+const sortedCustomers =
+    customerNames
+        .map(customer => {
 
-
-                customerCell.textContent =
-                    name;
-
-
-                customerCell.className =
-                    "customer-cell";
-
-
-                row.appendChild(
-                    customerCell
-                );
-
-
-                let customerTotal = 0;
-
-
-                group.dates.forEach(
-                    date => {
+            const customerTotal =
+                group.dates.reduce(
+                    (sum, date) => {
 
                         const kg =
-                            customers[name][date] ||
+                            customers[customer]?.[date] ||
                             0;
 
-
-                        customerTotal +=
-                            kg;
-
-
-                        const cell =
-                            document.createElement(
-                                "td"
-                            );
-
-
-                        cell.textContent =
-                            formatKg(
-                                kg
-                            );
-
-
-                        cell.dataset.date =
-                            date;
-
-
-                        row.appendChild(
-                            cell
-                        );
-                    }
+                        return sum + kg;
+                    },
+                    0
                 );
 
+            return {
+                customer,
+                customerTotal
+            };
+        })
+        .sort(
+            (a, b) =>
+                b.customerTotal -
+                a.customerTotal
+        );
 
-                const totalCell =
+
+sortedCustomers.forEach(
+    ({ customer, customerTotal }) => {
+
+        const row =
+            document.createElement(
+                "tr"
+            );
+
+
+        const customerCell =
+            document.createElement(
+                "td"
+            );
+
+
+        customerCell.textContent =
+            customer;
+
+
+        customerCell.className =
+            "customer-cell";
+
+
+        row.appendChild(
+            customerCell
+        );
+
+
+        group.dates.forEach(
+            date => {
+
+                const kg =
+                    customers[customer][date] ||
+                    0;
+
+
+                const cell =
                     document.createElement(
                         "td"
                     );
 
 
-                totalCell.textContent =
+                cell.textContent =
                     formatKg(
-                        customerTotal
+                        kg
                     );
 
 
-                totalCell.className =
-                    "total-col";
+                cell.dataset.date =
+                    date;
 
 
                 row.appendChild(
-                    totalCell
-                );
-
-
-                tbody.appendChild(
-                    row
+                    cell
                 );
             }
         );
+
+
+        const totalCell =
+            document.createElement(
+                "td"
+            );
+
+
+        totalCell.textContent =
+            formatKg(
+                customerTotal
+            );
+
+
+        totalCell.className =
+            "total-col";
+
+
+        row.appendChild(
+            totalCell
+        );
+
+
+        tbody.appendChild(
+            row
+        );
+    }
+);
 
 
         /* ========================================================
