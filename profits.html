@@ -278,7 +278,7 @@
 
         async function fetchData() {
             try {
-                let response = await fetch(API_URL, {
+                rawData = await fetchWithRetry(API_URL, {
                     method: 'POST',
                     body: new URLSearchParams({
                         operations: JSON.stringify([{
@@ -290,7 +290,6 @@
                     })
                 });
 
-                rawData = await response.json();
                 updateDashboard();
 
             } catch (error) {

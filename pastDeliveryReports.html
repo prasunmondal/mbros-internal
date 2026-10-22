@@ -649,6 +649,7 @@
 </div>
 
 
+<script src="config.js"></script>
 <script>
 
     /* ============================================================
@@ -1676,18 +1677,13 @@
             );
 
 
-            const response =
-                await fetch(
+            const json = await fetchWithRetry(
                     CONFIG.apiUrl,
                     {
                         method: "POST",
                         body: formData
                     }
                 );
-
-
-            const json =
-                await response.json();
 
 
             const data1 =

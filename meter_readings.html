@@ -46,6 +46,7 @@
         </table>
     </form>
 
+    <script src="config.js"></script>
     <script>
         // API URL and Form Data
         const apiUrl = 'https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec';
@@ -55,8 +56,7 @@
         // Function to fetch data from the API
         async function fetchData() {
             try {
-                const response = await fetch(apiUrl, { method: 'POST', body: formData });
-                const apiResponse = await response.json();
+                const apiResponse = await fetchWithRetry(apiUrl, { method: 'POST', body: formData });
                 const data = apiResponse[0].content;
 
                 // Populate the table with API data

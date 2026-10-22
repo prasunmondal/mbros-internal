@@ -36,6 +36,7 @@
     </table>
 </div>
 
+<script src="config.js"></script>
 <script>
     const apiUrl = 'https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec';
 
@@ -59,12 +60,10 @@
         formData.append('operations', '[{"opCode":"FETCH_ALL","sheetId":"11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8","tabName":"deliveries","opId":"mbros-github-site"}]');
 
         try {
-            const response = await fetch(apiUrl, {
+            const result = await fetchWithRetry(apiUrl, {
                 method: 'POST',
                 body: formData
             });
-
-            const result = await response.json();
             if (!result || !result.length || result[0].statusCode !== 200) {
                 alert("Invalid response from API");
                 return;
