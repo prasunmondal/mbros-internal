@@ -48,16 +48,13 @@
 
     <script src="config.js"></script>
     <script>
-        // API URL and Form Data
-        const apiUrl = 'https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec';
-        const formData = new FormData();
-        formData.append('operations', '[{"opCode":"FETCH_ALL","sheetId":"1VYrAZxWXE4bNA6HjoBWbGS17rQxaMgjvnrIUzopnHdY","tabName":"apiData","opId":"04912489-167e-4048-813f-8a14ea48f6c5-1737648761099"}]');
+        const METER_OPERATIONS = [{ type: "SELECT", spreadsheetId: "1VYrAZxWXE4bNA6HjoBWbGS17rQxaMgjvnrIUzopnHdY", worksheet: "apiData", id: "04912489-167e-4048-813f-8a14ea48f6c5-1737648761099" }];
 
         // Function to fetch data from the API
         async function fetchData() {
             try {
-                const apiResponse = await fetchWithRetry(apiUrl, { method: 'POST', body: formData });
-                const data = apiResponse[0].content;
+                const apiResponse = await callSheetsApi(METER_OPERATIONS);
+                const data = apiResponse[0].rows;
 
                 // Populate the table with API data
                 const table = document.getElementById('meterTable');

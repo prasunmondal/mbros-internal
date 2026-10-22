@@ -73,18 +73,13 @@
 
     async function fetchData() {
         try {
-            const data = await fetchWithRetry(API_URL, {
-                method: 'POST',
-                body: new URLSearchParams({
-                    operations: JSON.stringify([{
-                        opCode: "FETCH_ALL",
-                        sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-                        tabName: "db2.deliveries",
-                        opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
-                    }])
-                })
-            });
-            populateCustomers(data[0].content);
+            const data = await callSheetsApi([{
+                type: "SELECT",
+                spreadsheetId: MAIN_SHEET_ID,
+                worksheet: "db2.deliveries",
+                id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+            }]);
+            populateCustomers(data[0].rows);
         } catch (error) {
             console.error("Error fetching data:", error);
         }
@@ -92,18 +87,13 @@
 
     async function fetchProfits() {
         try {
-            const data = await fetchWithRetry(API_URL, {
-                method: 'POST',
-                body: new URLSearchParams({
-                    operations: JSON.stringify([{
-                        opCode: "FETCH_ALL",
-                        sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-                        tabName: "cumilativeCalculations",
-                        opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
-                    }])
-                })
-            });
-            window.profitData = data[0].content;
+            const data = await callSheetsApi([{
+                type: "SELECT",
+                spreadsheetId: MAIN_SHEET_ID,
+                worksheet: "cumilativeCalculations",
+                id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+            }]);
+            window.profitData = data[0].rows;
         } catch (error) {
             console.error("Error fetching profit data:", error);
         }

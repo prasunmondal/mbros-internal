@@ -38,8 +38,6 @@
 
 <script src="config.js"></script>
 <script>
-    const apiUrl = 'https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec';
-
     function formatDateToIST(utcDateString) {
         let date = new Date(utcDateString);
         date.setHours(date.getHours() + 5, date.getMinutes() + 30); // Convert to IST (UTC+5:30)
@@ -56,20 +54,10 @@
         document.getElementById("loading").style.display = "block";
         document.getElementById("resultTable").style.display = "none";
 
-        const formData = new FormData();
-        formData.append('operations', '[{"opCode":"FETCH_ALL","sheetId":"11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8","tabName":"deliveries","opId":"mbros-github-site"}]');
-
         try {
-            const result = await fetchWithRetry(apiUrl, {
-                method: 'POST',
-                body: formData
-            });
-            if (!result || !result.length || result[0].statusCode !== 200) {
-                alert("Invalid response from API");
-                return;
-            }
+            const result = await callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "deliveries", id: "mbros-github-site" }]);
 
-            const data = result[0].content || [];
+            const data = result[0].rows || [];
             console.log("Fetched Data:", data);
 
             let customerBalance = {};

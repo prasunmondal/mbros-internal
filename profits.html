@@ -278,17 +278,12 @@
 
         async function fetchData() {
             try {
-                rawData = await fetchWithRetry(API_URL, {
-                    method: 'POST',
-                    body: new URLSearchParams({
-                        operations: JSON.stringify([{
-                            opCode: "FETCH_ALL",
-                            sheetId: "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-                            tabName: "cumilativeCalculations",
-                            opId: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
-                        }])
-                    })
-                });
+                rawData = await callSheetsApi([{
+                    type: "SELECT",
+                    spreadsheetId: MAIN_SHEET_ID,
+                    worksheet: "cumilativeCalculations",
+                    id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+                }]);
 
                 updateDashboard();
 
@@ -298,7 +293,7 @@
         }
 
         function updateDashboard() {
-            if (!rawData || !rawData[0] || !rawData[0].content) return;
+            if (!rawData || !rawData[0] || !rawData[0].rows) return;
 
             updateKPIs();
             updateProfitChart('month');
@@ -357,14 +352,14 @@
         }
 
         function updateKPIs() {
-            if (!rawData || !rawData[0] || !rawData[0].content) return;
+            if (!rawData || !rawData[0] || !rawData[0].rows) return;
 
             let latestDueBalance = 0;
             let totalKg = 0;
             let totalTrips = 0;
             let latestDate = null;
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 totalKg += parseFloat(entry.kg) || 0;
                 totalTrips++;
 
@@ -398,7 +393,7 @@
             const grouped = {};
             const dateMap = {};
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -477,7 +472,7 @@
 
             const groupedCar = {}, groupedLabour = {}, groupedExtra = {}, dateMap = {};
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -546,7 +541,7 @@
 
             const grouped = {}, dateMap = {};
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -591,7 +586,7 @@
 
             const groupedProfit = {}, groupedKg = {}, dateMap = {};
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -638,7 +633,7 @@
 
             const grouped = {}, dateMap = {};
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -685,7 +680,7 @@
             const grouped = {}, dateMap = {};
             const periodData = {}; // Track transactions per period
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -746,10 +741,10 @@
         }
 
         function getAvailableYearsForBar() {
-            if (!rawData || !rawData[0] || !rawData[0].content) return [];
+            if (!rawData || !rawData[0] || !rawData[0].rows) return [];
 
             const yearsSet = new Set();
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (!isNaN(date.getTime())) {
@@ -821,7 +816,7 @@
             const periodByYear = {}, dateMap = {}, yearsSet = new Set();
             const breakdownMap = {}; // Store profit and debt change for each period-year
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -972,7 +967,7 @@
 
             // First, group transactions by period (without year) and collect all
             const transactionsByPeriod = {};
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -1062,7 +1057,7 @@
             const periodData = {}; // Track transactions per period
             const breakdownMap = {}; // Store profit and debt change for tooltip
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date) return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -1180,7 +1175,7 @@
         function groupDataByPeriodMultiYear(groupBy, field) {
             const grouped = {}, yearsSet = new Set(), dateMap = {};
 
-            rawData[0].content.forEach(entry => {
+            rawData[0].rows.forEach(entry => {
                 if (!entry.date || entry[field] === "#N/A") return;
                 const date = new Date(entry.date);
                 if (isNaN(date.getTime())) return;
@@ -1360,8 +1355,8 @@
         };
 
         function getCustomGraphContent() {
-            if (!rawData || !rawData[0] || !Array.isArray(rawData[0].content)) return [];
-            return rawData[0].content;
+            if (!rawData || !rawData[0] || !Array.isArray(rawData[0].rows)) return [];
+            return rawData[0].rows;
         }
 
         function getCustomGraphFields() {

@@ -658,23 +658,20 @@
 
     const CONFIG = {
 
-        apiUrl:
-            "https://script.google.com/macros/s/AKfycby0rORN4PWBqs2XR2JFTlMHBA2kphA7A8LLrAQ40yF8aiXveEa1cqUJA-glH36VdRZ0Pg/exec",
-
         operations: [
             {
-                opCode: "FETCH_ALL",
-                sheetId:
+                type: "SELECT",
+                spreadsheetId:
                     "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw",
-                tabName: "deliveries.2023",
-                opId: "mbros-github-site-1"
+                worksheet: "deliveries.2023",
+                id: "mbros-github-site-1"
             },
             {
-                opCode: "FETCH_ALL",
-                sheetId:
-                    "11TA2pPlxqajVwkPEigNMPNfsV-12CExxmySk1OMw_v8",
-                tabName: "db2.deliveries",
-                opId: "mbros-github-site-2"
+                type: "SELECT",
+                spreadsheetId:
+                    MAIN_SHEET_ID,
+                worksheet: "db2.deliveries",
+                id: "mbros-github-site-2"
             }
         ]
     };
@@ -1666,31 +1663,14 @@
 
         try {
 
-            const formData =
-                new FormData();
-
-            formData.append(
-                "operations",
-                JSON.stringify(
-                    CONFIG.operations
-                )
-            );
-
-
-            const json = await fetchWithRetry(
-                    CONFIG.apiUrl,
-                    {
-                        method: "POST",
-                        body: formData
-                    }
-                );
+            const json = await callSheetsApi(CONFIG.operations);
 
 
             const data1 =
-                json[0]?.content || [];
+                json[0]?.rows || [];
 
             const data2 =
-                json[1]?.content || [];
+                json[1]?.rows || [];
 
 
             allTransactions =
