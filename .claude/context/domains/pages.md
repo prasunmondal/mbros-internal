@@ -29,7 +29,7 @@ sources:
 | `app/profits/` | business dashboard: KPIs and trend charts | `cumilativeCalculations` |
 | `app/daily/` | daily sold / expenses / profit charts | `cumilativeCalculations` |
 | `app/customer-profit/` | profit and debt movement per customer and date range | `db2.deliveries`, `cumilativeCalculations` |
-| `app/customer-performance/` | per-customer orders/week and avg order KG over 1/2/3/6/12 months, KG chart by day/week/month/year, all-customer comparison | `deliveries.2023`, `db2.deliveries` |
+| `app/customer-performance/` | per-customer orders/week and avg order KG over 1/2/3/6/12 months, KG chart by day/week/month/year (timeline or years overlaid, with change vs previous period and last year), all-customer comparison | `deliveries.2023`, `db2.deliveries` |
 | `app/meters/` | meter reading difference and units to target | `apiData` (meter sheet) |
 | `app/calculator/` | discount and commission calculator | none |
 

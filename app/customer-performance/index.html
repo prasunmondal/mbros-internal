@@ -24,6 +24,10 @@
         }
         .segmented button + button { border-left: 1px solid var(--border-strong); }
         .segmented button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-strong); }
+        .chart-summary { margin: 0 0 14px; font-size: 0.9rem; color: var(--text-muted); }
+        .chart-summary .strong { color: var(--text); font-weight: 700; }
+        .chart-summary .up, .table td.up { color: var(--brand); font-weight: 600; }
+        .chart-summary .down, .table td.down { color: var(--danger); font-weight: 600; }
         .stat-note { margin-top: 4px; font-size: 0.8rem; color: var(--text-muted); }
         .stat-note.up { color: var(--brand); }
         .stat-note.down { color: var(--danger); }
@@ -99,6 +103,10 @@
             <div class="card-header">
                 <h2 id="chartTitle">Delivered KG</h2>
                 <div class="chart-controls no-print">
+                <div class="segmented" id="chartView" role="group" aria-label="View">
+                    <button type="button" data-view="timeline" aria-pressed="true">Timeline</button>
+                    <button type="button" data-view="years">Compare years</button>
+                </div>
                 <select id="chartRange" class="select" aria-label="Chart range">
                     <option value="3">Last 3 months</option>
                     <option value="6">Last 6 months</option>
@@ -106,7 +114,7 @@
                     <option value="24">Last 2 years</option>
                     <option value="0">All time (since 2023)</option>
                 </select>
-                <div class="segmented" role="group" aria-label="Group by">
+                <div class="segmented" id="chartGroup" role="group" aria-label="Group by">
                     <button type="button" data-group="day">Day</button>
                     <button type="button" data-group="week" aria-pressed="true">Week</button>
                     <button type="button" data-group="month">Month</button>
@@ -114,7 +122,10 @@
                 </div>
                 </div>
             </div>
-            <div class="card-body"><div class="chart-box"><canvas id="kgChart"></canvas></div></div>
+            <div class="card-body">
+                <p class="chart-summary" id="chartSummary"></p>
+                <div class="chart-box"><canvas id="kgChart"></canvas></div>
+            </div>
         </section>
 
         <section class="card section">
@@ -151,6 +162,7 @@
     let currentNames = new Set();  // customers present in db2.deliveries (the live khata)
     let firstDate = {};     // first delivery day per customer, and for ALL
     let today = Mb.todayIST();
+    let dataEnd = today;    // latest day with a delivery; the chart treats it as "now" because entry can lag a day or two
     let chart = null;
     let groupBy = "week";
 
@@ -241,6 +253,7 @@
         });
 
         orders = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+        dataEnd = orders.length ? orders[orders.length - 1].date : today;
         Object.values(rowsByName).forEach(rows => rows.sort((a, b) => a.date.localeCompare(b.date)));
 
         firstDate = {};
@@ -411,14 +424,120 @@
                 : "");
     }
 
+    // ---------- chart ----------
+
+    const YEAR_COLORS = ["#2a78d6", "#eb6834", "#1baf7a"];  // this year, last year, two years ago (validated, all pairs)
+    const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    let chartView = "timeline";  // "timeline" or "years"
+
+    function kgByDay(list) {
+        const daily = new Map();
+        list.forEach(o => daily.set(o.date, (daily.get(o.date) || 0) + o.kg));
+        return daily;
+    }
+
+    function sumKg(daily, from, to) {
+        let kg = 0;
+        for (let d = from; d <= to; d = addDays(d, 1)) kg += daily.get(d) || 0;
+        return kg;
+    }
+
+    function bucketEnd(start, group) {
+        return addDays(nextBucket(start, group), -1);
+    }
+
+    function previousBucket(start, group) {
+        if (group === "day") return addDays(start, -1);
+        if (group === "week") return addDays(start, -7);
+        return monthsBefore(start, group === "month" ? 1 : 12);
+    }
+
+    // Day and week go back 364 days so the weekday matches.
+    function lastYearBucket(start, group) {
+        return group === "day" || group === "week" ? addDays(start, -364) : monthsBefore(start, 12);
+    }
+
+    // KG in `range` and in `other`, with `other` cut to the same number of days, so a period still in
+    // progress (this month up to dataEnd) is not set against a whole earlier one.
+    function likeForLike(daily, range, other) {
+        const end = range.end < dataEnd ? range.end : dataEnd;
+        const otherEnd = addDays(other.start, daysBetween(range.start, end));
+        return {
+            current: sumKg(daily, range.start, end),
+            other: sumKg(daily, other.start, otherEnd < other.end ? otherEnd : other.end),
+            partial: end < range.end,
+            hasData: other.start >= firstDate[ALL]
+        };
+    }
+
+    function changeText(c) {
+        if (!c.hasData) return { text: "no data", cls: "" };
+        if (!c.other) return { text: c.current ? "new" : "–", cls: "" };
+        const pct = (c.current - c.other) / c.other * 100;
+        return { text: (pct >= 0 ? "▲ " : "▼ ") + Math.abs(pct).toFixed(0) + "%", cls: pct >= 0 ? "up" : "down" };
+    }
+
+    function kgText(kg) {
+        return Mb.formatNumber(kg, 0) + " kg";
+    }
+
+    // Change against the previous bucket and the same bucket last year (one comparison for years).
+    function bucketChanges(daily, start, group) {
+        const range = { start, end: bucketEnd(start, group) };
+        const prevStart = previousBucket(start, group);
+        const changes = [{ label: group === "year" ? "last year" : "last " + group,
+                           ...likeForLike(daily, range, { start: prevStart, end: bucketEnd(prevStart, group) }) }];
+        if (group !== "year") {
+            const lyStart = lastYearBucket(start, group);
+            changes.push({ label: "same " + group + " last year",
+                           ...likeForLike(daily, range, { start: lyStart, end: bucketEnd(lyStart, group) }) });
+        }
+        return changes;
+    }
+
+    function renderChartSummary(daily) {
+        const start = bucketStart(dataEnd, groupBy);
+        const changes = bucketChanges(daily, start, groupBy);
+        const box = document.getElementById("chartSummary");
+        box.innerHTML = "";
+        const add = (text, cls) => {
+            const span = document.createElement("span");
+            span.textContent = text;
+            if (cls) span.className = cls;
+            box.appendChild(span);
+        };
+        add(groupBy === "day"
+            ? "Latest day with deliveries (" + formatDate(dataEnd, { weekday: "short", day: "2-digit", month: "short" }) + "): "
+            : "This " + groupBy + " so far (" + formatDate(start, { day: "2-digit", month: "short" }) + " – " +
+              formatDate(dataEnd, { day: "2-digit", month: "short" }) + ", latest data): ");
+        add(kgText(changes[0].current), "strong");
+        changes.forEach(c => {
+            const change = changeText(c);
+            add(" · ");
+            add(change.text, change.cls);
+            add(" vs " + c.label + (c.partial ? " (same days)" : ""));
+        });
+    }
+
     function renderChart(name) {
-        const months = +document.getElementById("chartRange").value;
-        // Start on a bucket boundary so the first bar is not a partial week/month/year.
-        const from = months ? bucketStart(monthsBefore(today, months), groupBy) : "";
+        const daily = kgByDay(ordersFor(name));
+        const years = chartView === "years" && groupBy !== "year";
+        document.getElementById("chartRange").disabled = chartView === "years";
+        document.getElementById("chartTitle").textContent =
+            "Delivered KG by " + groupBy + (years ? ", year against year" : "") + " · " + (name === ALL ? "all customers" : name);
+        renderChartSummary(daily);
+        if (chart) chart.destroy();
+        chart = years ? yearsChart(daily) : timelineChart(name, daily);
+    }
+
+    function timelineChart(name, daily) {
+        // The years view grouped by year shows every year; otherwise start on a bucket boundary so the first bar is whole.
+        const months = chartView === "years" ? 0 : +document.getElementById("chartRange").value;
+        const from = months ? bucketStart(monthsBefore(dataEnd, months), groupBy) : "";
         const list = ordersFor(name).filter(o => o.date >= from);
         const buckets = new Map();
         if (list.length) {
-            const end = bucketStart(today, groupBy);
+            const end = bucketStart(dataEnd, groupBy);
             for (let b = from || bucketStart(list[0].date, groupBy); b <= end; b = nextBucket(b, groupBy)) {
                 buckets.set(b, { kg: 0, orders: 0 });
             }
@@ -431,11 +550,7 @@
         const keys = [...buckets.keys()];
         const values = [...buckets.values()];
 
-        document.getElementById("chartTitle").textContent =
-            "Delivered KG by " + groupBy + " · " + (name === ALL ? "all customers" : name);
-
-        if (chart) chart.destroy();
-        chart = new Chart(document.getElementById("kgChart"), {
+        return new Chart(document.getElementById("kgChart"), {
             type: "bar",
             data: {
                 labels: keys.map(k => bucketLabel(k, groupBy)),
@@ -456,15 +571,103 @@
                         callbacks: {
                             title: items => {
                                 const start = keys[items[0].dataIndex];
-                                if (groupBy === "week") return "Week of " + formatDate(start);
+                                const partial = bucketEnd(start, groupBy) > dataEnd ? " (so far)" : "";
+                                if (groupBy === "week") return "Week of " + formatDate(start) + partial;
                                 if (groupBy === "day") return formatDate(start, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
-                                return bucketLabel(start, groupBy);
+                                return bucketLabel(start, groupBy) + partial;
                             },
                             label: item => Mb.formatNumber(item.raw, 1) + " kg",
                             afterLabel: item => {
                                 const v = values[item.dataIndex];
-                                return v.orders + (v.orders === 1 ? " order" : " orders") +
-                                    (v.orders ? " · avg " + Mb.formatNumber(v.kg / v.orders, 1) + " kg" : "");
+                                const lines = [v.orders + (v.orders === 1 ? " order" : " orders") +
+                                    (v.orders ? " · avg " + Mb.formatNumber(v.kg / v.orders, 1) + " kg" : "")];
+                                bucketChanges(daily, keys[item.dataIndex], groupBy).forEach(c => lines.push(
+                                    changeText(c).text + " vs " + c.label + " (" + kgText(c.other) + (c.partial ? ", same days" : "") + ")"));
+                                return lines;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 0 } },
+                    y: { beginAtZero: true, grid: { color: "#eef0ec" }, title: { display: true, text: "KG" } }
+                }
+            }
+        });
+    }
+
+    // Slot i of a year: month i, week i (weeks counted from 1 Jan; the last one takes the leftover
+    // day or two), or day i of a leap year (so 29 Feb has a slot; other years skip it).
+    function slotRange(year, i, group) {
+        if (group === "month") {
+            const start = year + "-" + String(i + 1).padStart(2, "0") + "-01";
+            return { start, end: bucketEnd(start, "month") };
+        }
+        if (group === "week") {
+            const start = addDays(year + "-01-01", 7 * i);
+            return { start, end: i === 51 ? year + "-12-31" : addDays(start, 6) };
+        }
+        const start = year + "-" + addDays("2024-01-01", i).slice(5);
+        return fromUTC(toUTC(start)) === start ? { start, end: start } : null;
+    }
+
+    function yearsChart(daily) {
+        const slots = { day: 366, week: 52, month: 12 }[groupBy];
+        const thisYear = +dataEnd.slice(0, 4);
+        const years = [0, 1, 2].map(k => thisYear - k).filter(y => y >= +firstDate[ALL].slice(0, 4));
+        const labels = Array.from({ length: slots }, (_, i) =>
+            groupBy === "month" ? MONTH_NAMES[i]
+                : groupBy === "week" ? "W" + (i + 1)
+                : formatDate(addDays("2024-01-01", i), { day: "2-digit", month: "short" }));
+
+        const valueAt = (year, i) => {
+            const range = slotRange(year, i, groupBy);
+            if (!range || range.start > dataEnd || range.end < firstDate[ALL]) return null;
+            return Math.round(sumKg(daily, range.start, range.end < dataEnd ? range.end : dataEnd) * 10) / 10;
+        };
+
+        return new Chart(document.getElementById("kgChart"), {
+            type: "line",
+            data: {
+                labels,
+                datasets: years.map((year, k) => ({
+                    label: String(year),
+                    data: labels.map((_, i) => valueAt(year, i)),
+                    borderColor: YEAR_COLORS[k],
+                    backgroundColor: YEAR_COLORS[k],
+                    borderWidth: 2,
+                    borderDash: k === 2 ? [6, 4] : [],
+                    pointRadius: groupBy === "month" ? 3 : 0,
+                    pointHoverRadius: 5,
+                    tension: 0.25,
+                    spanGaps: groupBy === "day"
+                }))
+            },
+            options: {
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { position: "top", align: "end", labels: { usePointStyle: true, pointStyle: "line" } },
+                    tooltip: {
+                        callbacks: {
+                            title: items => {
+                                const i = items[0].dataIndex;
+                                const range = slotRange(thisYear, i, groupBy) || slotRange(2024, i, groupBy);
+                                if (groupBy === "week") return "Week " + (i + 1) + " · " + formatDate(range.start, { day: "2-digit", month: "short" }) +
+                                    " – " + formatDate(range.end, { day: "2-digit", month: "short" });
+                                return labels[i];
+                            },
+                            label: item => item.dataset.label + ": " + Mb.formatNumber(item.raw, 1) + " kg" +
+                                (+item.dataset.label === thisYear && slotRange(thisYear, item.dataIndex, groupBy).end > dataEnd ? " (so far)" : ""),
+                            // Each year against the year before it, over the same days.
+                            footer: items => {
+                                const i = items[0].dataIndex;
+                                return years.slice(0, -1).map(year => {
+                                    const range = slotRange(year, i, groupBy);
+                                    const before = slotRange(year - 1, i, groupBy);
+                                    if (!range || !before || range.start > dataEnd) return null;
+                                    const c = likeForLike(daily, range, before);
+                                    return year + " vs " + (year - 1) + ": " + changeText(c).text + (c.partial ? " (same days)" : "");
+                                }).filter(Boolean);
                             }
                         }
                     }
@@ -562,13 +765,17 @@
         select.disabled = false;
     }
 
-    document.querySelectorAll(".segmented button").forEach(button => {
-        button.addEventListener("click", () => {
-            groupBy = button.dataset.group;
-            document.querySelectorAll(".segmented button").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
+    // Segmented buttons: `apply` takes the clicked button's data value.
+    function wireSegmented(id, apply) {
+        const buttons = document.querySelectorAll("#" + id + " button");
+        buttons.forEach(button => button.addEventListener("click", () => {
+            buttons.forEach(b => b.setAttribute("aria-pressed", String(b === button)));
+            apply(button);
             renderChart(document.getElementById("customerSelect").value || ALL);
-        });
-    });
+        }));
+    }
+    wireSegmented("chartGroup", button => groupBy = button.dataset.group);
+    wireSegmented("chartView", button => chartView = button.dataset.view);
     document.getElementById("customerSelect").addEventListener("change", render);
     document.getElementById("chartRange").addEventListener("change", () =>
         renderChart(document.getElementById("customerSelect").value || ALL));
