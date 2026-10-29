@@ -13,17 +13,24 @@
     <script src="../../assets/js/common.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
-        .chart-box { position: relative; height: 340px; }
         .card-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-        .chart-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-        .chart-controls .select { width: auto; padding-top: 6px; padding-bottom: 6px; }
-        .segmented { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; }
-        .segmented button {
-            padding: 6px 14px; border: 0; background: var(--surface); color: var(--text-muted);
-            font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        /* Chart card, controls and buttons follow the business dashboard (app/profits/profits.css). */
+        .chart-card h2 { margin-bottom: 16px; }
+        .chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .chart-controls .divider { width: 1px; align-self: stretch; margin: 0 4px; background: var(--border); }
+        .control-btn {
+            padding: 6px 12px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-muted);
+            border-radius: var(--radius-sm); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
         }
-        .segmented button + button { border-left: 1px solid var(--border-strong); }
-        .segmented button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-strong); }
+        .control-btn:hover { border-color: var(--brand); color: var(--brand); }
+        .control-btn[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+        .axis-select {
+            padding: 6px 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+            border-radius: var(--radius-sm); font: inherit; font-size: 0.85rem;
+        }
+        .axis-select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.15); }
+        .axis-select:disabled { opacity: 0.5; }
+        .chart-wrapper { position: relative; height: 300px; }
         .chart-summary { margin: 0 0 14px; font-size: 0.9rem; color: var(--text-muted); }
         .chart-summary .strong { color: var(--text); font-weight: 700; }
         .chart-summary .up, .table td.up { color: var(--brand); font-weight: 600; }
@@ -99,33 +106,31 @@
             <div class="footnote" id="periodNote"></div>
         </section>
 
-        <section class="card section">
-            <div class="card-header">
-                <h2 id="chartTitle">Delivered KG</h2>
-                <div class="chart-controls no-print">
-                <div class="segmented" id="chartView" role="group" aria-label="View">
-                    <button type="button" data-view="timeline" aria-pressed="true">Timeline</button>
-                    <button type="button" data-view="years">Compare years</button>
-                </div>
-                <select id="chartRange" class="select" aria-label="Chart range">
+        <section class="card card-body chart-card section">
+            <h2 id="chartTitle">Delivered KG</h2>
+            <div class="chart-controls no-print">
+                <span id="chartView" role="group" aria-label="View" style="display: contents;">
+                    <button type="button" class="control-btn" data-view="timeline" aria-pressed="true">Timeline</button>
+                    <button type="button" class="control-btn" data-view="years">Compare years</button>
+                </span>
+                <span class="divider" aria-hidden="true"></span>
+                <span id="chartGroup" role="group" aria-label="Group by" style="display: contents;">
+                    <button type="button" class="control-btn" data-group="day">Day</button>
+                    <button type="button" class="control-btn" data-group="week" aria-pressed="true">Week</button>
+                    <button type="button" class="control-btn" data-group="month">Month</button>
+                    <button type="button" class="control-btn" data-group="year">Year</button>
+                </span>
+                <span class="divider" aria-hidden="true"></span>
+                <select id="chartRange" class="axis-select" aria-label="Chart range">
                     <option value="3">Last 3 months</option>
                     <option value="6">Last 6 months</option>
                     <option value="12" selected>Last 12 months</option>
                     <option value="24">Last 2 years</option>
                     <option value="0">All time (since 2023)</option>
                 </select>
-                <div class="segmented" id="chartGroup" role="group" aria-label="Group by">
-                    <button type="button" data-group="day">Day</button>
-                    <button type="button" data-group="week" aria-pressed="true">Week</button>
-                    <button type="button" data-group="month">Month</button>
-                    <button type="button" data-group="year">Year</button>
-                </div>
-                </div>
             </div>
-            <div class="card-body">
-                <p class="chart-summary" id="chartSummary"></p>
-                <div class="chart-box"><canvas id="kgChart"></canvas></div>
-            </div>
+            <p class="chart-summary" id="chartSummary"></p>
+            <div class="chart-wrapper"><canvas id="kgChart"></canvas></div>
         </section>
 
         <section class="card section">
@@ -426,9 +431,51 @@
 
     // ---------- chart ----------
 
-    const YEAR_COLORS = ["#2a78d6", "#eb6834", "#1baf7a"];  // this year, last year, two years ago (validated, all pairs)
+    // Look and colours follow the business dashboard (getChartConfig and the YoY charts in
+    // app/profits/profits.js): this year red, last year amber, older years dark to light gray.
+    const KG_COLOR = "#2563eb";
     const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     let chartView = "timeline";  // "timeline" or "years"
+
+    function yearColor(index, count) {
+        if (index === 0) return "#ef4444";
+        if (index === 1) return "#f59e0b";
+        // #4b5563 → #9ca3af across the older years.
+        const ratio = count <= 3 ? 0.5 : (index - 2) / (count - 3);
+        const mix = (a, b) => Math.round(a + (b - a) * ratio).toString(16).padStart(2, "0");
+        return "#" + mix(0x4b, 0x9c) + mix(0x55, 0xa3) + mix(0x63, 0xaf);
+    }
+
+    function chartOptions(tooltipCallbacks) {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: { display: true, labels: { font: { size: 12, weight: 600 }, color: "#6b7280" } },
+                tooltip: { callbacks: tooltipCallbacks }
+            },
+            scales: {
+                y: { beginAtZero: true, border: { display: false }, grid: { color: "#f3f4f6" }, ticks: { color: "#9ca3af" } },
+                x: { grid: { display: false }, ticks: { color: "#9ca3af", autoSkip: true, maxRotation: 0 } }
+            }
+        };
+    }
+
+    function lineDataset(label, data, color, pointRadius) {
+        return {
+            label, data,
+            borderColor: color,
+            backgroundColor: color + "15",
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true,
+            pointRadius,
+            pointBackgroundColor: color,
+            pointBorderColor: "#fff",
+            pointBorderWidth: 1
+        };
+    }
 
     function kgByDay(list) {
         const daily = new Map();
@@ -551,48 +598,30 @@
         const values = [...buckets.values()];
 
         return new Chart(document.getElementById("kgChart"), {
-            type: "bar",
+            type: "line",
             data: {
                 labels: keys.map(k => bucketLabel(k, groupBy)),
-                datasets: [{
-                    label: "Delivered KG",
-                    data: values.map(v => Math.round(v.kg * 10) / 10),
-                    backgroundColor: "#1f6f4a",
-                    hoverBackgroundColor: "#17573a",
-                    borderRadius: 4,
-                    maxBarThickness: 48
-                }]
+                datasets: [lineDataset("Delivered KG", values.map(v => Math.round(v.kg * 10) / 10), KG_COLOR,
+                                       keys.length > 120 ? 0 : 3)]
             },
-            options: {
-                interaction: { mode: "index", intersect: false },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            title: items => {
-                                const start = keys[items[0].dataIndex];
-                                const partial = bucketEnd(start, groupBy) > dataEnd ? " (so far)" : "";
-                                if (groupBy === "week") return "Week of " + formatDate(start) + partial;
-                                if (groupBy === "day") return formatDate(start, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
-                                return bucketLabel(start, groupBy) + partial;
-                            },
-                            label: item => Mb.formatNumber(item.raw, 1) + " kg",
-                            afterLabel: item => {
-                                const v = values[item.dataIndex];
-                                const lines = [v.orders + (v.orders === 1 ? " order" : " orders") +
-                                    (v.orders ? " · avg " + Mb.formatNumber(v.kg / v.orders, 1) + " kg" : "")];
-                                bucketChanges(daily, keys[item.dataIndex], groupBy).forEach(c => lines.push(
-                                    changeText(c).text + " vs " + c.label + " (" + kgText(c.other) + (c.partial ? ", same days" : "") + ")"));
-                                return lines;
-                            }
-                        }
-                    }
+            options: chartOptions({
+                title: items => {
+                    const start = keys[items[0].dataIndex];
+                    const partial = bucketEnd(start, groupBy) > dataEnd ? " (so far)" : "";
+                    if (groupBy === "week") return "Week of " + formatDate(start) + partial;
+                    if (groupBy === "day") return formatDate(start, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+                    return bucketLabel(start, groupBy) + partial;
                 },
-                scales: {
-                    x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 0 } },
-                    y: { beginAtZero: true, grid: { color: "#eef0ec" }, title: { display: true, text: "KG" } }
+                label: item => "Delivered KG: " + Mb.formatNumber(item.raw, 1) + " kg",
+                afterLabel: item => {
+                    const v = values[item.dataIndex];
+                    const lines = [v.orders + (v.orders === 1 ? " order" : " orders") +
+                        (v.orders ? " · avg " + Mb.formatNumber(v.kg / v.orders, 1) + " kg" : "")];
+                    bucketChanges(daily, keys[item.dataIndex], groupBy).forEach(c => lines.push(
+                        changeText(c).text + " vs " + c.label + " (" + kgText(c.other) + (c.partial ? ", same days" : "") + ")"));
+                    return lines;
                 }
-            }
+            })
         });
     }
 
@@ -614,7 +643,8 @@
     function yearsChart(daily) {
         const slots = { day: 366, week: 52, month: 12 }[groupBy];
         const thisYear = +dataEnd.slice(0, 4);
-        const years = [0, 1, 2].map(k => thisYear - k).filter(y => y >= +firstDate[ALL].slice(0, 4));
+        const years = [];  // newest first, as on the business dashboard
+        for (let y = thisYear; y >= +firstDate[ALL].slice(0, 4); y--) years.push(y);
         const labels = Array.from({ length: slots }, (_, i) =>
             groupBy === "month" ? MONTH_NAMES[i]
                 : groupBy === "week" ? "W" + (i + 1)
@@ -631,52 +661,33 @@
             data: {
                 labels,
                 datasets: years.map((year, k) => ({
-                    label: String(year),
-                    data: labels.map((_, i) => valueAt(year, i)),
-                    borderColor: YEAR_COLORS[k],
-                    backgroundColor: YEAR_COLORS[k],
-                    borderWidth: 2,
-                    borderDash: k === 2 ? [6, 4] : [],
-                    pointRadius: groupBy === "month" ? 3 : 0,
-                    pointHoverRadius: 5,
-                    tension: 0.25,
+                    ...lineDataset(String(year), labels.map((_, i) => valueAt(year, i)), yearColor(k, years.length),
+                                   groupBy === "day" ? 0 : 2),
                     spanGaps: groupBy === "day"
                 }))
             },
-            options: {
-                interaction: { mode: "index", intersect: false },
-                plugins: {
-                    legend: { position: "top", align: "end", labels: { usePointStyle: true, pointStyle: "line" } },
-                    tooltip: {
-                        callbacks: {
-                            title: items => {
-                                const i = items[0].dataIndex;
-                                const range = slotRange(thisYear, i, groupBy) || slotRange(2024, i, groupBy);
-                                if (groupBy === "week") return "Week " + (i + 1) + " · " + formatDate(range.start, { day: "2-digit", month: "short" }) +
-                                    " – " + formatDate(range.end, { day: "2-digit", month: "short" });
-                                return labels[i];
-                            },
-                            label: item => item.dataset.label + ": " + Mb.formatNumber(item.raw, 1) + " kg" +
-                                (+item.dataset.label === thisYear && slotRange(thisYear, item.dataIndex, groupBy).end > dataEnd ? " (so far)" : ""),
-                            // Each year against the year before it, over the same days.
-                            footer: items => {
-                                const i = items[0].dataIndex;
-                                return years.slice(0, -1).map(year => {
-                                    const range = slotRange(year, i, groupBy);
-                                    const before = slotRange(year - 1, i, groupBy);
-                                    if (!range || !before || range.start > dataEnd) return null;
-                                    const c = likeForLike(daily, range, before);
-                                    return year + " vs " + (year - 1) + ": " + changeText(c).text + (c.partial ? " (same days)" : "");
-                                }).filter(Boolean);
-                            }
-                        }
-                    }
+            options: chartOptions({
+                title: items => {
+                    const i = items[0].dataIndex;
+                    const range = slotRange(thisYear, i, groupBy) || slotRange(2024, i, groupBy);
+                    if (groupBy === "week") return "Week " + (i + 1) + " · " + formatDate(range.start, { day: "2-digit", month: "short" }) +
+                        " – " + formatDate(range.end, { day: "2-digit", month: "short" });
+                    return labels[i];
                 },
-                scales: {
-                    x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 0 } },
-                    y: { beginAtZero: true, grid: { color: "#eef0ec" }, title: { display: true, text: "KG" } }
+                label: item => item.dataset.label + ": " + Mb.formatNumber(item.raw, 1) + " kg" +
+                    (+item.dataset.label === thisYear && slotRange(thisYear, item.dataIndex, groupBy).end > dataEnd ? " (so far)" : ""),
+                // Each year against the year before it, over the same days.
+                footer: items => {
+                    const i = items[0].dataIndex;
+                    return years.slice(0, -1).map(year => {
+                        const range = slotRange(year, i, groupBy);
+                        const before = slotRange(year - 1, i, groupBy);
+                        if (!range || !before || range.start > dataEnd) return null;
+                        const c = likeForLike(daily, range, before);
+                        return year + " vs " + (year - 1) + ": " + changeText(c).text + (c.partial ? " (same days)" : "");
+                    }).filter(Boolean);
                 }
-            }
+            })
         });
     }
 
