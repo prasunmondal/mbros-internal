@@ -1,0 +1,14 @@
+# Checks .claude/ knowledge files against the repo. Warn-only: never fails the build.
+name: knowledge-lint
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # last_verified staleness check needs history
+      - run: node scripts/knowledge/lint-context.js
