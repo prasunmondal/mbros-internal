@@ -1,0 +1,197 @@
+/* Delivery report: controls panel + report area. Class names are set by deliveries.js. */
+
+.report-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.controls {
+    position: sticky;
+    top: calc(var(--header-h) + 20px);
+    max-height: calc(100vh - var(--header-h) - 40px);
+    overflow-y: auto;
+}
+
+.control-section + .control-section {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+}
+
+.control-section .label { display: block; margin-bottom: 8px; }
+.control-section .btn { margin-top: 8px; }
+
+#loading { margin-top: 10px; }
+
+/* Date groups */
+.date-group {
+    margin-bottom: 12px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-muted);
+}
+
+.date-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.date-group-title { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+
+.delete-group-button,
+.remove-date,
+.remove-highlight {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--text-subtle);
+}
+
+.delete-group-button:hover,
+.remove-date:hover,
+.remove-highlight:hover { color: var(--danger); }
+
+.date-group-dates { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.date-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: var(--brand-soft);
+    border: 1px solid #c5e1d0;
+    color: var(--brand-strong);
+    font-size: 0.78rem;
+    font-weight: 550;
+}
+
+.date-group-navigation { display: flex; gap: 6px; margin-top: 8px; }
+
+.date-navigation-option,
+.add-group-date-button {
+    flex: 1;
+    padding: 5px 6px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--brand);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.add-group-date-button { width: 100%; margin-top: 8px; }
+
+.date-navigation-option:hover,
+.add-group-date-button:hover { border-color: var(--brand); background: var(--brand-soft); }
+
+.no-selected-dates,
+.no-highlighted-dates { color: var(--text-subtle); font-size: 0.8rem; }
+
+/* Highlighted dates */
+.highlighted-dates { display: flex; flex-direction: column; gap: 6px; }
+
+.highlighted-date-chip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--highlight);
+    border: 1px solid #ecd76a;
+    color: #5c4a00;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Report */
+.report-banner {
+    margin-bottom: 20px;
+    padding: 14px 20px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.year-report {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.year-title {
+    margin: 0 0 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 1.1rem;
+}
+
+.year-report table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.year-report th,
+.year-report td {
+    border: 1px solid var(--border);
+    padding: 7px 9px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.year-report th { background: var(--surface-muted); font-weight: 600; }
+
+.customer-header { text-align: left !important; }
+.customer-cell { text-align: left !important; font-weight: 550; }
+
+.total-row td,
+.total-col { font-weight: 700; background: var(--surface-muted); }
+.total-header { text-align: center !important; }
+
+.clickable-date { color: var(--brand); font-weight: 700; cursor: pointer; }
+
+.highlight-date-cell { background-color: var(--highlight) !important; font-weight: 700; }
+.highlight-date-header { background-color: #ffe36e !important; font-weight: 700; }
+
+/* Reports are wider than the screen; scroll them inside their card. */
+#yearReports .year-report { overflow-x: auto; }
+
+@media (max-width: 900px) {
+    .report-layout { grid-template-columns: minmax(0, 1fr); }
+    .controls { position: static; max-height: none; }
+}
+
+@media print {
+    @page { size: portrait; margin: 18mm 15mm; }
+
+    .report-layout { display: block; }
+    .controls, .page-header, .report-banner { display: none !important; }
+
+    .year-report {
+        margin: 0 0 20mm;
+        padding: 0;
+        border: none;
+        overflow: visible;
+        break-inside: avoid;
+    }
+
+    .year-report + .year-report { break-before: page; }
+    .year-report table { margin-top: 8mm; }
+    .year-report tr, .year-report td, .year-report th { break-inside: avoid; }
+}

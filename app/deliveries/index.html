@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Deliveries · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <link rel="stylesheet" href="deliveries.css">
+    <script src="../../assets/js/common.js"></script>
+</head>
+<body data-page="deliveries">
+
+<main class="app-main wide">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Delivery report</h1>
+                <p>Delivered KG per customer, grouped by event period and compared across years.</p>
+            </div>
+        </div>
+
+        <input type="date" id="calendarDate" hidden>
+
+        <div class="report-layout">
+
+            <aside class="card card-body controls">
+
+                <div class="control-section">
+                    <label class="label" for="reportTitle">Report title</label>
+                    <input type="text" id="reportTitle" class="input" value="Durga Puja" placeholder="Enter report title">
+                </div>
+
+                <div class="control-section">
+                    <span class="label">Selected dates</span>
+                    <div id="dateGroups" class="date-groups"></div>
+                    <button type="button" class="btn btn-secondary btn-block" onclick="createDateGroup()">+ Create group</button>
+                </div>
+
+                <div class="control-section">
+                    <span class="label">Highlighted dates</span>
+                    <div id="highlightedDates" class="highlighted-dates">
+                        <span class="no-highlighted-dates">Click a date in the report</span>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <button type="button" class="btn btn-primary btn-block" onclick="fetchData()">Get delivered KG</button>
+                    <button type="button" class="btn btn-secondary btn-block" onclick="printReport()">Print report</button>
+                    <p id="loading" class="status status-info" style="display: none;">
+                        <span class="spinner" aria-hidden="true"></span> Fetching data…
+                    </p>
+                </div>
+
+            </aside>
+
+            <section>
+                <div id="reportBanner" class="card report-banner">Delivered KG Report</div>
+
+                <div id="yearReports">
+                    <div class="card empty-state">
+                        <div class="empty-state-title">No report generated</div>
+                        <div>Create one or more date groups and click “Get delivered KG”.</div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</main>
+
+<script src="../../assets/js/config.js"></script>
+<script src="deliveries.js"></script>
+</body>
+</html>

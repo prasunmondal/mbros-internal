@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Overview · Mondal Brothers</title>
+    <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../assets/css/site.css">
+    <script src="../assets/js/common.js"></script>
+</head>
+<body data-page="overview">
+
+<main class="app-main">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Overview</h1>
+                <p>Reports, analytics and tools for running Mondal Brothers.</p>
+            </div>
+            <div class="page-actions">
+                <a class="btn btn-secondary" href="../pay/">Customer payment page</a>
+            </div>
+        </div>
+
+        <div id="toolGroups"></div>
+
+    </div>
+</main>
+
+<script>
+    const groups = {};
+    Mb.TOOLS.forEach(tool => (groups[tool.group] ??= []).push(tool));
+
+    document.getElementById("toolGroups").innerHTML = Object.entries(groups).map(([group, tools]) => `
+        <section class="section">
+            <h2 class="section-title">${Mb.escapeHtml(group)}</h2>
+            <div class="grid grid-auto">
+                ${tools.map(tool => `
+                    <a class="card tool-card" href="${Mb.url(tool.path)}">
+                        <h3>${Mb.escapeHtml(tool.title)}</h3>
+                        <p>${Mb.escapeHtml(tool.description)}</p>
+                    </a>`).join("")}
+            </div>
+        </section>`).join("");
+</script>
+</body>
+</html>

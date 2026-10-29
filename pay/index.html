@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pay Mondal Brothers · পেমেন্ট করুন</title>
+    <meta name="description" content="Pay Mondal Brothers by UPI: scan the QR code or pay with any UPI app.">
+    <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../assets/css/site.css">
+    <style>
+        body { background: linear-gradient(180deg, var(--brand-strong) 0, var(--brand) 260px, var(--bg) 260px); min-height: 100vh; }
+        .pay { max-width: 460px; margin: 0 auto; padding: 32px 16px 48px; }
+        .pay-head { color: #fff; text-align: center; margin-bottom: 20px; }
+        .pay-head .brand-mark { margin: 0 auto 12px; width: 44px; height: 44px; font-size: 1rem; background: rgba(255,255,255,0.15); }
+        .pay-head h1 { font-size: 1.6rem; }
+        .pay-head p { color: rgba(255,255,255,0.8); margin-top: 4px; }
+        .pay-card { padding: 24px; text-align: center; box-shadow: var(--shadow); }
+        .qr { width: 100%; max-width: 280px; height: auto; margin: 14px auto 0; border-radius: var(--radius); }
+        .bn { display: block; font-size: 0.9em; opacity: 0.85; font-weight: 500; }
+        .payee { margin-top: 18px; padding: 14px; border-radius: var(--radius-sm); background: var(--surface-muted); text-align: left; }
+        .payee-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.9rem; padding: 3px 0; }
+        .payee-row span:first-child { color: var(--text-muted); }
+        .payee-row span:last-child { font-weight: 600; text-align: right; word-break: break-all; }
+        .pay-actions { display: grid; gap: 10px; margin-top: 18px; }
+        .pay-actions .btn { flex-direction: column; gap: 0; line-height: 1.3; }
+        .contact { margin-top: 20px; padding: 20px; }
+        .contact dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 0.9rem; }
+        .contact dt { color: var(--text-muted); }
+        .contact dd { margin: 0; }
+        .contact address { font-style: normal; }
+        .hint { margin-top: 10px; font-size: 0.8rem; color: var(--text-subtle); }
+    </style>
+</head>
+<body>
+
+<main class="pay">
+
+    <header class="pay-head">
+        <div class="brand-mark">MB</div>
+        <h1>Mondal Brothers</h1>
+        <p>Live Stock Chicken Distributor</p>
+    </header>
+
+    <section class="card pay-card">
+        <h2>Scan to pay <span class="bn">স্ক্যান করে পেমেন্ট করুন</span></h2>
+        <img class="qr" src="../assets/img/upi-qr.jpeg" alt="UPI QR code for paying Mondal Brothers" width="992" height="1600">
+    </section>
+
+    <section class="card pay-card" style="margin-top: 20px;">
+        <h2>Or pay with a UPI app <span class="bn">অথবা UPI অ্যাপে পেমেন্ট করুন</span></h2>
+
+        <div class="payee">
+            <div class="payee-row"><span>Paying to</span><span>Prasun Mondal</span></div>
+            <div class="payee-row"><span>UPI ID</span><span id="upiId">prsnmondal@ybl</span></div>
+            <div class="payee-row"><span>Phone</span><span><a href="tel:+919679004046">96790 04046</a></span></div>
+        </div>
+
+        <div class="pay-actions">
+            <a class="btn btn-accent btn-lg" href="upi://pay?pa=prsnmondal@ybl&amp;pn=Prasun%20Mondal&amp;tn=Payment%20to%20Mondal%20Brothers&amp;cu=INR">
+                Pay with UPI app <span class="bn">অনলাইন পেমেন্ট করুন</span>
+            </a>
+            <button type="button" class="btn btn-secondary" id="copyUpi">
+                Copy UPI ID <span class="bn">UPI আইডি কপি করুন</span>
+            </button>
+        </div>
+        <p class="hint">The button opens a payment app on your phone. On a computer, scan the QR code above instead.</p>
+    </section>
+
+    <section class="card contact">
+        <h3 style="margin-bottom: 12px;">Contact <span class="bn" style="display: inline;">· যোগাযোগ</span></h3>
+        <dl>
+            <dt>Name</dt><dd>Pranab Mondal</dd>
+            <dt>Phone</dt><dd><a href="tel:+919734075801">97340 75801</a></dd>
+            <dt>Email</dt><dd><a href="mailto:mbros.business@gmail.com">mbros.business@gmail.com</a></dd>
+            <dt>Address</dt><dd><address>Mirga-Chatra, Goghat,<br>West Bengal 712602</address></dd>
+        </dl>
+    </section>
+
+</main>
+
+<script>
+    document.getElementById("copyUpi").addEventListener("click", async event => {
+        const button = event.currentTarget;
+        const original = button.innerHTML;
+        try {
+            await navigator.clipboard.writeText(document.getElementById("upiId").textContent);
+            button.innerHTML = 'Copied! <span class="bn">কপি হয়েছে</span>';
+        } catch {
+            button.textContent = "prsnmondal@ybl";
+        }
+        setTimeout(() => { button.innerHTML = original; }, 2000);
+    });
+</script>
+</body>
+</html>

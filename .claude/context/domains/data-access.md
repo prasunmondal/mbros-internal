@@ -2,13 +2,13 @@
 status: VERIFIED
 last_verified: 2026-10-29
 sources:
-  - config.js
-  - balance.html
-  - day-dashboard.html
-  - meter_readings.html
-  - pastDeliveryReports.html
-  - profits.html
-  - profitsPerCustomer.html
+  - assets/js/config.js
+  - app/balance/index.html
+  - app/daily/index.html
+  - app/meters/index.html
+  - app/deliveries/deliveries.js
+  - app/profits/profits.js
+  - app/customer-profit/index.html
 ---
 # Data access: GridBase client and data sources
 
@@ -18,7 +18,7 @@ contract live in the GridBase repo (C:\Projects\GridBase: appscript/ and
 .claude/context/domains/wire-contract.md). Paths in that repo are written without backticks so
 the lint here does not check them.
 
-## Client (`config.js`)
+## Client (`assets/js/config.js`)
 - `API_URL`: the deployed engine. `MAIN_SHEET_ID`: the main business spreadsheet.
 - `callSheetsApi(operations)` sends `{ operations }` in one POST and resolves to one
   `{ operationId, rowCount, rows }` per operation. It throws when the reply has `success: false`.
@@ -29,13 +29,15 @@ the lint here does not check them.
 ## Data sources
 | Spreadsheet | Worksheet | Read by |
 |---|---|---|
-| main (`MAIN_SHEET_ID`) | `deliveries` | `balance.html` |
-| main | `db2.deliveries` | `pastDeliveryReports.html`, `profitsPerCustomer.html` |
-| main | `cumilativeCalculations` | `profits.html`, `profitsPerCustomer.html`, `day-dashboard.html` |
-| 2023 archive (ID in `pastDeliveryReports.html`) | `deliveries.2023` | `pastDeliveryReports.html` |
-| meter sheet (ID in `meter_readings.html`) | `apiData` | `meter_readings.html` |
+| main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
+| main | `db2.deliveries` | `app/deliveries/`, `app/customer-profit/` |
+| main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
+| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/deliveries/` |
+| meter sheet (ID in `app/meters/`) | `apiData` | `app/meters/` |
 
-`deliveries` vs `db2.deliveries`: [?] which one is current, and is the other one legacy?
+`deliveries` no longer exists: on 2026-10-29 the engine answered "Worksheet not found: deliveries",
+so `app/balance/` fails (see `known-issues.md`). `db2.deliveries` is the live worksheet.
+The meter sheet now has a `name` column; the page used to read the unnamed `""` column.
 
 ## Operation `id`
 Each operation carries an `id`, returned as `operationId`. Pages use fixed strings

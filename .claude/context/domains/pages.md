@@ -3,41 +3,54 @@ status: VERIFIED
 last_verified: 2026-10-29
 sources:
   - index.html
-  - balance.html
-  - calculator.html
-  - day-dashboard.html
-  - meter_readings.html
-  - pastDeliveryReports.html
-  - payment.html
-  - profits.html
-  - profitsPerCustomer.html
-  - qr.html
+  - pay/index.html
+  - app/index.html
+  - app/balance/index.html
+  - app/deliveries/index.html
+  - app/profits/index.html
+  - app/daily/index.html
+  - app/customer-profit/index.html
+  - app/meters/index.html
+  - app/calculator/index.html
+  - assets/css/site.css
+  - assets/js/common.js
 ---
 # Pages
 
 ## Inventory
 | Page | Purpose | Data |
 |---|---|---|
-| `index.html` | links to the other pages, built from a directory listing | none |
-| `balance.html` | customer khata balances as of a chosen date | `deliveries` |
-| `pastDeliveryReports.html` | delivery analysis over 2023 + current deliveries (large file) | `deliveries.2023`, `db2.deliveries` |
-| `profits.html` | business dashboard: profit, expenses, trends (Chart.js) | `cumilativeCalculations` |
-| `day-dashboard.html` | daily sold / expenses / profit charts (Chart.js) | `cumilativeCalculations` |
-| `profitsPerCustomer.html` | profit per selected customer | `db2.deliveries`, `cumilativeCalculations` |
-| `meter_readings.html` | meter reading difference and estimated bill | `apiData` (meter sheet) |
-| `calculator.html` | discount and commission calculator | none |
-| `payment.html`, `qr.html` | customer UPI payment pages (Bengali + English) | none |
+| `index.html` | public home: who we are, contact, link to payment | none |
+| `pay/` | customer UPI payment (QR + UPI link), Bengali + English | none |
+| `app/` | internal overview, cards built from `Mb.TOOLS` | none |
+| `app/balance/` | customer khata balances as of a date | `deliveries` |
+| `app/deliveries/` | delivered KG per customer by date group, 2023 + current | `deliveries.2023`, `db2.deliveries` |
+| `app/profits/` | business dashboard: KPIs and trend charts | `cumilativeCalculations` |
+| `app/daily/` | daily sold / expenses / profit charts | `cumilativeCalculations` |
+| `app/customer-profit/` | profit and debt movement per customer and date range | `db2.deliveries`, `cumilativeCalculations` |
+| `app/meters/` | meter reading difference and units to target | `apiData` (meter sheet) |
+| `app/calculator/` | discount and commission calculator | none |
+
+## Layout (ADR-003)
+- `assets/css/site.css`: design tokens (`:root`), base, components, app shell, public site,
+  print. Light theme only: chart colours in `app/profits/profits.js` are hard-coded for a light background.
+- `assets/js/common.js`: `Mb` namespace (`TOOLS`, `url`, `escapeHtml`, `toISTDate`, `todayIST`,
+  `formatINR`, `formatNumber`, `setStatus`) and the app header/footer, inserted on
+  DOMContentLoaded. It resolves the site root from its own URL, so links work under any base path.
+- `pay/` and `index.html` use `assets/css/site.css` only, without `assets/js/common.js`.
 
 ## Shared patterns
-- Each page has inline `<style>` and `<script>`. There is no shared CSS or component code.
-- Data pages: `fetchData()` on load → `callSheetsApi([...])` → transform `rows` → build DOM.
-- Dates are shown in IST. `formatDateToIST` is defined separately in `balance.html` and
-  `pastDeliveryReports.html`; it is not shared.
-- Errors are logged with `console.error`; some pages also `alert` the user.
+- Data pages: load → `Mb.setStatus(…, "info")` → `callSheetsApi([...])` → transform `rows` →
+  build DOM with `textContent` → clear status, or show an error status on failure.
+- Dates are shown in IST. `Mb.toISTDate` is the shared helper; `app/deliveries/deliveries.js` and
+  `customer-profit` still use their own IST helpers (logic kept as it was).
+- `app/deliveries/deliveries.js` and `app/profits/profits.js` were moved out of their HTML unchanged; their markup keeps
+  the ids, classes and inline `onclick` names those scripts rely on.
 
 ## Adding a page
-1. New self-contained `<name>.html`; include `config.js` if it reads data.
-2. Add a row above, and to `domains/data-access.md` if it reads a new worksheet.
+1. New folder `app/<id>/index.html` copying an existing small page's `<head>`; `data-page="<id>"`.
+2. Add it to `Mb.TOOLS` in `assets/js/common.js` (nav + overview card).
+3. Add a row above, and to `domains/data-access.md` if it reads a new worksheet.
 
 ## Decisions
-None yet.
+- ADR-003 folder-per-page site with a shared design system, no build step

@@ -3,63 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Index of Pages</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            text-align: center;
-        }
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-        li {
-            margin: 10px 0;
-        }
-        a {
-            text-decoration: none;
-            color: #007BFF;
-            font-size: 18px;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>Mondal Brothers · Live Stock Chicken Distributor, Goghat</title>
+    <meta name="description" content="Mondal Brothers is a live stock chicken distributor in Mirga-Chatra, Goghat, West Bengal. Contact us or pay online by UPI.">
+    <meta property="og:title" content="Mondal Brothers">
+    <meta property="og:description" content="Live stock chicken distributor in Goghat, West Bengal.">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#1f6f4a">
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="assets/css/site.css">
 </head>
 <body>
-<h1>Index of Pages</h1>
-<ul id="fileList"></ul>
 
-<script>
-    async function listFiles() {
-        try {
-            const response = await fetch('.'); // Fetch directory listing (works if directory browsing is enabled)
-            const text = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            const links = [...doc.querySelectorAll('a')].map(a => a.getAttribute('href'));
+<header class="site-header">
+    <div class="container">
+        <a class="brand" href="./">
+            <span class="brand-mark">MB</span>
+            <span>Mondal Brothers</span>
+        </a>
+        <nav class="site-nav" aria-label="Main">
+            <a href="#contact">Contact</a>
+            <a class="btn btn-primary" href="pay/">Pay online</a>
+        </nav>
+    </div>
+</header>
 
-            const fileList = links.filter(file => file.endsWith('.html') && file !== 'index.html');
-            const ul = document.getElementById('file-list');
+<main>
+    <section class="hero">
+        <div class="container">
+            <span class="eyebrow">Goghat · West Bengal</span>
+            <h1>Mondal Brothers</h1>
+            <p class="lead">Live stock chicken distributor serving Goghat and the surrounding area.</p>
+            <p class="lead-bn">মণ্ডল ব্রাদার্স · জীবন্ত মুরগি সরবরাহকারী</p>
+            <div class="hero-actions">
+                <a class="btn btn-accent btn-lg" href="tel:+919734075801">Call 97340 75801</a>
+                <a class="btn btn-secondary btn-lg" href="pay/">Pay online · অনলাইন পেমেন্ট</a>
+            </div>
+        </div>
+    </section>
 
-            fileList.forEach(file => {
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.href = file;
-                a.textContent = file;
-                li.appendChild(a);
-                ul.appendChild(li);
-            });
-        } catch (error) {
-            console.error('Error fetching files:', error);
-        }
-    }
+    <section class="site-section" id="contact">
+        <div class="container">
+            <h2>Get in touch</h2>
+            <p class="section-lead">For orders, rates and delivery, call or email us.</p>
 
-    listFiles();
-</script>
+            <div class="contact-grid">
+                <div class="card contact-item">
+                    <span class="label">Phone · ফোন</span>
+                    <a class="value" href="tel:+919734075801">97340 75801</a>
+                    <p class="subtle">Pranab Mondal</p>
+                </div>
+                <div class="card contact-item">
+                    <span class="label">Email</span>
+                    <a class="value" href="mailto:mbros.business@gmail.com">mbros.business@gmail.com</a>
+                </div>
+                <div class="card contact-item">
+                    <span class="label">Address · ঠিকানা</span>
+                    <address class="value">Mirga-Chatra, Goghat,<br>West Bengal 712602</address>
+                    <p class="subtle"><a href="https://www.google.com/maps/search/?api=1&amp;query=Mirga-Chatra%2C%20Goghat%2C%20West%20Bengal%20712602" target="_blank" rel="noopener">Open in Google Maps</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="site-section alt">
+        <div class="container">
+            <div class="cta-band">
+                <div>
+                    <h2>Pay your bill online</h2>
+                    <p class="section-lead">Scan our QR code or pay with any UPI app. · যেকোনো UPI অ্যাপে পেমেন্ট করুন।</p>
+                </div>
+                <a class="btn btn-primary btn-lg" href="pay/">Go to payment page</a>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <span>© <span id="year">2026</span> Mondal Brothers, Goghat</span>
+        <a href="app/">Internal tools</a>
+    </div>
+</footer>
+
+<script>document.getElementById("year").textContent = new Date().getFullYear();</script>
 </body>
 </html>

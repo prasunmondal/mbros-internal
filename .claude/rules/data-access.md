@@ -1,10 +1,10 @@
 ---
 paths:
-  - "config.js"
+  - "assets/js/config.js"
 ---
-# Data access (`config.js`): invariants
+# Data access (`assets/js/config.js`): invariants
 
-- `config.js` is the only GridBase client. Every page that reads data depends on it, so a change
+- `assets/js/config.js` is the only GridBase client. Every page that reads data depends on it, so a change
   here affects all of them.
 - Keep the POST body a JSON string with no Content-Type header (no CORS preflight, ADR-002).
 - `fetchWithRetry` retries because failed Apps Script calls return an HTML page without CORS

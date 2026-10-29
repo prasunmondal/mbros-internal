@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Balances · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <script src="../../assets/js/common.js"></script>
+</head>
+<body data-page="balance">
+
+<main class="app-main">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Customer balances</h1>
+                <p>Khata balance of every customer as of the selected date.</p>
+            </div>
+            <div class="page-actions">
+                <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+            </div>
+        </div>
+
+        <form id="balanceForm" class="card card-body toolbar no-print">
+            <div class="field">
+                <label for="datePicker">Balance as of</label>
+                <input type="date" id="datePicker" class="input" required>
+            </div>
+            <div class="field grow">
+                <label for="search">Find customer</label>
+                <input type="search" id="search" class="input" placeholder="Type a name…" autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-primary">Get balances</button>
+        </form>
+
+        <p id="status" class="status" hidden style="margin-top: 16px;"></p>
+
+        <div id="results" hidden>
+            <div class="stats section">
+                <div class="stat">
+                    <div class="stat-label">Customers</div>
+                    <div class="stat-value" id="customerCount">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total outstanding</div>
+                    <div class="stat-value" id="totalBalance">₹0.00</div>
+                </div>
+            </div>
+
+            <div class="card section">
+                <div class="table-wrap">
+                    <table class="table" id="resultTable">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th class="num">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script src="../../assets/js/config.js"></script>
+<script>
+    let customerBalance = {};
+
+    async function fetchBalance(event) {
+        event.preventDefault();
+        const selectedDate = document.getElementById("datePicker").value;
+        const status = document.getElementById("status");
+
+        Mb.setStatus(status, "info", "Fetching balances…");
+        document.getElementById("results").hidden = true;
+
+        try {
+            const result = await callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "deliveries", id: "mbros-github-site" }]);
+            const data = result[0].rows || [];
+
+            // Per customer: the balance of the latest delivery on or before the date
+            // (falls back to the first row if there is none, see context/product.md).
+            customerBalance = {};
+            data.forEach(entry => {
+                const date = Mb.toISTDate(entry.timestamp);
+                const name = entry.name || "Unknown";
+                const balance = parseFloat(entry.khataBalance || 0);
+
+                if (!customerBalance[name] || date <= selectedDate) {
+                    customerBalance[name] = balance;
+                }
+            });
+
+            Mb.setStatus(status, null);
+            updateTable();
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            Mb.setStatus(status, "error", "Could not load balances. Please try again.");
+        }
+    }
+
+    function updateTable() {
+        const query = document.getElementById("search").value.trim().toLowerCase();
+        const names = Object.keys(customerBalance)
+            .filter(name => name.toLowerCase().includes(query))
+            .sort((a, b) => a.localeCompare(b));
+        const total = names.reduce((sum, name) => sum + customerBalance[name], 0);
+
+        const rows = names.map(name => `
+            <tr>
+                <td>${Mb.escapeHtml(name)}</td>
+                <td class="num">${Mb.formatINR(customerBalance[name])}</td>
+            </tr>`).join("");
+
+        document.querySelector("#resultTable tbody").innerHTML = rows
+            || `<tr><td colspan="2" class="empty-state">No customers match “${Mb.escapeHtml(query)}”.</td></tr>`;
+        document.getElementById("customerCount").textContent = names.length;
+        document.getElementById("totalBalance").textContent = Mb.formatINR(total);
+        document.getElementById("results").hidden = false;
+    }
+
+    document.getElementById("datePicker").value = Mb.todayIST();
+    document.getElementById("balanceForm").addEventListener("submit", fetchBalance);
+    document.getElementById("search").addEventListener("input", () => {
+        if (Object.keys(customerBalance).length) updateTable();
+    });
+</script>
+</body>
+</html>

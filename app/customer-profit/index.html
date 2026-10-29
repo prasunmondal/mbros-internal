@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Customer profit · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <script src="../../assets/js/common.js"></script>
+</head>
+<body data-page="customer-profit">
+
+<main class="app-main wide">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Customer profit</h1>
+                <p>Profit share and debt movement for a customer (or all customers) over a date range.</p>
+            </div>
+            <div class="page-actions">
+                <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+            </div>
+        </div>
+
+        <div class="card card-body toolbar no-print">
+            <div class="field grow">
+                <label for="customerSelect">Customer</label>
+                <select id="customerSelect" class="select" disabled>
+                    <option value="">Loading customers…</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="startDate">From</label>
+                <input type="date" id="startDate" class="input">
+            </div>
+            <div class="field">
+                <label for="endDate">To</label>
+                <input type="date" id="endDate" class="input">
+            </div>
+        </div>
+
+        <p id="status" class="status" hidden style="margin-top: 16px;"></p>
+
+        <div class="stats section">
+            <div class="stat"><div class="stat-label">Profit</div><div class="stat-value" id="profitDisplay">–</div></div>
+            <div class="stat"><div class="stat-label">Profit after debt change</div><div class="stat-value" id="profitDisplayDebtIncrementAdjusted">–</div></div>
+            <div class="stat"><div class="stat-label">Starting debt</div><div class="stat-value" id="startingDebt">–</div></div>
+            <div class="stat"><div class="stat-label">Final debt</div><div class="stat-value" id="finalDebt">–</div></div>
+            <div class="stat"><div class="stat-label">Debt increase</div><div class="stat-value" id="debtIncreased">–</div></div>
+        </div>
+
+        <div class="card section">
+            <div class="card-header"><h2>Deliveries in range</h2></div>
+            <div class="table-wrap">
+                <table class="table" id="dataTable">
+                    <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Timestamp</th>
+                        <th class="num">Delivered PC</th>
+                        <th class="num">Delivered KG</th>
+                        <th class="num">Rate</th>
+                        <th class="num">Deliver amount</th>
+                        <th class="num">Total profit</th>
+                        <th class="num">Total delivered KG</th>
+                        <th class="num">Cust delivered KG</th>
+                        <th class="num">Discount</th>
+                        <th class="num">Profit</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="11" class="empty-state">Select a customer to see their deliveries.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script src="../../assets/js/config.js"></script>
+<script>
+
+    function convertToIST(dateString) {
+        let date = new Date(dateString);
+        let istOffset = 5.5 * 60 * 60 * 1000;
+        return new Date(date.getTime() + istOffset);
+    }
+
+    async function fetchData() {
+        const data = await callSheetsApi([{
+            type: "SELECT",
+            spreadsheetId: MAIN_SHEET_ID,
+            worksheet: "db2.deliveries",
+            id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+        }]);
+        populateCustomers(data[0].rows);
+    }
+
+    async function fetchProfits() {
+        const data = await callSheetsApi([{
+            type: "SELECT",
+            spreadsheetId: MAIN_SHEET_ID,
+            worksheet: "cumilativeCalculations",
+            id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
+        }]);
+        window.profitData = data[0].rows;
+    }
+
+    function populateCustomers(customers) {
+        const selectElement = document.getElementById('customerSelect');
+        selectElement.innerHTML = '<option value="">Select a customer…</option>';
+        selectElement.innerHTML += '<option value="ALL">All customers</option>';
+
+        const uniqueCustomers = new Set();
+        customers.forEach(customer => {
+            if (!uniqueCustomers.has(customer.name)) {
+                uniqueCustomers.add(customer.name);
+                let option = document.createElement('option');
+                option.value = customer.name;
+                option.textContent = customer.name;
+                selectElement.appendChild(option);
+            }
+        });
+        window.customers = customers;
+    }
+
+    function setStat(id, value) {
+        const element = document.getElementById(id);
+        element.textContent = value === null ? "–" : Mb.formatINR(value);
+        element.classList.toggle("negative", value !== null && value < 0);
+    }
+
+    function updateProfit() {
+        const selectedCustomer = document.getElementById('customerSelect').value;
+        const startDate = document.getElementById('startDate').value ? convertToIST(document.getElementById('startDate').value) : null;
+        const endDate = document.getElementById('endDate').value ? convertToIST(document.getElementById('endDate').value) : null;
+        const tableBody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';
+
+        if (!window.customers || !window.profitData) return;
+
+        const filteredCustomers = window.customers.filter(c => {
+            let customerDate = convertToIST(c.timestamp);
+            return (selectedCustomer === "ALL" || c.name === selectedCustomer) &&
+                (!startDate || customerDate >= startDate) &&
+                (!endDate || customerDate <= endDate);
+        });
+
+        let totalProfit = 0;
+        let totalCustKgDelivered = 0;
+        let totalAmountDelivered = 0;
+        let totalDiscount = 0;
+        let startingBalance = 0;
+        let finalBalance = 0;
+
+        filteredCustomers.forEach(c => {
+            let profitEntry = window.profitData.find(p => convertToIST(p.date).getTime() === convertToIST(c.timestamp).getTime());
+            let profitValue = profitEntry ? (profitEntry.profit / profitEntry.deliveredKg * c.deliveredKg) - c.discount : "N/A";
+            totalProfit += profitValue !== "N/A" ? profitValue : 0;
+            totalCustKgDelivered += c.deliveredKg ? c.deliveredKg : 0;
+            totalAmountDelivered += c.deliverAmount ? c.deliverAmount : 0;
+            totalDiscount += c.discount ? c.discount : 0;
+
+            if (startingBalance === 0) {
+                if (selectedCustomer === "ALL") {
+                    startingBalance = profitEntry.prev_due_balance
+                } else {
+                    startingBalance = c.prevAmount
+                }
+            }
+
+            const row = tableBody.insertRow();
+            [
+                c.orderId,
+                convertToIST(c.timestamp).toLocaleString(),
+                c.deliveredPc,
+                c.deliveredKg,
+                c.rate,
+                c.deliverAmount,
+                profitEntry ? profitEntry.profit.toFixed(2) : "N/A",
+                profitEntry ? profitEntry.deliveredKg.toFixed(3) : "N/A",
+                c.deliveredKg,
+                c.discount,
+                profitEntry ? profitValue.toFixed(2) : 0
+            ].forEach((value, i) => {
+                const td = row.insertCell();
+                td.textContent = value;
+                if (i >= 2) td.className = "num";
+            });
+
+            if (selectedCustomer === "ALL") {
+                if (profitEntry)
+                    finalBalance = profitEntry.new_due_balance
+            } else {
+                finalBalance = c.totalBalance
+            }
+        });
+
+        const totalRow = tableBody.insertRow();
+        totalRow.className = "total-row";
+        ["TOTAL", "", "", totalCustKgDelivered, "", totalAmountDelivered, "", "", totalCustKgDelivered.toFixed(3), totalDiscount, totalProfit.toFixed(2)]
+            .forEach((value, i) => {
+                const td = totalRow.insertCell();
+                td.textContent = value;
+                if (i >= 2) td.className = "num";
+            });
+
+        const hasRows = filteredCustomers.length > 0;
+        setStat("profitDisplay", hasRows ? totalProfit : null);
+        setStat("profitDisplayDebtIncrementAdjusted", hasRows ? totalProfit.toFixed(2) - (finalBalance - startingBalance) : null);
+        setStat("startingDebt", hasRows ? startingBalance : null);
+        setStat("finalDebt", hasRows ? finalBalance : null);
+        setStat("debtIncreased", hasRows ? (finalBalance - startingBalance) : null);
+    }
+
+    async function initialize() {
+        const status = document.getElementById("status");
+        Mb.setStatus(status, "info", "Loading deliveries and profit data…");
+        try {
+            await fetchData();
+            await fetchProfits();
+            Mb.setStatus(status, null);
+            document.getElementById("customerSelect").disabled = false;
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            Mb.setStatus(status, "error", "Could not load data. Please try again.");
+        }
+    }
+
+    ["customerSelect", "startDate", "endDate"].forEach(id =>
+        document.getElementById(id).addEventListener("change", updateProfit));
+
+    initialize();
+</script>
+</body>
+</html>

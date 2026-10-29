@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Business dashboard · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <link rel="stylesheet" href="profits.css">
+    <script src="../../assets/js/common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
+    <script src="../../assets/js/config.js" defer></script>
+    <script src="profits.js" defer></script>
+</head>
+<body data-page="profits">
+
+<main class="app-main wide">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Business dashboard</h1>
+                <p>Profit, expenses, due balance and year-over-year trends.</p>
+            </div>
+        </div>
+
+        <div class="kpi-container">
+            <div class="kpi-card accent-blue">
+                <div class="kpi-label">Due Balance</div>
+                <div class="kpi-value" id="dueBalance">₹0</div>
+            </div>
+            <div class="kpi-card accent-green">
+                <div class="kpi-label">Total KG Handled</div>
+                <div class="kpi-value" id="totalKgHandled">0 KG</div>
+            </div>
+            <div class="kpi-card accent-amber">
+                <div class="kpi-label">Total Trips</div>
+                <div class="kpi-value" id="totalTrips">0</div>
+            </div>
+        </div>
+
+    <div class="charts-grid">
+
+        <div class="chart-card">
+            <h3>Actual Money Received (Last 12 Months)</h3>
+            <div class="chart-wrapper">
+                <canvas id="actualMoneyLast12MonthsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Profit Trend</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="profit" data-group="day">Day</button>
+                <button class="control-btn" data-chart="profit" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="profit" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profit" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="profitChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>KG Comparison (Year-over-Year)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="kgComparison" data-group="day">Day</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="kgComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="kgComparison" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="kgComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Profit Comparison (Year-over-Year)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="profitComparison" data-group="day">Day</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="profitComparison" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profitComparison" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="profitComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Due Balance Trend</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="dueBalance" data-group="day">Day</button>
+                <button class="control-btn" data-chart="dueBalance" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="dueBalance" data-group="month">Month</button>
+                <button class="control-btn" data-chart="dueBalance" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="dueBalanceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Expenses Breakdown</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="expenses" data-group="day">Day</button>
+                <button class="control-btn" data-chart="expenses" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="expenses" data-group="month">Month</button>
+                <button class="control-btn" data-chart="expenses" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="expensesChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Profit per KG</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="profitPerKg" data-group="day">Day</button>
+                <button class="control-btn" data-chart="profitPerKg" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="profitPerKg" data-group="month">Month</button>
+                <button class="control-btn" data-chart="profitPerKg" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="profitPerKgChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Total Expenses Trend</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="totalExpenses" data-group="day">Day</button>
+                <button class="control-btn" data-chart="totalExpenses" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="totalExpenses" data-group="month">Month</button>
+                <button class="control-btn" data-chart="totalExpenses" data-group="year">Year</button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="totalExpensesChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Actual Money Received (Bar Chart)</h3>
+            <div class="chart-controls">
+                <button class="control-btn" data-chart="actualMoneyBar" data-group="day">Day</button>
+                <button class="control-btn" data-chart="actualMoneyBar" data-group="week">Week</button>
+                <button class="control-btn active" data-chart="actualMoneyBar" data-group="month">Month</button>
+                <button class="control-btn" data-chart="actualMoneyBar" data-group="year">Year</button>
+                <span class="axis-label">Years:</span>
+                <select id="barTimeGroup" class="axis-select">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month" selected>Month</option>
+                    <option value="year">Year</option>
+                </select>
+            </div>
+            <div id="barChartYearFilters" class="year-filters"></div>
+            <div class="chart-wrapper">
+                <canvas id="actualMoneyBarChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Custom Year Comparison</h3>
+            <div class="chart-controls">
+                <span class="axis-label">Time:</span>
+                <select id="overlapTimeGroup" class="axis-select">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month" selected>Month</option>
+                    <option value="year">Year</option>
+                </select>
+                <span class="axis-label">Y Axis:</span>
+                <select id="overlapYAxis" class="axis-select"></select>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="customOverlapChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Custom Timeline</h3>
+            <div class="chart-controls">
+                <span class="axis-label">Time:</span>
+                <select id="linearTimeGroup" class="axis-select">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month" selected>Month</option>
+                    <option value="year">Year</option>
+                </select>
+                <span class="axis-label">Y Axis:</span>
+                <select id="linearYAxis" class="axis-select"></select>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="customLinearChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    </div>
+</main>
+
+</body>
+</html>

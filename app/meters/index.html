@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Meter readings · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <script src="../../assets/js/common.js"></script>
+    <style>
+        #meterTable .input { width: 120px; padding: 6px 10px; text-align: right; }
+        .units-left.negative { color: var(--danger); font-weight: 700; }
+    </style>
+</head>
+<body data-page="meters">
+
+<main class="app-main">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Meter readings</h1>
+                <p>Enter the current reading to see units used and units left to the target.</p>
+            </div>
+        </div>
+
+        <p id="status" class="status" hidden></p>
+
+        <div class="card section">
+            <div class="table-wrap">
+                <table class="table" id="meterTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th class="num">Initial reading</th>
+                            <th class="num">Current reading</th>
+                            <th class="num">Difference</th>
+                            <th class="num">Target units</th>
+                            <th class="num">Units required</th>
+                            <th class="num">Estimated bill</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script src="../../assets/js/config.js"></script>
+<script>
+    const METER_OPERATIONS = [{ type: "SELECT", spreadsheetId: "1VYrAZxWXE4bNA6HjoBWbGS17rQxaMgjvnrIUzopnHdY", worksheet: "apiData", id: "04912489-167e-4048-813f-8a14ea48f6c5-1737648761099" }];
+
+    function cell(row, content, className = "num") {
+        const td = row.insertCell();
+        td.className = className;
+        if (content instanceof Node) td.appendChild(content);
+        else td.textContent = content;
+        return td;
+    }
+
+    function numberInput(value, attrs = {}) {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.className = "input";
+        if (value !== undefined) input.value = value;
+        Object.assign(input, attrs);
+        return input;
+    }
+
+    async function fetchData() {
+        const status = document.getElementById("status");
+        Mb.setStatus(status, "info", "Loading meters…");
+        try {
+            const apiResponse = await callSheetsApi(METER_OPERATIONS);
+            const tbody = document.querySelector("#meterTable tbody");
+
+            apiResponse[0].rows.forEach(entry => {
+                const row = tbody.insertRow();
+                const initial = numberInput(entry.initialReading, { disabled: true });
+                const current = numberInput(undefined, { placeholder: entry.currentReading ?? "" });
+                const target = numberInput(entry.targetUnits, { disabled: true });
+
+                cell(row, entry.name ?? entry[""] ?? "", "");
+                cell(row, initial);
+                cell(row, current);
+                const differenceCell = cell(row, "0");
+                cell(row, target);
+                const unitsCell = cell(row, "0");
+                cell(row, entry.EstimatedBill || 0);
+
+                const recalculate = () => {
+                    const initialValue = parseFloat(initial.value) || 0;
+                    const targetUnits = parseFloat(target.value) || 0;
+                    const currentValue = current.value ? parseFloat(current.value) : parseFloat(current.placeholder) || 0;
+
+                    const difference = currentValue - initialValue;
+                    const unitsRequired = targetUnits - difference;
+
+                    differenceCell.textContent = difference;
+                    unitsCell.textContent = unitsRequired;
+                    unitsCell.classList.toggle("units-left", true);
+                    unitsCell.classList.toggle("negative", unitsRequired < 0);
+                };
+                current.addEventListener("input", recalculate);
+                recalculate();
+            });
+            Mb.setStatus(status, null);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            Mb.setStatus(status, "error", "Could not load meter readings. Please try again.");
+        }
+    }
+
+    fetchData();
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Commission calculator · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <script src="../../assets/js/common.js"></script>
+    <style>
+        .calc { max-width: 760px; }
+        .calc .toolbar .field { flex-basis: 150px; }
+        .breakdown td:first-child { color: var(--text-muted); }
+        .breakdown .key td { font-weight: 700; color: var(--text); }
+    </style>
+</head>
+<body data-page="calculator">
+
+<main class="app-main">
+    <div class="container calc">
+
+        <div class="page-header">
+            <div>
+                <h1>Discount &amp; commission calculator</h1>
+                <p>Commission % = total discount % − discount passed on %.</p>
+            </div>
+        </div>
+
+        <div class="card card-body toolbar">
+            <div class="field grow">
+                <label for="payingAmount">Paying amount (₹)</label>
+                <input type="number" id="payingAmount" class="input" placeholder="0.00" inputmode="decimal" autofocus>
+            </div>
+            <div class="field">
+                <label for="totalDiscount">Total discount %</label>
+                <input type="number" id="totalDiscount" class="input" value="5" inputmode="decimal">
+            </div>
+            <div class="field">
+                <label for="discountPassedOn">Passed on %</label>
+                <input type="number" id="discountPassedOn" class="input" value="3" inputmode="decimal">
+            </div>
+            <div class="field">
+                <label for="commission">Commission %</label>
+                <input type="number" id="commission" class="input" placeholder="Auto" readonly>
+            </div>
+        </div>
+
+        <p id="status" class="status status-empty section">Enter a paying amount to see the breakdown.</p>
+
+        <div id="result" class="grid grid-2 section" hidden>
+            <section class="card">
+                <div class="card-header"><h2>Payment</h2></div>
+                <table class="table breakdown">
+                    <tr><td>Total amount</td><td class="num" id="outTotal"></td></tr>
+                    <tr><td>Discount passed on</td><td class="num" id="outPassedOn"></td></tr>
+                    <tr class="key"><td>Payable by customer</td><td class="num" id="outPayable"></td></tr>
+                </table>
+            </section>
+            <section class="card">
+                <div class="card-header"><h2>Discount</h2></div>
+                <table class="table breakdown">
+                    <tr><td>Total discount</td><td class="num" id="outDiscount"></td></tr>
+                    <tr><td>Discount passed on</td><td class="num" id="outPassedOn2"></td></tr>
+                    <tr class="key"><td>Commission</td><td class="num" id="outCommission"></td></tr>
+                </table>
+            </section>
+        </div>
+
+    </div>
+</main>
+
+<script>
+    function calculateValues() {
+        const payingAmount = parseFloat(document.getElementById('payingAmount').value);
+        const totalDiscount = parseFloat(document.getElementById('totalDiscount').value);
+        const discountPassedOn = parseFloat(document.getElementById('discountPassedOn').value);
+        const status = document.getElementById('status');
+        const result = document.getElementById('result');
+
+        if (isNaN(payingAmount) || isNaN(totalDiscount) || isNaN(discountPassedOn)) {
+            result.hidden = true;
+            status.hidden = false;
+            status.textContent = "Please enter valid numbers in all fields.";
+            return;
+        }
+
+        const commission = totalDiscount - discountPassedOn;
+        document.getElementById('commission').value = commission;
+
+        const totalDiscountValue = (payingAmount * totalDiscount) / 100;
+        const discountPassedOnValue = (payingAmount * discountPassedOn) / 100;
+        const commissionValue = (payingAmount * commission) / 100;
+        const payableAmount = payingAmount - discountPassedOnValue;
+
+        document.getElementById('outTotal').textContent = Mb.formatINR(payingAmount);
+        document.getElementById('outPassedOn').textContent = Mb.formatINR(discountPassedOnValue);
+        document.getElementById('outPayable').textContent = Mb.formatINR(payableAmount);
+        document.getElementById('outDiscount').textContent = Mb.formatINR(totalDiscountValue);
+        document.getElementById('outPassedOn2').textContent = Mb.formatINR(discountPassedOnValue);
+        document.getElementById('outCommission').textContent = Mb.formatINR(commissionValue);
+
+        status.hidden = true;
+        result.hidden = false;
+    }
+
+    ['payingAmount', 'totalDiscount', 'discountPassedOn'].forEach(id =>
+        document.getElementById(id).addEventListener('input', calculateValues));
+</script>
+</body>
+</html>

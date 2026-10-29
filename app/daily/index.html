@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Daily summary · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <script src="../../assets/js/common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .chart-box { position: relative; height: 320px; }
+    </style>
+</head>
+<body data-page="daily">
+
+<main class="app-main wide">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Daily summary</h1>
+                <p>Day-by-day sales, profit and expenses.</p>
+            </div>
+        </div>
+
+        <p id="status" class="status" hidden></p>
+
+        <div class="grid grid-2" style="margin-top: 16px;">
+            <section class="card">
+                <div class="card-header"><h2>Sales &amp; profit over time</h2></div>
+                <div class="card-body"><div class="chart-box"><canvas id="salesChart"></canvas></div></div>
+            </section>
+
+            <section class="card">
+                <div class="card-header"><h2>Expense breakdown</h2></div>
+                <div class="card-body"><div class="chart-box"><canvas id="expenseChart"></canvas></div></div>
+            </section>
+
+            <section class="card">
+                <div class="card-header"><h2>Revenue vs expenses</h2></div>
+                <div class="card-body"><div class="chart-box"><canvas id="revenueChart"></canvas></div></div>
+            </section>
+        </div>
+
+    </div>
+</main>
+
+<script src="../../assets/js/config.js"></script>
+<script>
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.maintainAspectRatio = false;
+
+    async function fetchData() {
+        const data = await callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "cumilativeCalculations", id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031" }]);
+        return data[0].rows;
+    }
+
+    async function renderCharts() {
+        const status = document.getElementById("status");
+        Mb.setStatus(status, "info", "Loading daily figures…");
+
+        let content;
+        try {
+            content = await fetchData();
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            Mb.setStatus(status, "error", "Could not load the daily figures. Please try again.");
+            return;
+        }
+        Mb.setStatus(status, null);
+
+        const labels = content.map(entry => new Date(entry.date).toISOString().split('T')[0]);
+        const soldAmounts = content.map(entry => entry.sold_amount || 0);
+        const profits = content.map(entry => entry.profit || 0);
+        const expenses = content.map(entry => entry.total_expenses || 0);
+
+        new Chart(document.getElementById("salesChart"), {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: "Sold Amount", data: soldAmounts, borderColor: "#1f6f4a", backgroundColor: "#1f6f4a", fill: false, pointRadius: 0 },
+                    { label: "Profit", data: profits, borderColor: "#e0a526", backgroundColor: "#e0a526", fill: false, pointRadius: 0 }
+                ]
+            }
+        });
+
+        // Uses the second row only, as before (see known-issues).
+        new Chart(document.getElementById("expenseChart"), {
+            type: "pie",
+            data: {
+                labels: ["Car Expense", "Labour Expense", "Extra Expenses"],
+                datasets: [{
+                    data: [content[1].car_expense || 0, content[1].labour_expense || 0, content[1].extra_expenses || 0],
+                    backgroundColor: ["#1f6f4a", "#e0a526", "#5c8fd6"]
+                }]
+            }
+        });
+
+        new Chart(document.getElementById("revenueChart"), {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: "Sold Amount", data: soldAmounts, backgroundColor: "#1f6f4a" },
+                    { label: "Total Expenses", data: expenses, backgroundColor: "#d9773a" }
+                ]
+            }
+        });
+    }
+
+    renderCharts();
+</script>
+</body>
+</html>

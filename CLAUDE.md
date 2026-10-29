@@ -6,21 +6,23 @@ matching files. Same conventions as the GridBase repo (`C:\Projects\GridBase`).
 
 ## What this is
 
-Internal web pages for **Mondal Brothers** (the family business): delivery reports, customer
-khata (credit) balances, profits, a discount/commission calculator, meter readings, and UPI
-payment pages. Plain HTML + inline JS, no build step, no package manager, no tests.
+Website for **Mondal Brothers** (the family business): a public home page (`index.html`), a
+customer UPI payment page (`pay/`), and internal tools under `app/`: delivery reports, customer
+khata (credit) balances, profits, a commission calculator, meter readings. Plain HTML + JS,
+no build step, no package manager, no tests.
 
 Data lives in Google Sheets and is read through the **GridBase** engine (Apps Script web app),
-via the shared client in `config.js`.
+via the shared client in `assets/js/config.js`.
 
 ## Hard constraints
 
-- All sheet I/O goes through `callSheetsApi(operations)` in `config.js`. Never call Google
-  Sheets or the engine URL any other way (ADR-001).
+- All sheet I/O goes through `callSheetsApi(operations)` in `assets/js/config.js`. Never call
+  Google Sheets or the engine URL any other way (ADR-001).
 - POST bodies are a JSON **string** with no Content-Type header, so there is no CORS preflight.
   Do not add `Content-Type: application/json` (ADR-002).
-- Each page is self-contained: its own HTML, CSS and JS. Shared code goes in `config.js` only.
-- Charts use Chart.js from the jsDelivr CDN (`profits.html`, `day-dashboard.html`).
+- One folder per page; shared code only in `assets/` (`assets/css/site.css`, `assets/js/common.js`, `assets/js/config.js`).
+  No build step or framework (ADR-003). All paths relative.
+- Charts use version-pinned Chart.js from the jsDelivr CDN (`app/profits/`, `app/daily/`).
 - The engine's wire contract is owned by the GridBase repo. Never redefine it here.
 
 ## Commands

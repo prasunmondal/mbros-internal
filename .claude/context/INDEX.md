@@ -9,8 +9,8 @@ open matching files. A task that needs none of these (typo, styling, generic JS)
 
 | Task mentions… | Read | Auto-loaded rule | Key sources | ADRs |
 |---|---|---|---|---|
-| fetch, API, GridBase, sheet, worksheet, spreadsheet, CORS, retry | `domains/data-access.md` | data-access | `config.js` | 001, 002 |
-| a page, table, chart, filter, layout, new page | `domains/pages.md` | pages | `*.html` | — |
+| fetch, API, GridBase, sheet, worksheet, spreadsheet, CORS, retry | `domains/data-access.md` | data-access | `assets/js/config.js` | 001, 002 |
+| a page, table, chart, filter, layout, new page | `domains/pages.md` | pages | `app/`, `pay/`, `index.html`, `assets/` | 003 |
 | khata, balance, profit, commission, discount, delivery, customer, meter, payment, UPI | `product.md` | pages | page that computes it | — |
 | bug triage, "is X a known problem" | `known-issues.md` | — | — | — |
 | why was X decided | `decisions/README.md` | — | — | all |
