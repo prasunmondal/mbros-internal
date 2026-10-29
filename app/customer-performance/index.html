@@ -24,6 +24,7 @@
         }
         .control-btn:hover { border-color: var(--brand); color: var(--brand); }
         .control-btn[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+        .share-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
         .axis-select {
             padding: 6px 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
             border-radius: var(--radius-sm); font: inherit; font-size: 0.85rem;
@@ -128,6 +129,10 @@
                     <option value="24">Last 2 years</option>
                     <option value="0">All time (since 2023)</option>
                 </select>
+                <button type="button" class="control-btn share-btn" id="shareChart" title="Share this chart as an image">
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                    Share
+                </button>
             </div>
             <p class="chart-summary" id="chartSummary"></p>
             <div class="chart-wrapper"><canvas id="kgChart"></canvas></div>
@@ -691,6 +696,80 @@
         });
     }
 
+    // Draw the chart onto a white card with its title, summary line and a footer, as a PNG file.
+    function chartImage() {
+        const source = chart.canvas;
+        const scale = source.width / source.clientWidth;  // device pixel ratio the chart was drawn at
+        const pad = 24, width = source.clientWidth + pad * 2;
+        const title = document.getElementById("chartTitle").textContent;
+        const summary = document.getElementById("chartSummary").textContent;
+        const font = getComputedStyle(document.body).fontFamily;
+
+        const out = document.createElement("canvas");
+        const ctx = out.getContext("2d");
+        ctx.font = "14px " + font;
+        const lines = wrapText(ctx, summary, width - pad * 2);
+        const top = pad + 26 + lines.length * 20 + 12;
+        const height = top + source.clientHeight + 40;
+
+        out.width = width * scale;
+        out.height = height * scale;
+        ctx.scale(scale, scale);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.textBaseline = "top";
+        ctx.fillStyle = "#1c2420";
+        ctx.font = "700 18px " + font;
+        ctx.fillText(title, pad, pad);
+        ctx.fillStyle = "#5c665f";
+        ctx.font = "14px " + font;
+        lines.forEach((line, i) => ctx.fillText(line, pad, pad + 30 + i * 20));
+        ctx.drawImage(source, pad, top, source.clientWidth, source.clientHeight);
+        ctx.fillStyle = "#8a938c";
+        ctx.font = "12px " + font;
+        ctx.fillText("Mondal Brothers · data up to " + formatDate(dataEnd), pad, height - 26);
+
+        return new Promise(resolve => out.toBlob(resolve, "image/png"));
+    }
+
+    function wrapText(ctx, text, maxWidth) {
+        const lines = [];
+        let line = "";
+        text.split(" ").forEach(word => {
+            const next = line ? line + " " + word : word;
+            if (line && ctx.measureText(next).width > maxWidth) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = next;
+            }
+        });
+        if (line) lines.push(line);
+        return lines;
+    }
+
+    // Phones get the share sheet (WhatsApp etc.); elsewhere the image downloads.
+    async function shareChart() {
+        if (!chart) return;
+        const title = document.getElementById("chartTitle").textContent;
+        const fileName = title.replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase() + ".png";
+        const file = new File([await chartImage()], fileName, { type: "image/png" });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({ files: [file], title });
+            } catch (error) {
+                if (error.name !== "AbortError") console.error("Share failed:", error);
+            }
+            return;
+        }
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(file);
+        link.download = fileName;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+
     function renderCompareTable(selected) {
         const thead = document.querySelector("#compareTable thead");
         const tbody = document.querySelector("#compareTable tbody");
@@ -788,6 +867,7 @@
     wireSegmented("chartGroup", button => groupBy = button.dataset.group);
     wireSegmented("chartView", button => chartView = button.dataset.view);
     document.getElementById("customerSelect").addEventListener("change", render);
+    document.getElementById("shareChart").addEventListener("click", shareChart);
     document.getElementById("chartRange").addEventListener("change", () =>
         renderChart(document.getElementById("customerSelect").value || ALL));
 
