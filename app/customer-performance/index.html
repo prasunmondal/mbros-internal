@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Customer performance · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <script src="../../assets/js/common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .chart-box { position: relative; height: 340px; }
+        .card-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+        .chart-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .chart-controls .select { width: auto; padding-top: 6px; padding-bottom: 6px; }
+        .segmented { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; }
+        .segmented button {
+            padding: 6px 14px; border: 0; background: var(--surface); color: var(--text-muted);
+            font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        }
+        .segmented button + button { border-left: 1px solid var(--border-strong); }
+        .segmented button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-strong); }
+        .stat-note { margin-top: 4px; font-size: 0.8rem; color: var(--text-muted); }
+        .stat-note.up { color: var(--brand); }
+        .stat-note.down { color: var(--danger); }
+        .table th.group { text-align: center; border-left: 1px solid var(--border); }
+        .table td.edge, .table th.edge { border-left: 1px solid var(--border); }
+        #compareTable tbody tr { cursor: pointer; }
+        #compareTable tbody tr.selected td { background: var(--brand-soft); }
+        .stale { color: var(--danger); font-weight: 600; }
+        .footnote { padding: 12px 20px; font-size: 0.8rem; color: var(--text-subtle); border-top: 1px solid var(--border); }
+    </style>
+</head>
+<body data-page="customer-performance">
+
+<main class="app-main wide">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Customer performance</h1>
+                <p>How often each customer orders, how much they take, and how that is changing.</p>
+            </div>
+            <div class="page-actions">
+                <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+            </div>
+        </div>
+
+        <div class="card card-body toolbar no-print">
+            <div class="field grow">
+                <label for="customerSelect">Customer</label>
+                <select id="customerSelect" class="select" disabled>
+                    <option value="">Loading customers…</option>
+                </select>
+            </div>
+        </div>
+
+        <p id="status" class="status" hidden style="margin-top: 16px;"></p>
+
+        <div class="stats section">
+            <div class="stat"><div class="stat-label">Last order</div><div class="stat-value" id="statLast">–</div><div class="stat-note" id="statLastNote"></div></div>
+            <div class="stat"><div class="stat-label">Orders / week (3 mo)</div><div class="stat-value" id="statFreq">–</div><div class="stat-note" id="statFreqNote"></div></div>
+            <div class="stat"><div class="stat-label">Avg order (3 mo)</div><div class="stat-value" id="statAvg">–</div><div class="stat-note" id="statAvgNote"></div></div>
+            <div class="stat"><div class="stat-label">KG, last 30 days</div><div class="stat-value" id="statKg30">–</div><div class="stat-note" id="statKg30Note"></div></div>
+            <div class="stat"><div class="stat-label">Share of KG (3 mo)</div><div class="stat-value" id="statShare">–</div><div class="stat-note" id="statShareNote"></div></div>
+            <div class="stat"><div class="stat-label">Current balance</div><div class="stat-value" id="statBalance">–</div><div class="stat-note" id="statBalanceNote"></div></div>
+        </div>
+
+        <section class="card section">
+            <div class="card-header"><h2>Order frequency &amp; size</h2></div>
+            <div class="table-wrap">
+                <table class="table" id="periodTable">
+                    <thead>
+                    <tr>
+                        <th>Period</th>
+                        <th class="num">Orders</th>
+                        <th class="num">Orders / week</th>
+                        <th class="num">Avg order KG</th>
+                        <th class="num">KG / week</th>
+                        <th class="num">Total KG</th>
+                        <th class="num">KG vs year before</th>
+                        <th class="num">Avg rate ₹/KG</th>
+                        <th class="num">Billed</th>
+                        <th class="num">Paid</th>
+                        <th class="num">Paid / billed</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="footnote" id="periodNote"></div>
+        </section>
+
+        <section class="card section">
+            <div class="card-header">
+                <h2 id="chartTitle">Delivered KG</h2>
+                <div class="chart-controls no-print">
+                <select id="chartRange" class="select" aria-label="Chart range">
+                    <option value="3">Last 3 months</option>
+                    <option value="6">Last 6 months</option>
+                    <option value="12" selected>Last 12 months</option>
+                    <option value="24">Last 2 years</option>
+                    <option value="0">All time (since 2023)</option>
+                </select>
+                <div class="segmented" role="group" aria-label="Group by">
+                    <button type="button" data-group="day">Day</button>
+                    <button type="button" data-group="week" aria-pressed="true">Week</button>
+                    <button type="button" data-group="month">Month</button>
+                    <button type="button" data-group="year">Year</button>
+                </div>
+                </div>
+            </div>
+            <div class="card-body"><div class="chart-box"><canvas id="kgChart"></canvas></div></div>
+        </section>
+
+        <section class="card section">
+            <div class="card-header"><h2>All customers compared</h2><span class="subtle">Customers who ordered in the last 12 months · click a row to open one</span></div>
+            <div class="table-wrap">
+                <table class="table" id="compareTable">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<script src="../../assets/js/config.js"></script>
+<script>
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.maintainAspectRatio = false;
+
+    const PERIODS = [
+        { months: 1, label: "Last 1 month" },
+        { months: 2, label: "Last 2 months" },
+        { months: 3, label: "Last 3 months" },
+        { months: 6, label: "Last 6 months" },
+        { months: 12, label: "Last 12 months" }
+    ];
+    const ALL = "ALL";
+    const ARCHIVE_SHEET_ID = "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw";  // 2023–2025 deliveries
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    let orders = [];        // one entry per customer per delivery day: { name, date, kg, amount }
+    let rowsByName = {};    // every delivery row (including payment-only rows), by customer
+    let currentNames = new Set();  // customers present in db2.deliveries (the live khata)
+    let firstDate = {};     // first delivery day per customer, and for ALL
+    let today = Mb.todayIST();
+    let chart = null;
+    let groupBy = "week";
+
+    // ---------- date helpers (all dates are YYYY-MM-DD strings in IST) ----------
+
+    function toUTC(date) {
+        return Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10));
+    }
+
+    function fromUTC(ms) {
+        return new Date(ms).toISOString().slice(0, 10);
+    }
+
+    function addDays(date, days) {
+        return fromUTC(toUTC(date) + days * DAY_MS);
+    }
+
+    function daysBetween(from, to) {
+        return Math.round((toUTC(to) - toUTC(from)) / DAY_MS);
+    }
+
+    // Same day N calendar months earlier (clamped to the month's last day).
+    function monthsBefore(date, months) {
+        const d = new Date(toUTC(date));
+        const day = d.getUTCDate();
+        d.setUTCDate(1);
+        d.setUTCMonth(d.getUTCMonth() - months);
+        const lastDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+        d.setUTCDate(Math.min(day, lastDay));
+        return d.toISOString().slice(0, 10);
+    }
+
+    function formatDate(date, options = { day: "2-digit", month: "short", year: "numeric" }) {
+        return new Date(toUTC(date)).toLocaleDateString("en-IN", { ...options, timeZone: "UTC" });
+    }
+
+    // Start of the bucket a date falls in. Weeks start on Monday.
+    function bucketStart(date, group) {
+        if (group === "day") return date;
+        if (group === "week") return addDays(date, -((new Date(toUTC(date)).getUTCDay() + 6) % 7));
+        if (group === "month") return date.slice(0, 8) + "01";
+        return date.slice(0, 5) + "01-01";
+    }
+
+    function nextBucket(start, group) {
+        if (group === "day") return addDays(start, 1);
+        if (group === "week") return addDays(start, 7);
+        if (group === "month") return monthsBefore(start, -1);
+        return (+start.slice(0, 4) + 1) + "-01-01";
+    }
+
+    function bucketLabel(start, group) {
+        if (group === "day") return formatDate(start, { day: "2-digit", month: "short" });
+        if (group === "week") return formatDate(start, { day: "2-digit", month: "short" });
+        if (group === "month") return formatDate(start, { month: "short", year: "numeric" });
+        return start.slice(0, 4);
+    }
+
+    // ---------- data ----------
+
+    async function loadData() {
+        const data = await callSheetsApi([
+            { type: "SELECT", spreadsheetId: ARCHIVE_SHEET_ID, worksheet: "deliveries.2023", id: "mbros-github-site-customer-performance-1" },
+            { type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.deliveries", id: "mbros-github-site-customer-performance-2" }
+        ]);
+
+        const withDate = rows => rows.filter(r => r.name && r.timestamp).map(r => ({ ...r, date: Mb.toISTDate(r.timestamp) }));
+        const current = withDate(data[1].rows);
+        // The archive (2023–2025) ends where db2.deliveries starts; drop any overlap so no day counts twice.
+        const currentStart = current.reduce((min, r) => r.date < min ? r.date : min, "9999-12-31");
+        const archive = withDate(data[0].rows).filter(r => r.date < currentStart);
+        currentNames = new Set(current.map(r => r.name));
+
+        const byDay = new Map();
+        rowsByName = {};
+        [...archive, ...current].forEach(row => {
+            const date = row.date;
+            (rowsByName[row.name] = rowsByName[row.name] || []).push(row);
+
+            const kg = Number(row.deliveredKg) || 0;
+            if (kg <= 0) return;  // payment-only row, not an order
+            // Several rows for one customer on one day count as one order.
+            const key = row.name + "|" + date;
+            const order = byDay.get(key) || { name: row.name, date, kg: 0, amount: 0 };
+            order.kg += kg;
+            order.amount += Number(row.deliverAmount) || 0;
+            byDay.set(key, order);
+        });
+
+        orders = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+        Object.values(rowsByName).forEach(rows => rows.sort((a, b) => a.date.localeCompare(b.date)));
+
+        firstDate = {};
+        orders.forEach(o => {
+            if (!firstDate[o.name]) firstDate[o.name] = o.date;
+            if (!firstDate[ALL]) firstDate[ALL] = o.date;
+        });
+    }
+
+    function ordersFor(name) {
+        return name === ALL ? orders : orders.filter(o => o.name === name);
+    }
+
+    function paymentsFor(name, from, to) {
+        const rows = name === ALL ? Object.values(rowsByName).flat() : (rowsByName[name] || []);
+        return rows
+            .filter(r => r.date >= from && r.date <= to)
+            .reduce((sum, r) => sum + (Number(r.paidCash) || 0) + (Number(r.paidOnline) || 0), 0);
+    }
+
+    // Balances come from the live sheet only; an archive-only customer's 2025 balance may be out of date.
+    function latestBalance(name) {
+        if (!currentNames.has(name)) return null;
+        const rows = rowsByName[name] || [];
+        const last = rows[rows.length - 1];
+        return last ? Number(last.totalBalance) || 0 : 0;
+    }
+
+    // Metrics for one customer (or ALL) over [from, to]. Weeks are counted from the later of `from`
+    // and the customer's first delivery, so a new customer is not diluted by weeks before they started.
+    function metrics(name, list, from, to) {
+        const inRange = list.filter(o => o.date >= from && o.date <= to);
+        const activeFrom = firstDate[name] && firstDate[name] > from ? firstDate[name] : from;
+        const weeks = Math.max(1, (daysBetween(activeFrom, to) + 1) / 7);
+        const kg = inRange.reduce((s, o) => s + o.kg, 0);
+        const amount = inRange.reduce((s, o) => s + o.amount, 0);
+        return {
+            orders: inRange.length,
+            perWeek: inRange.length / weeks,
+            avgKg: inRange.length ? kg / inRange.length : 0,
+            kgPerWeek: kg / weeks,
+            kg,
+            amount,
+            rate: kg ? amount / kg : 0,
+            activeFrom,
+            weeks
+        };
+    }
+
+    // ---------- rendering ----------
+
+    function setText(id, text, className) {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        if (className !== undefined) el.className = el.className.split(" ")[0] + (className ? " " + className : "");
+    }
+
+    function changeNote(current, previous, suffix) {
+        if (!previous) return { text: current ? "new vs " + suffix : "", cls: "" };
+        const pct = (current - previous) / previous * 100;
+        return { text: (pct >= 0 ? "▲ " : "▼ ") + Math.abs(pct).toFixed(0) + "% vs " + suffix, cls: pct >= 0 ? "up" : "down" };
+    }
+
+    function renderStats(name) {
+        const list = ordersFor(name);
+        const last = list[list.length - 1];
+        if (last) {
+            const ago = daysBetween(last.date, today);
+            setText("statLast", formatDate(last.date, { day: "2-digit", month: "short" }));
+            setText("statLastNote", ago === 0 ? "today" : ago + (ago === 1 ? " day ago" : " days ago"), ago > 7 ? "down" : "");
+        } else {
+            setText("statLast", "–");
+            setText("statLastNote", "no orders", "");
+        }
+
+        const from3 = monthsBefore(today, 3);
+        const m3 = metrics(name, list, from3, today);
+        const prev3 = metrics(name, list, monthsBefore(today, 6), addDays(from3, -1));
+        let note = changeNote(m3.perWeek, prev3.perWeek, "prior 3 mo");
+        setText("statFreq", Mb.formatNumber(m3.perWeek, 1));
+        setText("statFreqNote", note.text, note.cls);
+        note = changeNote(m3.avgKg, prev3.avgKg, "prior 3 mo");
+        setText("statAvg", Mb.formatNumber(m3.avgKg, 1) + " kg");
+        setText("statAvgNote", note.text, note.cls);
+
+        const kg30 = list.filter(o => o.date > addDays(today, -30)).reduce((s, o) => s + o.kg, 0);
+        const kgPrev30 = list.filter(o => o.date > addDays(today, -60) && o.date <= addDays(today, -30)).reduce((s, o) => s + o.kg, 0);
+        note = changeNote(kg30, kgPrev30, "prior 30 days");
+        setText("statKg30", Mb.formatNumber(kg30, 0) + " kg");
+        setText("statKg30Note", note.text, note.cls);
+
+        if (name === ALL) {
+            const active = new Set(orders.filter(o => o.date >= from3).map(o => o.name)).size;
+            setText("statShare", "100%");
+            setText("statShareNote", active + " customers ordered in 3 mo", "");
+            const total = [...currentNames].reduce((s, n) => s + latestBalance(n), 0);
+            setText("statBalance", Mb.formatINR(total, 0), total < 0 ? "negative" : "");
+            setText("statBalanceNote", "sum of every customer's latest balance", "");
+        } else {
+            const all3 = metrics(ALL, orders, from3, today);
+            const share = all3.kg ? m3.kg / all3.kg * 100 : 0;
+            const rank = rankBy3MonthKg().indexOf(name) + 1;
+            setText("statShare", Mb.formatNumber(share, 1) + "%");
+            setText("statShareNote", rank ? "rank #" + rank + " by KG" : "no orders in 3 mo", "");
+            const balance = latestBalance(name);
+            const lastRow = (rowsByName[name] || []).slice(-1)[0];
+            if (balance === null) {
+                setText("statBalance", "–", "");
+                setText("statBalanceNote", "not in the current khata", "");
+            } else {
+                setText("statBalance", Mb.formatINR(balance, 0), balance < 0 ? "negative" : "");
+                setText("statBalanceNote", lastRow ? "as of " + formatDate(lastRow.date) : "", "");
+            }
+        }
+    }
+
+    function rankBy3MonthKg() {
+        const from3 = monthsBefore(today, 3);
+        const totals = {};
+        orders.filter(o => o.date >= from3).forEach(o => totals[o.name] = (totals[o.name] || 0) + o.kg);
+        return Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+    }
+
+    function cell(row, text, className) {
+        const td = row.insertCell();
+        td.textContent = text;
+        if (className) td.className = className;
+        return td;
+    }
+
+    function renderPeriodTable(name) {
+        const list = ordersFor(name);
+        const tbody = document.querySelector("#periodTable tbody");
+        tbody.innerHTML = "";
+        let clipped = false;
+
+        PERIODS.forEach(p => {
+            const from = monthsBefore(today, p.months);
+            const m = metrics(name, list, from, today);
+            const paid = paymentsFor(name, from, today);
+            if (m.activeFrom > from) clipped = true;
+
+            const row = tbody.insertRow();
+            cell(row, p.label);
+            cell(row, m.orders, "num");
+            cell(row, Mb.formatNumber(m.perWeek, 2), "num");
+            cell(row, Mb.formatNumber(m.avgKg, 1), "num");
+            cell(row, Mb.formatNumber(m.kgPerWeek, 1), "num");
+            cell(row, Mb.formatNumber(m.kg, 1), "num");
+            // Same window one year earlier.
+            const lastYearKg = list
+                .filter(o => o.date >= monthsBefore(from, 12) && o.date <= monthsBefore(today, 12))
+                .reduce((s, o) => s + o.kg, 0);
+            const yoy = changeNote(m.kg, lastYearKg, "");
+            cell(row, lastYearKg ? yoy.text.replace(" vs ", "") : "–", "num " + yoy.cls);
+            cell(row, m.kg ? Mb.formatNumber(m.rate, 2) : "–", "num");
+            cell(row, Mb.formatINR(m.amount, 0), "num");
+            cell(row, Mb.formatINR(paid, 0), "num");
+            cell(row, m.amount ? Mb.formatNumber(paid / m.amount * 100, 0) + "%" : "–", "num");
+        });
+
+        const since = firstDate[name];
+        document.getElementById("periodNote").textContent =
+            "An order is one delivery day. Periods end today (" + formatDate(today) + "). " +
+            (clipped && since
+                ? "Weekly figures count weeks from " + formatDate(since) + ", the first delivery on record" +
+                  (name === ALL ? "" : " for this customer") + ", where that is later than the period start."
+                : "");
+    }
+
+    function renderChart(name) {
+        const months = +document.getElementById("chartRange").value;
+        // Start on a bucket boundary so the first bar is not a partial week/month/year.
+        const from = months ? bucketStart(monthsBefore(today, months), groupBy) : "";
+        const list = ordersFor(name).filter(o => o.date >= from);
+        const buckets = new Map();
+        if (list.length) {
+            const end = bucketStart(today, groupBy);
+            for (let b = from || bucketStart(list[0].date, groupBy); b <= end; b = nextBucket(b, groupBy)) {
+                buckets.set(b, { kg: 0, orders: 0 });
+            }
+            list.forEach(o => {
+                const bucket = buckets.get(bucketStart(o.date, groupBy));
+                bucket.kg += o.kg;
+                bucket.orders += 1;
+            });
+        }
+        const keys = [...buckets.keys()];
+        const values = [...buckets.values()];
+
+        document.getElementById("chartTitle").textContent =
+            "Delivered KG by " + groupBy + " · " + (name === ALL ? "all customers" : name);
+
+        if (chart) chart.destroy();
+        chart = new Chart(document.getElementById("kgChart"), {
+            type: "bar",
+            data: {
+                labels: keys.map(k => bucketLabel(k, groupBy)),
+                datasets: [{
+                    label: "Delivered KG",
+                    data: values.map(v => Math.round(v.kg * 10) / 10),
+                    backgroundColor: "#1f6f4a",
+                    hoverBackgroundColor: "#17573a",
+                    borderRadius: 4,
+                    maxBarThickness: 48
+                }]
+            },
+            options: {
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: items => {
+                                const start = keys[items[0].dataIndex];
+                                if (groupBy === "week") return "Week of " + formatDate(start);
+                                if (groupBy === "day") return formatDate(start, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+                                return bucketLabel(start, groupBy);
+                            },
+                            label: item => Mb.formatNumber(item.raw, 1) + " kg",
+                            afterLabel: item => {
+                                const v = values[item.dataIndex];
+                                return v.orders + (v.orders === 1 ? " order" : " orders") +
+                                    (v.orders ? " · avg " + Mb.formatNumber(v.kg / v.orders, 1) + " kg" : "");
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 0 } },
+                    y: { beginAtZero: true, grid: { color: "#eef0ec" }, title: { display: true, text: "KG" } }
+                }
+            }
+        });
+    }
+
+    function renderCompareTable(selected) {
+        const thead = document.querySelector("#compareTable thead");
+        const tbody = document.querySelector("#compareTable tbody");
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+
+        const top = thead.insertRow();
+        const sub = thead.insertRow();
+        [["Customer", 2, 1], ["Last order", 2, 1, "num"]].forEach(([text, rowSpan, colSpan, cls]) => {
+            const th = document.createElement("th");
+            th.textContent = text;
+            th.rowSpan = rowSpan;
+            if (cls) th.className = cls;
+            top.appendChild(th);
+        });
+        PERIODS.forEach(p => {
+            const th = document.createElement("th");
+            th.textContent = p.months + " mo";
+            th.colSpan = 2;
+            th.className = "group";
+            top.appendChild(th);
+            ["Orders/wk", "Avg KG"].forEach((text, i) => {
+                const h = document.createElement("th");
+                h.textContent = text;
+                h.className = "num" + (i === 0 ? " edge" : "");
+                sub.appendChild(h);
+            });
+        });
+        const balanceTh = document.createElement("th");
+        balanceTh.textContent = "Balance";
+        balanceTh.rowSpan = 2;
+        balanceTh.className = "num edge";
+        top.appendChild(balanceTh);
+
+        // Customers with recent orders first (by 3-month KG), then anyone else who ordered in the last
+        // 12 months, by last order. Older (archive-only) customers stay in the dropdown only.
+        const ranked = rankBy3MonthKg();
+        const lastOrder = n => { const l = ordersFor(n); return l.length ? l[l.length - 1].date : ""; };
+        const yearAgo = monthsBefore(today, 12);
+        const rest = Object.keys(firstDate).filter(n => n !== ALL && !ranked.includes(n) && lastOrder(n) >= yearAgo);
+        rest.sort((a, b) => lastOrder(b).localeCompare(lastOrder(a)));
+
+        [...ranked, ...rest].forEach(name => {
+            const list = ordersFor(name);
+            const row = tbody.insertRow();
+            if (name === selected) row.className = "selected";
+            row.addEventListener("click", () => selectCustomer(name));
+
+            cell(row, name);
+            const last = lastOrder(name);
+            const ago = daysBetween(last, today);
+            cell(row, formatDate(last, { day: "2-digit", month: "short" }) + " (" + ago + "d)", "num" + (ago > 7 ? " stale" : ""));
+            PERIODS.forEach(p => {
+                const m = metrics(name, list, monthsBefore(today, p.months), today);
+                cell(row, m.orders ? Mb.formatNumber(m.perWeek, 1) : "–", "num edge");
+                cell(row, m.orders ? Mb.formatNumber(m.avgKg, 1) : "–", "num");
+            });
+            const balance = latestBalance(name);
+            cell(row, balance === null ? "–" : Mb.formatINR(balance, 0), "num edge");
+        });
+    }
+
+    function render() {
+        const name = document.getElementById("customerSelect").value || ALL;
+        renderStats(name);
+        renderPeriodTable(name);
+        renderChart(name);
+        renderCompareTable(name);
+    }
+
+    function selectCustomer(name) {
+        document.getElementById("customerSelect").value = name;
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function populateCustomers() {
+        const select = document.getElementById("customerSelect");
+        select.innerHTML = "";
+        select.add(new Option("All customers", ALL));
+        Object.keys(firstDate).filter(n => n !== ALL).sort((a, b) => a.localeCompare(b))
+            .forEach(name => select.add(new Option(name, name)));
+        select.disabled = false;
+    }
+
+    document.querySelectorAll(".segmented button").forEach(button => {
+        button.addEventListener("click", () => {
+            groupBy = button.dataset.group;
+            document.querySelectorAll(".segmented button").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
+            renderChart(document.getElementById("customerSelect").value || ALL);
+        });
+    });
+    document.getElementById("customerSelect").addEventListener("change", render);
+    document.getElementById("chartRange").addEventListener("change", () =>
+        renderChart(document.getElementById("customerSelect").value || ALL));
+
+    async function initialize() {
+        const status = document.getElementById("status");
+        Mb.setStatus(status, "info", "Loading deliveries…");
+        try {
+            await loadData();
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            Mb.setStatus(status, "error", "Could not load deliveries. Please try again.");
+            return;
+        }
+        if (!orders.length) {
+            Mb.setStatus(status, "empty", "No deliveries found.");
+            return;
+        }
+        Mb.setStatus(status, null);
+        today = Mb.todayIST();
+        populateCustomers();
+        render();
+    }
+
+    initialize();
+</script>
+</body>
+</html>

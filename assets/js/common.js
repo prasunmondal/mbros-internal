@@ -13,6 +13,8 @@
           description: 'Delivered KG per customer across date groups and years.' },
         { id: 'customer-profit', path: 'app/customer-profit/', title: 'Customer profit', group: 'Reports',
           description: 'Profit and debt movement for a customer over a date range.' },
+        { id: 'customer-performance', path: 'app/customer-performance/', title: 'Customer performance', group: 'Reports',
+          description: 'Order frequency, average order size and KG trends per customer.' },
         { id: 'profits', path: 'app/profits/', title: 'Business dashboard', group: 'Analytics',
           description: 'Profit, expenses, due balance and year-over-year trends.' },
         { id: 'daily', path: 'app/daily/', title: 'Daily summary', group: 'Analytics',

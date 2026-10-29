@@ -32,6 +32,11 @@ earns, plus pages customers use to pay.
   Payable = paying amount − discount passed on. Defaults: 5% total, 3% passed on.
 - **Expenses** (`app/profits/profits.js`): broken down into car, labour and extra expenses
   `[inferred: from column names]`.
+- **Order** (`app/customer-performance/`): one customer's delivery day with `deliveredKg` > 0;
+  rows without KG are payment-only. Orders/week counts weeks from the later of the period
+  start and the customer's first delivery `[inferred: chosen when the page was built, not owner-confirmed]`.
+  History joins the 2023–2025 archive (`deliveries.2023`, ends 2025-12-31) to `db2.deliveries`
+  (from 2026-01-01). Balances come from `db2.deliveries` only; archive-only customers show none.
 - **Payments** (`pay/`): two UPI routes. The QR image `assets/img/upi-qr.jpeg` is a Google Pay
   business QR for `9679004046@okbizaxis` ("Mondal Brothers"); the `upi://pay` button pays
   `prsnmondal@ybl` ("Prasun Mondal"). Both were on the old payment page.
