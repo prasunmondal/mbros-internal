@@ -21,6 +21,91 @@
           description: 'Profit and debt movement for a customer over a date range.' }
     ];
 
+    // Password gate for every app page. A deterrent only: this is a static site, so the hash is
+    // public and the engine URL still answers without it (see context/known-issues.md).
+    // ACCESS_HASH is the SHA-256 hex of the password; changing it signs every device out.
+    const ACCESS_HASH = '362a945ed1f1d7d21e574f65bea48928db2e198815fc1bb8c6fb965eb0acf293';
+    const ACCESS_KEY = 'mb-access';
+    const SESSION_MS = 0.5 * 60 * 60 * 1000; // an unlock lasts 0.5 hours, then the password is asked again
+
+    // Unlock time (ms) if this browser holds a current, unexpired unlock; otherwise null.
+    function storedUnlockTime() {
+        try {
+            const { hash, at } = JSON.parse(localStorage.getItem(ACCESS_KEY));
+            return hash === ACCESS_HASH && Date.now() - at < SESSION_MS ? at : null;
+        } catch {
+            return null;
+        }
+    }
+
+    // Lock an open page when its session runs out.
+    function scheduleExpiry(at) {
+        setTimeout(lock, Math.max(0, at + SESSION_MS - Date.now()));
+    }
+
+    let unlock;
+    // Resolves once the password is accepted; callSheetsApi waits on it, so nothing loads while locked.
+    const ready = new Promise(resolve => { unlock = resolve; });
+    const unlockedAt = storedUnlockTime();
+    if (unlockedAt !== null) {
+        unlock();
+        scheduleExpiry(unlockedAt);
+    } else {
+        document.documentElement.classList.add('mb-locked');
+    }
+
+    async function sha256(text) {
+        const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+        return [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function renderLock() {
+        if (!document.documentElement.classList.contains('mb-locked')) return;
+        document.body.insertAdjacentHTML('beforeend', `
+            <div class="lock-screen">
+                <form class="card lock-card">
+                    <span class="brand-mark">MB</span>
+                    <h1>Mondal Brothers Internal</h1>
+                    <div class="field">
+                        <label for="mbPassword">Password</label>
+                        <input class="input" id="mbPassword" type="password" autocomplete="current-password" required autofocus>
+                    </div>
+                    <div class="status status-error" hidden></div>
+                    <button class="btn btn-primary btn-block" type="submit">Unlock</button>
+                </form>
+            </div>`);
+
+        const screen = document.body.lastElementChild;
+        const input = screen.querySelector('input');
+        const status = screen.querySelector('.status');
+        screen.querySelector('form').addEventListener('submit', async event => {
+            event.preventDefault();
+            let hash;
+            try {
+                hash = await sha256(input.value);
+            } catch {
+                setStatus(status, 'error', 'This browser cannot check the password here. Open the site over https.');
+                return;
+            }
+            if (hash !== ACCESS_HASH) {
+                setStatus(status, 'error', 'Wrong password.');
+                input.select();
+                return;
+            }
+            const at = Date.now();
+            try { localStorage.setItem(ACCESS_KEY, JSON.stringify({ hash, at })); } catch { /* unlocked for this page view only */ }
+            screen.remove();
+            document.documentElement.classList.remove('mb-locked');
+            unlock();
+            scheduleExpiry(at);
+        });
+    }
+
+    function lock() {
+        try { localStorage.removeItem(ACCESS_KEY); } catch { /* nothing stored */ }
+        location.reload();
+    }
+
     function url(path) {
         return new URL(path, ROOT).href;
     }
@@ -84,16 +169,25 @@
         document.body.insertAdjacentHTML('beforeend', `
             <footer class="app-footer">
                 <div class="container">
-                    Mondal Brothers internal tools · <a href="${url('')}">Public site</a> · <a href="${url('pay/')}">Payment page</a>
+                    Mondal Brothers internal tools · <a href="${url('')}">Public site</a> · <a href="${url('pay/')}">Payment page</a> · <a href="#" data-lock>Lock</a>
                 </div>
             </footer>`);
 
+        document.querySelector('[data-lock]').addEventListener('click', event => {
+            event.preventDefault();
+            lock();
+        });
         document.querySelector('.app-nav [aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
     }
 
-    window.Mb = { TOOLS, url, escapeHtml, toISTDate, todayIST, formatNumber, formatINR, setStatus };
+    function start() {
+        renderShell();
+        renderLock();
+    }
+
+    window.Mb = { TOOLS, ready, url, escapeHtml, toISTDate, todayIST, formatNumber, formatINR, setStatus };
 
     // Loaded in <head>, so `Mb` exists before page scripts run; the shell goes in once the body is parsed.
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderShell);
-    else renderShell();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+    else start();
 })();

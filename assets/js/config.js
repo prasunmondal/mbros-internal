@@ -21,6 +21,7 @@ async function fetchWithRetry(url, options, retries = 3, delayMs = 1000) {
 // Send a batch of operations to the GridBase engine; resolves to one { operationId, rowCount, rows }
 // per operation. A string body goes as text/plain, which avoids a CORS preflight; the engine parses it as JSON.
 async function callSheetsApi(operations) {
+    if (window.Mb) await Mb.ready; // app pages: wait for the password gate in common.js
     const response = await fetchWithRetry(API_URL, {
         method: 'POST',
         body: JSON.stringify({ operations })

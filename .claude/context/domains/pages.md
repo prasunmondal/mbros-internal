@@ -16,6 +16,7 @@ sources:
   - app/calculator/index.html
   - assets/css/site.css
   - assets/js/common.js
+  - assets/js/config.js
 ---
 # Pages
 
@@ -40,7 +41,10 @@ sources:
   print. Light theme only: chart colours in `app/profits/profits.js` are hard-coded for a light background.
 - `assets/js/common.js`: `Mb` namespace (`TOOLS`, `url`, `escapeHtml`, `toISTDate`, `todayIST`,
   `formatINR`, `formatNumber`, `setStatus`) and the app header/footer, inserted on
-  DOMContentLoaded. It resolves the site root from its own URL, so links work under any base path.
+  DOMContentLoaded. It also runs the password gate: until the password (SHA-256 in `ACCESS_HASH`)
+  is entered, the page is hidden and `Mb.ready` stays pending, and `callSheetsApi` awaits it.
+  Unlock is remembered per browser in `localStorage` for 2 hours (`SESSION_MS`), then the page
+  locks itself (an open page reloads to the gate); the footer "Lock" link clears it early. It resolves the site root from its own URL, so links work under any base path.
 - `pay/` and `index.html` use `assets/css/site.css` only, without `assets/js/common.js`.
 
 ## Shared patterns

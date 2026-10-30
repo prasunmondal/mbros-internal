@@ -237,6 +237,12 @@ img { max-width: 100%; display: block; }
 .tool-card:hover { border-color: var(--brand); box-shadow: var(--shadow); color: var(--text); transform: translateY(-1px); }
 .tool-card p { color: var(--text-muted); font-size: 0.875rem; }
 
+/* Password gate (assets/js/common.js): hides the page until unlocked. */
+.mb-locked body > :not(.lock-screen) { display: none !important; }
+.lock-screen { min-height: 100vh; display: grid; place-items: center; padding: 20px 16px; }
+.lock-card { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 360px; padding: 28px 24px; }
+.lock-card h1 { font-size: 1.25rem; }
+
 @media (max-width: 720px) {
     .app-header-inner { gap: 12px; padding: 0 12px; }
     .app-header .brand > span:last-child { display: none; }
