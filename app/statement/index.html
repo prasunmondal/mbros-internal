@@ -58,6 +58,10 @@
             </div>
             <div class="page-actions">
                 <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+                <button type="button" class="btn btn-primary" id="sharePdf" title="Share this statement as a PDF" disabled>
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                    Share PDF
+                </button>
             </div>
         </div>
 
@@ -163,6 +167,8 @@
 </main>
 
 <script src="../../assets/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script>
     const num = value => Number(value) || 0;
     // Timestamps arrive as YYYY-MM-DD; fall back to IST conversion if a full timestamp ever appears.
@@ -279,6 +285,7 @@
             ? `Period: ${from || 'start'} to ${to || 'today'} · Generated ${Mb.todayIST()}` : '';
         document.getElementById('summaryCard').hidden = names.length < 2;
 
+        document.getElementById('sharePdf').disabled = !names.length;
         if (!names.length) {
             const td = body.insertRow().insertCell();
             td.colSpan = 13;
@@ -403,6 +410,99 @@
         setStat('closingStat', running);
     }
 
+    // The PDF's built-in font has no ₹ or minus sign, so swap them for ASCII.
+    const pdfText = text => text.replace(/−/g, '-').replace(/₹/g, 'Rs ');
+
+    // Read a table as shown on screen: only visible columns, and rows that have every cell.
+    function visibleTable(table) {
+        const headers = [...table.tHead.rows[0].cells];
+        const visible = headers.map((th, i) => i).filter(i => getComputedStyle(headers[i]).display !== 'none');
+        const columnStyles = {};
+        visible.forEach((i, position) => {
+            if (headers[i].classList.contains('num')) columnStyles[position] = { halign: 'right' };
+        });
+        const rows = [...table.tBodies[0].rows].filter(tr => tr.cells.length === headers.length);
+        return {
+            head: [visible.map(i => headers[i].textContent.trim())],
+            body: rows.map(tr => visible.map(i => pdfText(tr.cells[i].textContent))),
+            rowClasses: rows.map(tr => tr.className),
+            columnStyles
+        };
+    }
+
+    function statementPdf() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        const margin = 36;
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        doc.setFont('helvetica', 'bold').setFontSize(16).setTextColor('#1c2420');
+        doc.text('Mondal Brothers · Customer statement', margin, margin + 8);
+        doc.setFont('helvetica', 'normal').setFontSize(10).setTextColor('#5c665f');
+        const names = [...selected].sort((a, b) => a.localeCompare(b)).join(', ');
+        const nameLines = doc.splitTextToSize(names, pageWidth - margin * 2);
+        doc.text(nameLines, margin, margin + 26);
+        let y = margin + 26 + nameLines.length * 12;
+        doc.text(pdfText(document.getElementById('statementMeta').textContent), margin, y);
+
+        const stats = [...document.querySelectorAll('.stats .stat')].map(stat =>
+            `${stat.querySelector('.stat-label').textContent}: ${pdfText(stat.querySelector('.stat-value').textContent)}`);
+        doc.setTextColor('#1c2420');
+        doc.text(stats.join('   |   '), margin, y + 16);
+        y += 30;
+
+        const tableOptions = (table, startY) => ({
+            ...table,
+            startY,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 8, cellPadding: 4 },
+            headStyles: { fillColor: '#1f6f4a', textColor: '#ffffff' },
+            didParseCell: data => {
+                if (data.section !== 'body') return;
+                const rowClass = table.rowClasses[data.row.index];
+                if (rowClass === 'total-row') Object.assign(data.cell.styles, { fontStyle: 'bold', fillColor: '#f1f3f0' });
+                if (rowClass === 'opening-row') Object.assign(data.cell.styles, { fontStyle: 'italic', textColor: '#5c665f' });
+            }
+        });
+
+        if (!document.getElementById('summaryCard').hidden) {
+            doc.autoTable(tableOptions(visibleTable(document.getElementById('summaryTable')), y));
+            y = doc.lastAutoTable.finalY + 18;
+        }
+        doc.autoTable(tableOptions(visibleTable(document.getElementById('statementTable')), y));
+        return doc.output('blob');
+    }
+
+    // Phones get the share sheet (WhatsApp etc.); elsewhere the PDF downloads.
+    async function shareStatement() {
+        if (!selected.size) return;
+        if (!window.jspdf) {
+            Mb.setStatus(document.getElementById('status'), 'error', 'PDF tools did not load. Check the connection and reload.');
+            return;
+        }
+        const names = [...selected].sort((a, b) => a.localeCompare(b));
+        const from = document.getElementById('startDate').value;
+        const to = document.getElementById('endDate').value;
+        const fileName = ['statement', names.length > 3 ? `${names.length}-customers` : names.join('-'), from, to]
+            .filter(Boolean).join('-').replace(/[^\w-]+/g, '-').replace(/-+/g, '-').toLowerCase() + '.pdf';
+        const file = new File([statementPdf()], fileName, { type: 'application/pdf' });
+        const title = `Statement · ${names.join(', ')}`;
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({ files: [file], title });
+            } catch (error) {
+                if (error.name !== 'AbortError') console.error('Share failed:', error);
+            }
+            return;
+        }
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(file);
+        link.download = fileName;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+
     function setDefaultDates() {
         const today = Mb.todayIST();
         document.getElementById('startDate').value = today.slice(0, 8) + '01';
@@ -437,6 +537,7 @@
         renderStatement();
     });
     document.querySelectorAll('#columnToggles input').forEach(box => box.addEventListener('change', applyColumns));
+    document.getElementById('sharePdf').addEventListener('click', shareStatement);
     ['startDate', 'endDate'].forEach(id => document.getElementById(id).addEventListener('change', renderStatement));
 
     initialize();

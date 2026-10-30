@@ -1,6 +1,6 @@
 ---
 status: VERIFIED
-last_verified: 2026-10-29
+last_verified: 2026-10-30
 sources:
   - app/balance/index.html
   - app/statement/index.html

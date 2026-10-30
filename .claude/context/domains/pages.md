@@ -1,6 +1,6 @@
 ---
 status: VERIFIED
-last_verified: 2026-10-29
+last_verified: 2026-10-30
 sources:
   - index.html
   - pay/index.html
@@ -46,6 +46,8 @@ sources:
 ## Shared patterns
 - Data pages: load → `Mb.setStatus(…, "info")` → `callSheetsApi([...])` → transform `rows` →
   build DOM with `textContent` → clear status, or show an error status on failure.
+- Share buttons: phones get the Web Share sheet, other browsers download the file
+  (`app/customer-performance/` PNG, `app/statement/` PDF via version-pinned jsPDF + jspdf-autotable from jsDelivr).
 - Dates are shown in IST. `Mb.toISTDate` is the shared helper; `app/deliveries/deliveries.js` and
   `customer-profit` still use their own IST helpers (logic kept as it was).
 - `app/deliveries/deliveries.js` and `app/profits/profits.js` were moved out of their HTML unchanged; their markup keeps
