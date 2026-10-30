@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Statement · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <script src="../../assets/js/common.js"></script>
+    <style>
+        .picker-actions { display: flex; gap: 8px; }
+        .picker-actions .btn { padding: 6px 12px; font-size: 0.8rem; }
+        .customer-list {
+            margin-top: 12px; max-height: 260px; overflow-y: auto;
+            display: grid; gap: 2px 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;
+        }
+        .customer-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        .customer-option:hover { background: var(--surface-muted); }
+        .customer-option input { accent-color: var(--brand); width: 16px; height: 16px; flex: none; }
+        .customer-option .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .customer-option .subtle { font-variant-numeric: tabular-nums; }
+        .statement-meta { margin-top: 4px; color: var(--text-muted); font-size: 0.875rem; }
+        .table td.negative { color: var(--danger); }
+        .table tr.opening-row td { font-style: italic; color: var(--text-muted); }
+        .table td.note { color: var(--text-muted); font-size: 0.8rem; max-width: 260px; }
+        @media print {
+            .table { font-size: 0.75rem; }
+            .table th, .table td { padding: 5px 8px; }
+            .stat { padding: 10px 12px; }
+            .stat-value { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body data-page="statement">
+
+<main class="app-main wide">
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <h1>Customer statement</h1>
+                <p>Statement for one or more customers over a date range, with a combined running balance.</p>
+            </div>
+            <div class="page-actions">
+                <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+            </div>
+        </div>
+
+        <div class="card card-body no-print">
+            <div class="toolbar">
+                <div class="field grow">
+                    <label for="customerSearch">Customers</label>
+                    <input type="search" id="customerSearch" class="input" placeholder="Search customers…" disabled>
+                </div>
+                <div class="field">
+                    <label for="startDate">From</label>
+                    <input type="date" id="startDate" class="input">
+                </div>
+                <div class="field">
+                    <label for="endDate">To</label>
+                    <input type="date" id="endDate" class="input">
+                </div>
+                <div class="picker-actions">
+                    <button type="button" class="btn btn-secondary" id="selectAll" disabled>Select shown</button>
+                    <button type="button" class="btn btn-secondary" id="clearAll" disabled>Clear</button>
+                </div>
+            </div>
+            <div class="customer-list" id="customerList">
+                <span class="subtle">Loading customers…</span>
+            </div>
+            <p class="subtle" style="margin-top: 8px;">Records start on 2026-01-01. Balance in the list is each customer's latest khata balance.</p>
+        </div>
+
+        <p id="status" class="status" hidden style="margin-top: 16px;"></p>
+
+        <div class="stats section">
+            <div class="stat"><div class="stat-label">Opening balance</div><div class="stat-value" id="openingStat">–</div></div>
+            <div class="stat"><div class="stat-label">Delivered</div><div class="stat-value" id="deliveredStat">–</div></div>
+            <div class="stat"><div class="stat-label">Paid</div><div class="stat-value" id="paidStat">–</div></div>
+            <div class="stat"><div class="stat-label">Discount + adjustments</div><div class="stat-value" id="otherStat">–</div></div>
+            <div class="stat"><div class="stat-label">Closing balance</div><div class="stat-value" id="closingStat">–</div></div>
+        </div>
+
+        <div class="card section" id="summaryCard" hidden>
+            <div class="card-header"><h2>By customer</h2></div>
+            <div class="table-wrap">
+                <table class="table" id="summaryTable">
+                    <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th class="num">Opening</th>
+                        <th class="num">KG</th>
+                        <th class="num">Delivered</th>
+                        <th class="num">Paid</th>
+                        <th class="num">Discount</th>
+                        <th class="num">Adjustments</th>
+                        <th class="num">Closing</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card section">
+            <div class="card-header">
+                <div>
+                    <h2 id="statementTitle">Statement</h2>
+                    <p class="statement-meta" id="statementMeta"></p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="table" id="statementTable">
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th class="num">PC</th>
+                        <th class="num">KG</th>
+                        <th class="num">Rate</th>
+                        <th class="num">Delivered</th>
+                        <th class="num">Paid cash</th>
+                        <th class="num">Paid online</th>
+                        <th class="num">Discount</th>
+                        <th class="num">Adjustment</th>
+                        <th class="num">Customer balance</th>
+                        <th class="num">Running balance</th>
+                        <th>Notes</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="13" class="empty-state">Select one or more customers to see their statement.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script src="../../assets/js/config.js"></script>
+<script>
+    const num = value => Number(value) || 0;
+    // Timestamps arrive as YYYY-MM-DD; fall back to IST conversion if a full timestamp ever appears.
+    const dayOf = timestamp => (typeof timestamp === 'string' && timestamp.length === 10) ? timestamp : Mb.toISTDate(timestamp);
+
+    let rowsByCustomer = new Map();   // name -> rows in sheet (date) order
+    const selected = new Set();
+
+    async function loadDeliveries() {
+        const data = await callSheetsApi([{
+            type: "SELECT",
+            spreadsheetId: MAIN_SHEET_ID,
+            worksheet: "db2.deliveries",
+            id: "mbros-github-site"
+        }]);
+        rowsByCustomer = new Map();
+        data[0].rows.forEach((row, index) => {
+            if (!row.name) return;
+            row.day = dayOf(row.timestamp);
+            row.index = index;
+            if (!rowsByCustomer.has(row.name)) rowsByCustomer.set(row.name, []);
+            rowsByCustomer.get(row.name).push(row);
+        });
+        rowsByCustomer.forEach(rows => rows.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index));
+    }
+
+    function renderCustomerList() {
+        const list = document.getElementById('customerList');
+        const query = document.getElementById('customerSearch').value.trim().toLowerCase();
+        const names = [...rowsByCustomer.keys()]
+            .sort((a, b) => a.localeCompare(b))
+            .filter(name => !query || name.toLowerCase().includes(query));
+
+        list.replaceChildren();
+        if (!names.length) {
+            const empty = document.createElement('span');
+            empty.className = 'subtle';
+            empty.textContent = 'No customers match.';
+            list.appendChild(empty);
+            return;
+        }
+        names.forEach(name => {
+            const rows = rowsByCustomer.get(name);
+            const label = document.createElement('label');
+            label.className = 'customer-option';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = name;
+            checkbox.checked = selected.has(name);
+            checkbox.addEventListener('change', () => {
+                checkbox.checked ? selected.add(name) : selected.delete(name);
+                renderStatement();
+            });
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'name';
+            nameSpan.textContent = name;
+            const balance = document.createElement('span');
+            balance.className = 'subtle';
+            balance.textContent = Mb.formatINR(rows[rows.length - 1].khataBalance, 0);
+            label.append(checkbox, nameSpan, balance);
+            list.appendChild(label);
+        });
+    }
+
+    // Balance before the range: last khata balance before `from`, else the carried-in prevAmount of the first row.
+    function openingBalance(rows, from) {
+        if (!from) return num(rows[0].prevAmount);
+        let opening = num(rows[0].prevAmount);
+        for (const row of rows) {
+            if (row.day >= from) break;
+            opening = num(row.khataBalance);
+        }
+        return opening;
+    }
+
+    function addCells(tr, values, numericFrom) {
+        values.forEach((value, i) => {
+            const td = tr.insertCell();
+            td.textContent = value;
+            if (i >= numericFrom) td.className = 'num';
+        });
+        return tr;
+    }
+
+    const blankIfZero = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
+
+    function setStat(id, value) {
+        const element = document.getElementById(id);
+        element.textContent = value === null ? '–' : Mb.formatINR(value, 0);
+    }
+
+    function renderStatement() {
+        const from = document.getElementById('startDate').value;
+        const to = document.getElementById('endDate').value;
+        const body = document.getElementById('statementTable').tBodies[0];
+        const summaryBody = document.getElementById('summaryTable').tBodies[0];
+        const names = [...selected].sort((a, b) => a.localeCompare(b));
+        body.replaceChildren();
+        summaryBody.replaceChildren();
+
+        document.getElementById('statementTitle').textContent = names.length
+            ? `Statement · ${names.join(', ')}` : 'Statement';
+        document.getElementById('statementMeta').textContent = names.length
+            ? `Period: ${from || 'start'} to ${to || 'today'} · Generated ${Mb.todayIST()}` : '';
+        document.getElementById('summaryCard').hidden = names.length < 2;
+
+        if (!names.length) {
+            const td = body.insertRow().insertCell();
+            td.colSpan = 13;
+            td.className = 'empty-state';
+            td.textContent = 'Select one or more customers to see their statement.';
+            ['openingStat', 'deliveredStat', 'paidStat', 'otherStat', 'closingStat'].forEach(id => setStat(id, null));
+            return;
+        }
+        if (from && to && from > to) {
+            Mb.setStatus(document.getElementById('status'), 'error', '"From" date is after "To" date.');
+            return;
+        }
+        Mb.setStatus(document.getElementById('status'), null);
+
+        let opening = 0;
+        const entries = [];
+        const totals = { pc: 0, kg: 0, delivered: 0, cash: 0, online: 0, discount: 0, adjustment: 0 };
+
+        names.forEach(name => {
+            const rows = rowsByCustomer.get(name);
+            const customerOpening = openingBalance(rows, from);
+            const inRange = rows.filter(row => (!from || row.day >= from) && (!to || row.day <= to));
+            const sums = { kg: 0, delivered: 0, paid: 0, discount: 0, adjustment: 0, change: 0 };
+            inRange.forEach(row => {
+                sums.kg += num(row.deliveredKg);
+                sums.delivered += num(row.deliverAmount);
+                sums.paid += num(row.paidCash) + num(row.paidOnline);
+                sums.discount += num(row.discount);
+                sums.adjustment += num(row.autoAdjust) + num(row.adjustments);
+                // khataBalance = prevAmount + deliverAmount − paidCash − paidOnline − discount + autoAdjust + adjustments
+                sums.change += num(row.khataBalance) - num(row.prevAmount);
+            });
+            opening += customerOpening;
+            entries.push(...inRange);
+
+            addCells(summaryBody.insertRow(), [
+                name,
+                Mb.formatINR(customerOpening, 0),
+                Mb.formatNumber(sums.kg, 1),
+                Mb.formatINR(sums.delivered, 0),
+                Mb.formatINR(sums.paid, 0),
+                Mb.formatINR(sums.discount, 0),
+                Mb.formatINR(sums.adjustment, 0),
+                Mb.formatINR(customerOpening + sums.change, 0)
+            ], 1);
+        });
+
+        entries.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
+
+        const openingRow = addCells(body.insertRow(), [
+            from || '', 'Opening balance', '', '', '', '', '', '', '', '', '', Mb.formatINR(opening, 0), ''
+        ], 2);
+        openingRow.className = 'opening-row';
+
+        let running = opening;
+        entries.forEach(row => {
+            const adjustment = num(row.autoAdjust) + num(row.adjustments);
+            running += num(row.khataBalance) - num(row.prevAmount);
+            totals.pc += num(row.deliveredPc);
+            totals.kg += num(row.deliveredKg);
+            totals.delivered += num(row.deliverAmount);
+            totals.cash += num(row.paidCash);
+            totals.online += num(row.paidOnline);
+            totals.discount += num(row.discount);
+            totals.adjustment += adjustment;
+
+            const notes = [row.discountNote, row.autoAdjustNote, row.adjustmentNote, row.notes]
+                .filter(Boolean).join(' · ');
+            const tr = addCells(body.insertRow(), [
+                row.day,
+                row.name,
+                blankIfZero(row.deliveredPc),
+                blankIfZero(row.deliveredKg, 1),
+                blankIfZero(row.rate),
+                blankIfZero(row.deliverAmount),
+                blankIfZero(row.paidCash),
+                blankIfZero(row.paidOnline),
+                blankIfZero(row.discount),
+                blankIfZero(adjustment),
+                Mb.formatNumber(row.khataBalance, 0),
+                Mb.formatINR(running, 0),
+                notes
+            ], 2);
+            tr.cells[12].className = 'note';
+            if (running < 0) tr.cells[11].classList.add('negative');
+        });
+
+        if (!entries.length) {
+            const td = body.insertRow().insertCell();
+            td.colSpan = 13;
+            td.className = 'empty-state';
+            td.textContent = 'No entries in this date range.';
+        }
+
+        const totalRow = addCells(body.insertRow(), [
+            to || '', 'Closing balance',
+            Mb.formatNumber(totals.pc, 0),
+            Mb.formatNumber(totals.kg, 1),
+            '',
+            Mb.formatNumber(totals.delivered, 0),
+            Mb.formatNumber(totals.cash, 0),
+            Mb.formatNumber(totals.online, 0),
+            Mb.formatNumber(totals.discount, 0),
+            Mb.formatNumber(totals.adjustment, 0),
+            '',
+            Mb.formatINR(running, 0),
+            ''
+        ], 2);
+        totalRow.className = 'total-row';
+
+        setStat('openingStat', opening);
+        setStat('deliveredStat', totals.delivered);
+        setStat('paidStat', totals.cash + totals.online);
+        setStat('otherStat', totals.adjustment - totals.discount);
+        setStat('closingStat', running);
+    }
+
+    function setDefaultDates() {
+        const today = Mb.todayIST();
+        document.getElementById('startDate').value = today.slice(0, 8) + '01';
+        document.getElementById('endDate').value = today;
+    }
+
+    async function initialize() {
+        const status = document.getElementById('status');
+        setDefaultDates();
+        Mb.setStatus(status, 'info', 'Loading deliveries…');
+        try {
+            await loadDeliveries();
+            Mb.setStatus(status, null);
+            ['customerSearch', 'selectAll', 'clearAll'].forEach(id => document.getElementById(id).disabled = false);
+            renderCustomerList();
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Mb.setStatus(status, 'error', 'Could not load data. Please try again.');
+            document.getElementById('customerList').textContent = '';
+        }
+    }
+
+    document.getElementById('customerSearch').addEventListener('input', renderCustomerList);
+    document.getElementById('selectAll').addEventListener('click', () => {
+        document.querySelectorAll('#customerList input[type=checkbox]').forEach(box => selected.add(box.value));
+        renderCustomerList();
+        renderStatement();
+    });
+    document.getElementById('clearAll').addEventListener('click', () => {
+        selected.clear();
+        renderCustomerList();
+        renderStatement();
+    });
+    ['startDate', 'endDate'].forEach(id => document.getElementById(id).addEventListener('change', renderStatement));
+
+    initialize();
+</script>
+</body>
+</html>

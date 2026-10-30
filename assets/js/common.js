@@ -9,6 +9,8 @@
     const TOOLS = [
         { id: 'balance', path: 'app/balance/', title: 'Balances', group: 'Reports',
           description: 'Customer khata balances as of a chosen date.' },
+        { id: 'statement', path: 'app/statement/', title: 'Statement', group: 'Reports',
+          description: 'Statement for one or more customers over a date range, with a running balance.' },
         { id: 'deliveries', path: 'app/deliveries/', title: 'Deliveries', group: 'Reports',
           description: 'Delivered KG per customer across date groups and years.' },
         { id: 'customer-profit', path: 'app/customer-profit/', title: 'Customer profit', group: 'Reports',

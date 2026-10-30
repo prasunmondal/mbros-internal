@@ -3,6 +3,7 @@ status: VERIFIED
 last_verified: 2026-10-29
 sources:
   - app/balance/index.html
+  - app/statement/index.html
   - app/calculator/index.html
   - app/profits/profits.js
   - app/customer-profit/index.html
@@ -28,6 +29,13 @@ earns, plus pages customers use to pay.
 - **Balance on a date** (`app/balance/`): for each customer, the `khataBalance` of the latest
   delivery on or before the selected date. Customers with no delivery by then show the balance
   of their first row `[inferred: assumes rows arrive in date order]`.
+- **Khata row arithmetic** (`db2.deliveries`): `khataBalance` = `prevAmount` + `deliverAmount` − `paidCash`
+  − `paidOnline` − `discount` + `autoAdjust` + `adjustments`, and each row's `prevAmount` is the
+  customer's previous `khataBalance`. Held for every row on 2026-10-30 `[inferred: from data, not owner-stated]`.
+  `totalBalance` adds `otherBalances` on top; the statement uses `khataBalance`.
+- **Statement** (`app/statement/`): opening = each selected customer's last `khataBalance` before
+  the start date (else the `prevAmount` of their first row), summed; the running balance then adds
+  each row's `khataBalance` − `prevAmount` in date order across all selected customers.
 - **Commission** (`app/calculator/`): commission % = total discount % − discount passed on %.
   Payable = paying amount − discount passed on. Defaults: 5% total, 3% passed on.
 - **Expenses** (`app/profits/profits.js`): broken down into car, labour and extra expenses

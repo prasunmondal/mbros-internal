@@ -4,6 +4,7 @@ last_verified: 2026-10-29
 sources:
   - assets/js/config.js
   - app/balance/index.html
+  - app/statement/index.html
   - app/daily/index.html
   - app/meters/index.html
   - app/deliveries/deliveries.js
@@ -31,7 +32,7 @@ the lint here does not check them.
 | Spreadsheet | Worksheet | Read by |
 |---|---|---|
 | main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
-| main | `db2.deliveries` | `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/` |
+| main | `db2.deliveries` | `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statement/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
 | 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/deliveries/`, `app/customer-performance/` |
 | meter sheet (ID in `app/meters/`) | `apiData` | `app/meters/` |
