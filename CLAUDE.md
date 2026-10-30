@@ -20,7 +20,8 @@ via the shared client in `assets/js/config.js`.
   Google Sheets or the engine URL any other way (ADR-001).
 - POST bodies are a JSON **string** with no Content-Type header, so there is no CORS preflight.
   Do not add `Content-Type: application/json` (ADR-002).
-- One folder per page; shared code only in `assets/` (`assets/css/site.css`, `assets/js/common.js`, `assets/js/config.js`).
+- One folder per page; shared code only in `assets/` (`assets/css/site.css`, `assets/js/common.js`, `assets/js/config.js`,
+  `assets/js/statement-pdf.js`).
   No build step or framework (ADR-003). All paths relative.
 - Charts use version-pinned Chart.js from the jsDelivr CDN (`app/profits/`).
 - The engine's wire contract is owned by the GridBase repo. Never redefine it here.

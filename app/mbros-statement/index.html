@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>MBros Statement · Mondal Brothers</title>
+    <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <script src="../../assets/js/common.js"></script>
+    <style>
+        .picker-actions { display: flex; gap: 8px; }
+        .picker-actions .btn { padding: 6px 12px; font-size: 0.8rem; }
+        .party-list {
+            margin-top: 12px; max-height: 260px; overflow-y: auto;
+            display: grid; gap: 2px 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;
+        }
+        .party-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        .party-option:hover { background: var(--surface-muted); }
+        .party-option input { accent-color: var(--brand); width: 16px; height: 16px; flex: none; }
+        .party-option .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .party-option .subtle { font-variant-numeric: tabular-nums; }
+        .statement-meta { margin-top: 4px; color: var(--text-muted); font-size: 0.875rem; }
+        .table td.negative { color: var(--danger); }
+        .table tr.opening-row td { font-style: italic; color: var(--text-muted); }
+        .table td.note { color: var(--text-muted); font-size: 0.8rem; max-width: 260px; }
+        .table td.route { white-space: nowrap; color: var(--text-muted); font-size: 0.85rem; }
+        #statementTable td:first-child { white-space: nowrap; }
+        .totals-table { max-width: 460px; }
+        .totals-table td:last-child { font-weight: 700; }
+        .totals-table tr.total-row td { font-size: 1rem; }
+        .option-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
+        .option-toggle input { accent-color: var(--brand); width: 16px; height: 16px; }
+        /* 12 columns need landscape; the Share PDF uses the same page. */
+        @page { size: A4 landscape; margin: 10mm; }
+        @media print {
+            .table { font-size: 0.75rem; }
+            .table th, .table td { padding: 5px 8px; }
+            .card, .table-wrap { overflow: visible; }
+        }
+    </style>
+</head>
+<body data-page="mbros-statement">
+
+<main class="app-main wide">
+    <div class="container">
+
+        <div class="page-header no-print">
+            <div>
+                <h1>MBros Statement</h1>
+                <p>Loads and payments between MBros and each party, from the loads sheet.</p>
+            </div>
+            <div class="page-actions">
+                <button type="button" class="btn btn-secondary" id="printBtn" onclick="window.print()" disabled>Print</button>
+                <button type="button" class="btn btn-primary" id="sharePdf" title="Share this statement as a PDF" disabled>
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                    Share PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="card card-body no-print">
+            <div class="toolbar">
+                <div class="field grow">
+                    <label for="partySearch">Parties</label>
+                    <input type="search" id="partySearch" class="input" placeholder="Search parties…" disabled>
+                </div>
+                <div class="field">
+                    <label for="startDate">From</label>
+                    <input type="date" id="startDate" class="input">
+                </div>
+                <div class="field">
+                    <label for="endDate">To</label>
+                    <input type="date" id="endDate" class="input">
+                </div>
+                <div class="picker-actions">
+                    <button type="button" class="btn btn-secondary" id="selectAll" disabled>Select shown</button>
+                    <button type="button" class="btn btn-secondary" id="clearAll" disabled>Clear</button>
+                </div>
+            </div>
+            <div class="party-list" id="partyList">
+                <span class="subtle">Loading parties…</span>
+            </div>
+            <label class="option-toggle"><input type="checkbox" id="showLetterhead" checked> Letterhead on print and PDF</label>
+            <p class="subtle" style="margin-top: 8px;">Balance is what MBros owes the party: positive means MBros owes them, negative means they owe MBros.
+                Goods or money coming to MBros count as Received, going out as Paid. When MBros is the middle party, it owes the sender the sender amount and the receiver owes it the via sell amount.</p>
+        </div>
+
+        <p id="status" class="status" hidden style="margin-top: 16px;"></p>
+
+        <table class="print-frame" id="printFrame">
+            <thead><tr><td>
+                <div class="letterhead">
+                    <div class="letterhead-band">
+                        <div class="letterhead-name">Mondal Brothers</div>
+                        <div class="letterhead-row">
+                            <span class="letterhead-tagline">Wholesale Chicken Distributor</span>
+                            <span>Contact: 9734075801</span>
+                        </div>
+                    </div>
+                    <div class="letterhead-strip">
+                        <a href="tel:+919734075801">📞 Click to Call</a>
+                        <span>Visit Website: <a href="https://tinyurl.com/mondalbros">tinyurl.com/mondalbros</a></span>
+                    </div>
+                </div>
+            </td></tr></thead>
+            <tbody><tr><td>
+
+        <div class="section">
+            <h2 class="section-title">Summary</h2>
+            <table class="table totals-table" id="totalsTable">
+                <thead>
+                <tr><th>Item</th><th class="num">Amount</th></tr>
+                </thead>
+                <tbody>
+                <tr><td>Total PC</td><td class="num" id="pcStat">–</td></tr>
+                <tr><td>Total KG</td><td class="num" id="kgStat">–</td></tr>
+                <tr><td>Opening balance</td><td class="num" id="openingStat">–</td></tr>
+                <tr><td>Received</td><td class="num" id="receivedStat">–</td></tr>
+                <tr><td>Paid</td><td class="num" id="paidStat">–</td></tr>
+                <tr class="total-row"><td>Closing balance</td><td class="num" id="closingStat">–</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card section" id="summaryCard" hidden>
+            <div class="card-header"><h2>By party</h2></div>
+            <div class="table-wrap">
+                <table class="table" id="summaryTable">
+                    <thead>
+                    <tr>
+                        <th>Party</th>
+                        <th class="num">Opening</th>
+                        <th class="num">KG</th>
+                        <th class="num">Received</th>
+                        <th class="num">Paid</th>
+                        <th class="num">Closing</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card section">
+            <div class="card-header">
+                <div>
+                    <h2 id="statementTitle">MBros Statement</h2>
+                    <p class="statement-meta" id="statementMeta"></p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="table" id="statementTable">
+                    <thead>
+                    <tr>
+                        <th class="nowrap">Date</th>
+                        <th>Party</th>
+                        <th>Type</th>
+                        <th class="nowrap">Route</th>
+                        <th class="num">PC</th>
+                        <th class="num">KG</th>
+                        <th class="num">Rate</th>
+                        <th class="num">Received</th>
+                        <th class="num">Paid</th>
+                        <th>Method</th>
+                        <th class="num">Balance</th>
+                        <th>Notes</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="12" class="empty-state">Select one or more parties to see their statement.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+            </td></tr></tbody>
+        </table>
+
+    </div>
+</main>
+
+<script src="../../assets/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="../../assets/js/statement-pdf.js"></script>
+<script>
+    const num = value => Number(value) || 0;
+    const MBROS = 'MBros';
+    const COLUMNS = 12;
+
+    let entriesByParty = new Map();   // party -> entries in date order
+    let dataReady = false;
+    const selected = new Set();
+
+    // What one loads row does to MBros's balance with each party, as [party, amount, rate]:
+    // + means MBros owes that party more (it received goods or money), − means less (it paid or delivered).
+    function flows(row) {
+        const { sender, via, receiver } = row;
+        const sent = { amount: num(row.senderAmount), rate: row.senderRate };
+        const resold = via ? { amount: num(row.viaSellAmount) || sent.amount, rate: row.viaSellRate } : sent;
+        if (via === MBROS) return [[sender, sent.amount, sent.rate], [receiver, -resold.amount, resold.rate]];
+        if (receiver === MBROS) return [[via || sender, resold.amount, resold.rate]];
+        if (sender === MBROS) return [[via || receiver, -sent.amount, sent.rate]];
+        return [];
+    }
+
+    async function loadEntries() {
+        const data = await callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.loads", id: "mbros-github-site" }]);
+        entriesByParty = new Map();
+        data[0].rows.forEach((row, index) => {
+            flows(row).forEach(([party, amount, rate]) => {
+                if (!party || party === MBROS || !amount) return;
+                if (!entriesByParty.has(party)) entriesByParty.set(party, []);
+                entriesByParty.get(party).push({
+                    day: row.deliverySession, index, party, amount, rate,
+                    type: row.transactionType,
+                    route: [row.sender, row.via, row.receiver].filter(Boolean).join(' → '),
+                    pc: row.loadPc, kg: row.loadKg, method: row.paymentMethod,
+                    notes: [row.description, row.notes].filter(Boolean).join(' · ')
+                });
+            });
+        });
+        entriesByParty.forEach(entries => entries.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index));
+    }
+
+    const balanceOf = entries => entries.reduce((sum, entry) => sum + entry.amount, 0);
+
+    function renderPartyList() {
+        const list = document.getElementById('partyList');
+        const query = document.getElementById('partySearch').value.trim().toLowerCase();
+        const names = [...entriesByParty.keys()]
+            .sort((a, b) => a.localeCompare(b))
+            .filter(name => !query || name.toLowerCase().includes(query));
+
+        list.replaceChildren();
+        if (!names.length) {
+            const empty = document.createElement('span');
+            empty.className = 'subtle';
+            empty.textContent = 'No parties match.';
+            list.appendChild(empty);
+            return;
+        }
+        names.forEach(name => {
+            const label = document.createElement('label');
+            label.className = 'party-option';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = name;
+            checkbox.checked = selected.has(name);
+            checkbox.addEventListener('change', () => {
+                checkbox.checked ? selected.add(name) : selected.delete(name);
+                renderStatement();
+            });
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'name';
+            nameSpan.textContent = name;
+            const balance = document.createElement('span');
+            balance.className = 'subtle';
+            balance.textContent = Mb.formatINR(balanceOf(entriesByParty.get(name)), 0);
+            label.append(checkbox, nameSpan, balance);
+            list.appendChild(label);
+        });
+    }
+
+    function addCells(tr, values, numericColumns) {
+        values.forEach((value, i) => {
+            const td = tr.insertCell();
+            td.textContent = value;
+            if (numericColumns.includes(i)) td.className = 'num';
+        });
+        return tr;
+    }
+
+    const NUMERIC = [4, 5, 6, 7, 8, 10];
+    const blankIfZero = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
+
+    function setStat(id, value, decimals) {
+        document.getElementById(id).textContent = value === null ? '–'
+            : decimals === undefined ? Mb.formatINR(value, 0) : Mb.formatNumber(value, decimals);
+    }
+
+    function renderStatement() {
+        const from = document.getElementById('startDate').value;
+        const to = document.getElementById('endDate').value;
+        const body = document.getElementById('statementTable').tBodies[0];
+        const summaryBody = document.getElementById('summaryTable').tBodies[0];
+        const names = [...selected].sort((a, b) => a.localeCompare(b));
+        const status = document.getElementById('status');
+        body.replaceChildren();
+        summaryBody.replaceChildren();
+
+        document.getElementById('statementTitle').textContent = names.length ? `MBros Statement · ${names.join(', ')}` : 'MBros Statement';
+        document.getElementById('statementMeta').textContent = names.length
+            ? `Period: ${from || 'start'} to ${to || 'today'} · Generated ${Mb.todayIST()}` : '';
+        document.getElementById('summaryCard').hidden = names.length < 2;
+        setReportReady(false);
+
+        const showEmpty = message => {
+            const td = body.insertRow().insertCell();
+            td.colSpan = COLUMNS;
+            td.className = 'empty-state';
+            td.textContent = message;
+            ['openingStat', 'receivedStat', 'paidStat', 'closingStat', 'pcStat', 'kgStat'].forEach(id => setStat(id, null));
+        };
+
+        if (!dataReady) return;
+        if (!names.length) {
+            showEmpty('Select one or more parties to see their statement.');
+            return;
+        }
+        if (from && to && from > to) {
+            Mb.setStatus(status, 'error', '"From" date is after "To" date.');
+            showEmpty('Fix the date range to see the statement.');
+            return;
+        }
+        Mb.setStatus(status, null);
+
+        let opening = 0;
+        const shown = [];
+        const totals = { pc: 0, kg: 0, received: 0, paid: 0 };
+
+        names.forEach(name => {
+            const entries = entriesByParty.get(name);
+            const partyOpening = balanceOf(entries.filter(entry => from && entry.day < from));
+            const inRange = entries.filter(entry => (!from || entry.day >= from) && (!to || entry.day <= to));
+            const sums = { kg: 0, received: 0, paid: 0 };
+            inRange.forEach(entry => {
+                sums.kg += num(entry.kg);
+                if (entry.amount > 0) sums.received += entry.amount;
+                else sums.paid -= entry.amount;
+            });
+            opening += partyOpening;
+            shown.push(...inRange);
+            addCells(summaryBody.insertRow(), [
+                name,
+                Mb.formatINR(partyOpening, 0),
+                Mb.formatNumber(sums.kg, 1),
+                Mb.formatINR(sums.received, 0),
+                Mb.formatINR(sums.paid, 0),
+                Mb.formatINR(partyOpening + sums.received - sums.paid, 0)
+            ], [1, 2, 3, 4, 5]);
+        });
+
+        shown.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
+
+        const openingRow = addCells(body.insertRow(), [
+            from ? `Opening · ${from}` : 'Opening balance', '', '', '', '', '', '', '', '', '', Mb.formatINR(opening, 0), ''
+        ], NUMERIC);
+        openingRow.className = 'opening-row';
+
+        let running = opening;
+        shown.forEach(entry => {
+            running += entry.amount;
+            totals.pc += num(entry.pc);
+            totals.kg += num(entry.kg);
+            if (entry.amount > 0) totals.received += entry.amount;
+            else totals.paid -= entry.amount;
+
+            const tr = addCells(body.insertRow(), [
+                entry.day,
+                entry.party,
+                entry.type,
+                entry.route,
+                blankIfZero(entry.pc),
+                blankIfZero(entry.kg, 2),
+                blankIfZero(entry.rate, 2),
+                entry.amount > 0 ? Mb.formatNumber(entry.amount, 0) : '',
+                entry.amount < 0 ? Mb.formatNumber(-entry.amount, 0) : '',
+                entry.method,
+                Mb.formatINR(running, 0),
+                entry.notes
+            ], NUMERIC);
+            tr.cells[3].classList.add('route');
+            tr.cells[11].className = 'note';
+            if (running < 0) tr.cells[10].classList.add('negative');
+        });
+
+        if (!shown.length) {
+            const td = body.insertRow().insertCell();
+            td.colSpan = COLUMNS;
+            td.className = 'empty-state';
+            td.textContent = 'No entries in this date range.';
+        }
+
+        const totalRow = addCells(body.insertRow(), [
+            to ? `Closing · ${to}` : 'Closing balance', '', '', '',
+            Mb.formatNumber(totals.pc, 0),
+            Mb.formatNumber(totals.kg, 2),
+            '',
+            Mb.formatNumber(totals.received, 0),
+            Mb.formatNumber(totals.paid, 0),
+            '',
+            Mb.formatINR(running, 0),
+            ''
+        ], NUMERIC);
+        totalRow.className = 'total-row';
+
+        setStat('pcStat', totals.pc, 0);
+        setStat('kgStat', totals.kg, 2);
+        setStat('openingStat', opening);
+        setStat('receivedStat', totals.received);
+        setStat('paidStat', totals.paid);
+        setStat('closingStat', running);
+        setReportReady(true);
+    }
+
+    // Print and Share only work on a finished statement.
+    function setReportReady(ready) {
+        document.getElementById('printBtn').disabled = !ready;
+        document.getElementById('sharePdf').disabled = !ready;
+    }
+
+    // Same layout as the printed page, letterhead included unless switched off.
+    function shareStatement() {
+        if (!selected.size) return;
+        const names = [...selected].sort((a, b) => a.localeCompare(b));
+        const from = document.getElementById('startDate').value;
+        const to = document.getElementById('endDate').value;
+        const title = document.getElementById('statementTitle').textContent;
+        StatementPdf.share({
+            fileName: ['mbros-statement', names.length > 3 ? `${names.length}-parties` : names.join('-'), from, to].filter(Boolean).join('-'),
+            title,
+            status: document.getElementById('status'),
+            letterhead: document.getElementById('showLetterhead').checked,
+            orientation: 'landscape',
+            summary: document.getElementById('totalsTable'),
+            cards: [
+                ...(document.getElementById('summaryCard').hidden ? [] : [{ table: document.getElementById('summaryTable'), title: 'By party' }]),
+                { table: document.getElementById('statementTable'), title, meta: document.getElementById('statementMeta').textContent }
+            ]
+        });
+    }
+
+    function setDefaultDates() {
+        const today = Mb.todayIST();
+        document.getElementById('startDate').value = today.slice(0, 8) + '01';
+        document.getElementById('endDate').value = today;
+    }
+
+    async function initialize() {
+        const status = document.getElementById('status');
+        setDefaultDates();
+        Mb.setStatus(status, 'info', 'Loading loads…');
+        try {
+            await loadEntries();
+            dataReady = true;
+            Mb.setStatus(status, null);
+            ['partySearch', 'selectAll', 'clearAll'].forEach(id => document.getElementById(id).disabled = false);
+            renderPartyList();
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Mb.setStatus(status, 'error', 'Could not load data. Please try again.');
+            document.getElementById('partyList').textContent = '';
+        }
+    }
+
+    document.getElementById('partySearch').addEventListener('input', renderPartyList);
+    document.getElementById('selectAll').addEventListener('click', () => {
+        document.querySelectorAll('#partyList input[type=checkbox]').forEach(box => selected.add(box.value));
+        renderPartyList();
+        renderStatement();
+    });
+    document.getElementById('clearAll').addEventListener('click', () => {
+        selected.clear();
+        renderPartyList();
+        renderStatement();
+    });
+    document.getElementById('showLetterhead').addEventListener('change', event =>
+        document.getElementById('printFrame').classList.toggle('no-letterhead', !event.target.checked));
+    document.getElementById('sharePdf').addEventListener('click', shareStatement);
+    ['startDate', 'endDate'].forEach(id => document.getElementById(id).addEventListener('change', renderStatement));
+
+    initialize();
+</script>
+</body>
+</html>

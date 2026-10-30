@@ -9,6 +9,7 @@ sources:
   - app/customer-profit/index.html
   - app/daily/index.html
   - app/meters/index.html
+  - app/mbros-statement/index.html
   - pay/index.html
   - index.html
 ---
@@ -46,6 +47,11 @@ earns, plus pages customers use to pay.
   explain counts as a cash payment noted "Payment not entered in sheet" (owner, 2026-10-30); an
   unexplained rise is shown as an adjustment `[inferred]`. The archive loads only for ranges
   starting before 2026.
+- **MBros statement** (`app/mbros-statement/`, `db2.loads`): each row moves goods or money from
+  `sender` (via `via`) to `receiver`. The balance with a party is what MBros owes it: value reaching
+  MBros adds `senderAmount` (or `viaSellAmount` when it came through a via), value leaving subtracts it.
+  When MBros is the via, it owes the sender `senderAmount` and the receiver owes it `viaSellAmount` (owner, 2026-10-30).
+  The 2025-10-31 "Migrate to newer balance sheet" Adjustment rows reset the supplier balances.
 - **Commission** (`app/calculator/`): commission % = total discount % − discount passed on %.
   Payable = paying amount − discount passed on. Defaults: 5% total, 3% passed on.
 - **Expenses** (`app/profits/profits.js`): broken down into car, labour and extra expenses

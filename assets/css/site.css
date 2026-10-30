@@ -288,6 +288,36 @@ img { max-width: 100%; display: block; }
 .site-footer .container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
 .site-footer a { color: var(--text-subtle); }
 
+/* ---------- Letterhead (statement pages) ---------- */
+
+/* The print frame is a table so its <thead> (the business header) repeats on every printed page.
+   On screen it is flattened to plain blocks and the header is hidden. .no-letterhead prints without it.
+   assets/js/statement-pdf.js draws the same letterhead: keep the two in step. */
+.print-frame, .print-frame > tbody, .print-frame > tbody > tr, .print-frame > tbody > tr > td { display: block; }
+.print-frame > thead { display: none; }
+.letterhead { margin-bottom: 16px; border-radius: var(--radius-sm); overflow: hidden; }
+.letterhead-band {
+    padding: 12px 16px 10px; color: #fff; border-bottom: 4px solid #d4a72c;
+    background: linear-gradient(90deg, #0b1f4b 0%, #16367f 55%, #1f4fae 100%);
+}
+.letterhead-name { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
+.letterhead-row, .letterhead-strip { display: flex; justify-content: space-between; gap: 16px; }
+.letterhead-row { margin-top: 2px; font-weight: 700; }
+.letterhead-tagline { padding-left: 40px; color: #f3c85b; }
+.letterhead-strip { padding: 5px 16px; background: #eaf0fb; color: #4b5a7a; font-size: 0.85rem; }
+.letterhead-strip a { color: #0b1f4b; font-weight: 700; }
+.letterhead-strip > a { text-decoration: none; }
+
+@media print {
+    .print-frame { display: table; width: 100%; border-collapse: collapse; }
+    .print-frame > thead { display: table-header-group; }
+    .print-frame > tbody { display: table-row-group; }
+    .print-frame > tbody > tr, .print-frame > thead > tr { display: table-row; }
+    .print-frame > tbody > tr > td, .print-frame > thead > tr > td { display: table-cell; padding: 0; }
+    .print-frame.no-letterhead > thead { display: none; }
+    .print-frame .section:first-child { margin-top: 0; }
+}
+
 /* ---------- Print ---------- */
 
 @media print {

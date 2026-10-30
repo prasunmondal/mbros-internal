@@ -11,6 +11,8 @@ sources:
   - app/profits/index.html
   - app/daily/index.html
   - app/customer-profit/index.html
+  - app/mbros-statement/index.html
+  - assets/js/statement-pdf.js
   - app/customer-performance/index.html
   - app/meters/index.html
   - app/calculator/index.html
@@ -31,6 +33,7 @@ sources:
 | `app/deliveries/` | delivered KG per customer by date group, 2023 + current | `deliveries.2023`, `db2.deliveries` |
 | `app/profits/` | business dashboard: KPIs and trend charts | `cumilativeCalculations` |
 | `app/daily/` | day summary report for a chosen date (`?date=YYYY-MM-DD`): loading, sales and dues, expenses and profit, trip and staff, notes, customer deliveries | `cumilativeCalculations`, `db2.deliveries`, `deliveries.2023` (days before 2026) |
+| `app/mbros-statement/` | MBros's ledger with one or more parties (suppliers, staff, accounts) over a date range: running balance, per-party summary, print + PDF share (landscape) | `db2.loads` |
 | `app/customer-profit/` | profit and debt movement per customer and date range | `db2.deliveries`, `cumilativeCalculations` |
 | `app/customer-performance/` | per-customer orders/week and avg order KG over 1/2/3/6/12 months, KG chart by day/week/month/year (timeline or years overlaid, with change vs previous period and last year), all-customer comparison | `deliveries.2023`, `db2.deliveries` |
 | `app/meters/` | meter reading difference and units to target | `apiData` (meter sheet) |
@@ -43,7 +46,7 @@ sources:
   `formatINR`, `formatNumber`, `setStatus`) and the app header/footer, inserted on
   DOMContentLoaded. It also runs the password gate: until the password (SHA-256 in `ACCESS_HASH`)
   is entered, the page is hidden and `Mb.ready` stays pending, and `callSheetsApi` awaits it.
-  Unlock is remembered per browser in `localStorage` for 2 hours (`SESSION_MS`), then the page
+  Unlock is remembered per browser in `localStorage` for `SESSION_MS` (30 minutes), then the page
   locks itself (an open page reloads to the gate); the footer "Lock" link clears it early. It resolves the site root from its own URL, so links work under any base path.
 - `pay/` and `index.html` use `assets/css/site.css` only, without `assets/js/common.js`.
 
@@ -51,7 +54,13 @@ sources:
 - Data pages: load → `Mb.setStatus(…, "info")` → `callSheetsApi([...])` → transform `rows` →
   build DOM with `textContent` → clear status, or show an error status on failure.
 - Share buttons: phones get the Web Share sheet, other browsers download the file
-  (`app/customer-performance/` PNG, `app/statement/` PDF via version-pinned jsPDF + jspdf-autotable from jsDelivr).
+  (`app/customer-performance/` PNG; `app/statement/` and `app/mbros-statement/` PDF via version-pinned jsPDF +
+  jspdf-autotable from jsDelivr).
+- Statement PDFs: `assets/js/statement-pdf.js` (`StatementPdf.share`) redraws the page's own tables to look like
+  its print: same `@page` size and orientation, print CSS sizes × 0.75. A print CSS change on those pages
+  needs the same change there. Both pages print the letterhead (`.print-frame` + `.letterhead` in
+  `assets/css/site.css`, repeated on every page) and pass it to the PDF; on `app/mbros-statement/` a checkbox
+  switches it off for both (`.no-letterhead`).
 - Dates are shown in IST. `Mb.toISTDate` is the shared helper; `app/deliveries/deliveries.js` and
   `customer-profit` still use their own IST helpers (logic kept as it was).
 - `app/deliveries/deliveries.js` and `app/profits/profits.js` were moved out of their HTML unchanged; their markup keeps
