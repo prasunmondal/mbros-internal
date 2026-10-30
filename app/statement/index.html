@@ -28,6 +28,16 @@
         .table td.negative { color: var(--danger); }
         .table tr.opening-row td { font-style: italic; color: var(--text-muted); }
         .table td.note { color: var(--text-muted); font-size: 0.8rem; max-width: 260px; }
+        .column-toggles { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 0.9rem; }
+        .column-toggles label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+        .column-toggles input { accent-color: var(--brand); width: 16px; height: 16px; }
+        /* Optional statement columns (1-based: name 2, rate 5, discount 9, adjustment 10, counter balance 11, notes 13). */
+        #statementTable.hide-name :is(th, td):nth-child(2),
+        #statementTable.hide-rate :is(th, td):nth-child(5),
+        #statementTable.hide-discount :is(th, td):nth-child(9),
+        #statementTable.hide-adjustment :is(th, td):nth-child(10),
+        #statementTable.hide-counter-balance :is(th, td):nth-child(11),
+        #statementTable.hide-notes :is(th, td):nth-child(13) { display: none; }
         @media print {
             .table { font-size: 0.75rem; }
             .table th, .table td { padding: 5px 8px; }
@@ -73,6 +83,15 @@
             <div class="customer-list" id="customerList">
                 <span class="subtle">Loading customers…</span>
             </div>
+            <div class="column-toggles" id="columnToggles">
+                <span class="label">Show columns</span>
+                <label><input type="checkbox" data-column="name" checked> Name</label>
+                <label><input type="checkbox" data-column="rate" checked> Rate</label>
+                <label><input type="checkbox" data-column="discount" checked> Discount</label>
+                <label><input type="checkbox" data-column="adjustment" checked> Adjustment</label>
+                <label><input type="checkbox" data-column="counter-balance"> Counter Balance</label>
+                <label><input type="checkbox" data-column="notes"> Notes</label>
+            </div>
             <p class="subtle" style="margin-top: 8px;">Records start on 2026-01-01. Balance in the list is each customer's latest khata balance.</p>
         </div>
 
@@ -115,11 +134,11 @@
                 </div>
             </div>
             <div class="table-wrap">
-                <table class="table" id="statementTable">
+                <table class="table hide-counter-balance hide-notes" id="statementTable">
                     <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Customer</th>
+                        <th>Name</th>
                         <th class="num">PC</th>
                         <th class="num">KG</th>
                         <th class="num">Rate</th>
@@ -128,7 +147,7 @@
                         <th class="num">Paid online</th>
                         <th class="num">Discount</th>
                         <th class="num">Adjustment</th>
-                        <th class="num">Customer balance</th>
+                        <th class="num">Counter Balance</th>
                         <th class="num">Running balance</th>
                         <th>Notes</th>
                     </tr>
@@ -230,6 +249,16 @@
 
     const blankIfZero = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
 
+    function columnToggle(column) {
+        return document.querySelector(`#columnToggles input[data-column="${column}"]`);
+    }
+
+    function applyColumns() {
+        const table = document.getElementById('statementTable');
+        document.querySelectorAll('#columnToggles input').forEach(box =>
+            table.classList.toggle(`hide-${box.dataset.column}`, !box.checked));
+    }
+
     function setStat(id, value) {
         const element = document.getElementById(id);
         element.textContent = value === null ? '–' : Mb.formatINR(value, 0);
@@ -299,8 +328,15 @@
 
         entries.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
 
+        // Each new selection or date range resets these toggles; the user can override until the next change.
+        columnToggle('name').checked = names.length > 1;
+        columnToggle('discount').checked = entries.some(row => num(row.discount));
+        columnToggle('adjustment').checked = entries.some(row => num(row.autoAdjust) + num(row.adjustments));
+        applyColumns();
+
+        // The label sits in the date column so it stays visible when the name column is hidden.
         const openingRow = addCells(body.insertRow(), [
-            from || '', 'Opening balance', '', '', '', '', '', '', '', '', '', Mb.formatINR(opening, 0), ''
+            from ? `Opening · ${from}` : 'Opening balance', '', '', '','', '', '', '', '', '', '', Mb.formatINR(opening, 0), ''
         ], 2);
         openingRow.className = 'opening-row';
 
@@ -345,7 +381,7 @@
         }
 
         const totalRow = addCells(body.insertRow(), [
-            to || '', 'Closing balance',
+            to ? `Closing · ${to}` : 'Closing balance', '',
             Mb.formatNumber(totals.pc, 0),
             Mb.formatNumber(totals.kg, 1),
             '',
@@ -400,6 +436,7 @@
         renderCustomerList();
         renderStatement();
     });
+    document.querySelectorAll('#columnToggles input').forEach(box => box.addEventListener('change', applyColumns));
     ['startDate', 'endDate'].forEach(id => document.getElementById(id).addEventListener('change', renderStatement));
 
     initialize();
