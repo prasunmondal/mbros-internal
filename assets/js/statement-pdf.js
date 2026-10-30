@@ -63,6 +63,9 @@
         // Column-group tints (light theme --info-soft, --accent-soft), by the class on the th or td.
         const groupFillOf = className => /\bgroup-locked\b/.test(className || '') ? '#eaf1fe'
             : /\bgroup-staged\b/.test(className || '') ? '#fdf5e1' : null;
+        // Who-pays colours: MBros pays in green (--brand-strong), the party pays MBros in red (--danger).
+        const payColorOf = className => /\bmbros-pays\b/.test(className || '') ? '#17573a'
+            : /\bpays-mbros\b/.test(className || '') ? DANGER : null;
         const TEXT = '#1c2420', MUTED = '#5c665f', SUBTLE = '#8a938c', BORDER = '#e2e5e0', SURFACE_MUTED = '#f1f3f0', DANGER = '#c0392b';
         const margin = 28.35;   // 10 mm
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -106,6 +109,7 @@
                     styles.halign = isGroup ? 'center' : table.columnStyles[data.column.index]?.halign || 'left';
                     const groupFill = groupFillOf(isGroup ? data.cell.raw.className : table.headClasses[data.column.index]);
                     if (groupFill) styles.fillColor = groupFill;
+                    if (!isGroup) styles.textColor = payColorOf(table.headClasses[data.column.index]) || styles.textColor;
                     return;
                 }
                 const rowClass = table.rowClasses[data.row.index];
@@ -113,6 +117,7 @@
                 if (rowClass === 'opening-row') Object.assign(styles, { fontStyle: 'italic', textColor: MUTED });
                 if (rowClass === 'total-row') Object.assign(styles, { fontStyle: 'bold', fillColor: SURFACE_MUTED, lineWidth: 0 });
                 if (groupFillOf(cellClass)) styles.fillColor = groupFillOf(cellClass);
+                if (payColorOf(cellClass)) styles.textColor = payColorOf(cellClass);
                 if (cellClass.includes('negative')) styles.textColor = DANGER;
                 if (cellClass.includes('lowlight')) styles.textColor = SUBTLE;
                 if (cellClass.includes('note')) Object.assign(styles, { fontSize: 9.6, textColor: MUTED });

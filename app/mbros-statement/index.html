@@ -44,7 +44,7 @@
             content: ""; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px);
             border-radius: 999px; background: var(--brand); box-shadow: var(--shadow-sm); transition: transform 0.2s ease;
         }
-        body[data-view="dues"] .view-switch::before { transform: translateX(100%); }
+        body[data-view="statement"] .view-switch::before { transform: translateX(100%); }
         .view-switch button {
             position: relative; padding: 8px 24px; border: 0; border-radius: 999px; background: none;
             font: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: color 0.2s ease;
@@ -58,8 +58,16 @@
         #duesTable .group-row th { text-align: center; position: static; }
         #duesTable .group-row th[colspan] { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
         #duesTable th.even { width: 15%; }
-        #duesTable .group-locked { background: var(--info-soft); }
-        #duesTable .group-staged { background: var(--accent-soft); }
+        /* Light column-group tints; on the black theme a faint wash, since the soft tokens are too deep there. */
+        #duesTable { --group-locked: var(--info-soft); --group-staged: var(--accent-soft); }
+        @media screen {
+            :root[data-theme="dark"] #duesTable { --group-locked: rgba(107, 155, 255, 0.07); --group-staged: rgba(224, 165, 38, 0.07); }
+        }
+        #duesTable .group-locked { background: var(--group-locked); }
+        #duesTable .group-staged { background: var(--group-staged); }
+        /* MBros pays in green, the party pays MBros in red, headers and amounts alike. */
+        #duesTable .mbros-pays { color: var(--brand-strong); }
+        #duesTable .pays-mbros { color: var(--danger); }
         #duesTable td[data-copy] { cursor: copy; }
         #duesTable td.copied { color: var(--brand-strong); }
         .table td.lowlight { color: var(--text-subtle); }
@@ -72,7 +80,7 @@
         }
     </style>
 </head>
-<body data-page="mbros-statement" data-view="statement">
+<body data-page="mbros-statement" data-view="dues">
 
 <main class="app-main wide">
     <div class="container">
@@ -92,8 +100,8 @@
         </div>
 
         <div class="view-switch no-print" role="tablist" aria-label="View">
-            <button type="button" role="tab" data-view="statement" aria-selected="true">Statement</button>
-            <button type="button" role="tab" data-view="dues" aria-selected="false">Due per party</button>
+            <button type="button" role="tab" data-view="dues" aria-selected="true">Due per party</button>
+            <button type="button" role="tab" data-view="statement" aria-selected="false">Statement</button>
         </div>
 
         <div class="card card-body no-print">
@@ -220,10 +228,10 @@
                     </tr>
                     <tr>
                         <th>Party</th>
-                        <th class="num even group-locked">MBros pays</th>
-                        <th class="num even group-locked">Pays MBros</th>
-                        <th class="num even group-staged">MBros pays</th>
-                        <th class="num even group-staged">Pays MBros</th>
+                        <th class="num even group-locked mbros-pays">MBros pays</th>
+                        <th class="num even group-locked pays-mbros">Pays MBros</th>
+                        <th class="num even group-staged mbros-pays">MBros pays</th>
+                        <th class="num even group-staged pays-mbros">Pays MBros</th>
                         <th class="nowrap">Last entry</th>
                     </tr>
                     </thead>
@@ -533,7 +541,7 @@
             ], [1, 2, 3, 4]);
             amounts.forEach((amount, i) => {
                 const td = tr.cells[i + 1];
-                td.classList.add(i < 2 ? 'group-locked' : 'group-staged');
+                td.classList.add(i < 2 ? 'group-locked' : 'group-staged', i % 2 ? 'pays-mbros' : 'mbros-pays');
                 if (amount || showZero) td.dataset.copy = String(amount);
             });
             return tr;
