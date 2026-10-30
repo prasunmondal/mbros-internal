@@ -33,7 +33,7 @@ sources:
 | `app/deliveries/` | delivered KG per customer by date group, 2023 + current | `deliveries.2023`, `db2.deliveries` |
 | `app/profits/` | business dashboard: KPIs and trend charts | `cumilativeCalculations` |
 | `app/daily/` | day summary report for a chosen date (`?date=YYYY-MM-DD`): loading, sales and dues, expenses and profit, trip and staff, notes, customer deliveries | `cumilativeCalculations`, `db2.deliveries`, `deliveries.2023` (days before 2026) |
-| `app/mbros-statement/` | MBros's ledger with one or more parties (suppliers, staff, accounts) over a date range: one plain sentence per party saying who pays whom at the end date, running balance, per-party table, print + PDF share (landscape). A checkbox adds staged rows from `temp.load`, marked "staged". A sliding switch flips to "Due per party": every party with a non-zero balance on the "As on" date, biggest first, each due shown without and with staged rows, with totals and net for both; print and Share PDF follow the active tab | `db2.loads`, `temp.load` |
+| `app/mbros-statement/` | MBros's ledger with one or more parties (suppliers, staff, accounts) over a date range: one plain sentence per party saying who pays whom at the end date, running balance, per-party table, print + PDF share (landscape). A checkbox adds staged rows from `temp.load`, marked "staged". A sliding switch flips to "Due per party": every party with a non-zero balance on the "As on" date, biggest first, columns grouped as "Locked data" and "Staged data" (with staged rows added), equal-width amounts, totals and net for both; print and Share PDF follow the active tab | `db2.loads`, `temp.load` |
 | `app/customer-profit/` | profit and debt movement per customer and date range | `db2.deliveries`, `cumilativeCalculations` |
 | `app/customer-performance/` | per-customer orders/week and avg order KG over 1/2/3/6/12 months, KG chart by day/week/month/year (timeline or years overlaid, with change vs previous period and last year), all-customer comparison | `deliveries.2023`, `db2.deliveries` |
 | `app/meters/` | meter reading difference and units to target | `apiData` (meter sheet) |
@@ -62,7 +62,8 @@ sources:
   jspdf-autotable from jsDelivr).
 - Statement PDFs: `assets/js/statement-pdf.js` (`StatementPdf.share`) redraws the page's own tables to look like
   its print: same `@page` size and orientation, print CSS sizes × 0.75. A print CSS change on those pages
-  needs the same change there. Both pages print the letterhead (`.print-frame` + `.letterhead` in
+  needs the same change there. It reads extra `<thead>` rows above the column row as column groups, and gives
+  columns whose `th` has class `even` one shared width; `group-locked` / `group-staged` cells get the light group tints. Both pages print the letterhead (`.print-frame` + `.letterhead` in
   `assets/css/site.css`, repeated on every page) and pass it to the PDF; on `app/mbros-statement/` a checkbox
   switches it off for both (`.no-letterhead`).
 - Dates are shown in IST. `Mb.toISTDate` is the shared helper; `app/deliveries/deliveries.js` and

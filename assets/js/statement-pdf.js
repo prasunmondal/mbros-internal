@@ -7,8 +7,13 @@
     const pdfText = text => text.replace(/−/g, '-').replace(/₹/g, 'Rs ').replace(/→/g, '>');
 
     // Read a table as shown on screen: only visible columns; a single wide cell (empty state) spans them all.
+    // Header rows above the last one are column groups (th colspan); they assume every grouped column is visible.
+    // Columns whose th has class "even" all get the width of the widest of them.
     function visibleTable(table) {
-        const headers = [...table.tHead.rows[0].cells];
+        const headRows = [...table.tHead.rows];
+        const headers = [...headRows[headRows.length - 1].cells];
+        const groups = headRows.slice(0, -1).map(tr =>
+            [...tr.cells].map(th => ({ content: th.textContent.trim().toUpperCase(), colSpan: th.colSpan, className: th.className })));
         const visible = headers.map((th, i) => i).filter(i => getComputedStyle(headers[i]).display !== 'none');
         const columnStyles = {};
         // Dates and numbers never wrap ('wrap' sizes the column to its content); text columns take the rest.
@@ -19,7 +24,9 @@
         const rows = [...table.tBodies[0].rows];
         const full = tr => tr.cells.length === headers.length;
         return {
-            head: [visible.map(i => headers[i].textContent.trim().toUpperCase())],   // th is uppercase in CSS
+            head: [...groups, visible.map(i => headers[i].textContent.trim().toUpperCase())],   // th is uppercase in CSS
+            headClasses: visible.map(i => headers[i].className),
+            even: visible.map((i, position) => position).filter(position => headers[visible[position]].classList.contains('even')),
             body: rows.map(tr => full(tr)
                 ? visible.map(i => table.classList.contains('hide-sums') && tr.cells[i].classList.contains('sum') ? '' : pdfText(tr.cells[i].textContent))
                 : [{ content: pdfText(tr.cells[0].textContent), colSpan: visible.length }]),
@@ -53,6 +60,9 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation, unit: 'pt', format: 'a4' });
         const BRAND = '#1f6f4a', BRAND_SOFT = '#e7f3ec';
+        // Column-group tints (light theme --info-soft, --accent-soft), by the class on the th or td.
+        const groupFillOf = className => /\bgroup-locked\b/.test(className || '') ? '#eaf1fe'
+            : /\bgroup-staged\b/.test(className || '') ? '#fdf5e1' : null;
         const TEXT = '#1c2420', MUTED = '#5c665f', SUBTLE = '#8a938c', BORDER = '#e2e5e0', SURFACE_MUTED = '#f1f3f0', DANGER = '#c0392b';
         const margin = 28.35;   // 10 mm
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -66,10 +76,22 @@
         const bodyTop = letterhead ? margin + bandHeight + ruleHeight + stripHeight + 12 : margin;
         let y = bodyTop;
 
+        // "even" columns all take the widest text among them (bold 9 pt, the widest style they use) plus padding.
+        function withEvenWidths(table) {
+            if (!table.even.length) return table.columnStyles;
+            doc.setFont('helvetica', 'bold').setFontSize(9);
+            const columnHead = table.head[table.head.length - 1];
+            const texts = table.even.flatMap(p => [columnHead[p], ...table.body.filter(row => row.length > 1).map(row => row[p])]);
+            const width = Math.max(...texts.map(text => doc.getTextWidth(String(text)))) + 12 + 1;
+            const styles = { ...table.columnStyles };
+            table.even.forEach(p => styles[p] = { ...styles[p], cellWidth: width });
+            return styles;
+        }
+
         const tableOptions = (table, extra = {}, isTotals = false) => ({
             head: table.head,
             body: table.body,
-            columnStyles: table.columnStyles,
+            columnStyles: withEvenWidths(table),
             theme: 'plain',
             margin: { top: bodyTop, left: margin, right: margin, bottom: margin },
             styles: {
@@ -80,19 +102,24 @@
             didParseCell: data => {
                 const styles = data.cell.styles;
                 if (data.section === 'head') {
-                    styles.halign = table.columnStyles[data.column.index]?.halign || 'left';
+                    const isGroup = data.row.index < table.head.length - 1;
+                    styles.halign = isGroup ? 'center' : table.columnStyles[data.column.index]?.halign || 'left';
+                    const groupFill = groupFillOf(isGroup ? data.cell.raw.className : table.headClasses[data.column.index]);
+                    if (groupFill) styles.fillColor = groupFill;
                     return;
                 }
                 const rowClass = table.rowClasses[data.row.index];
                 const cellClass = table.cellClasses[data.row.index][data.column.index] || '';
                 if (rowClass === 'opening-row') Object.assign(styles, { fontStyle: 'italic', textColor: MUTED });
                 if (rowClass === 'total-row') Object.assign(styles, { fontStyle: 'bold', fillColor: SURFACE_MUTED, lineWidth: 0 });
+                if (groupFillOf(cellClass)) styles.fillColor = groupFillOf(cellClass);
                 if (cellClass.includes('negative')) styles.textColor = DANGER;
+                if (cellClass.includes('lowlight')) styles.textColor = SUBTLE;
                 if (cellClass.includes('note')) Object.assign(styles, { fontSize: 9.6, textColor: MUTED });
                 if (cellClass.includes('route')) Object.assign(styles, { fontSize: 10.2, textColor: MUTED });
                 if (cellClass.includes('empty-state')) Object.assign(styles, { halign: 'center', textColor: MUTED, cellPadding: { top: 36, bottom: 36, left: 15, right: 15 } });
                 if (isTotals) {
-                    if (data.column.index === table.head[0].length - 1) styles.fontStyle = 'bold';
+                    if (data.column.index === table.head[table.head.length - 1].length - 1) styles.fontStyle = 'bold';
                     if (rowClass === 'total-row') styles.fontSize = 12;
                 }
             },

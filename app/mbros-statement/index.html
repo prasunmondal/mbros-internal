@@ -54,9 +54,15 @@
         .option-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
         .option-toggle input { accent-color: var(--brand); width: 16px; height: 16px; }
         .options { display: flex; flex-wrap: wrap; column-gap: 24px; }
-        /* Staged rows (temp.load) are not in the loads sheet yet. */
-        .table tr.staged-row td { background: var(--accent-soft); }
-        .table td.staged-changed { background: var(--accent-soft); }
+        /* Due per party: column groups over equal-width amount columns. */
+        #duesTable .group-row th { text-align: center; position: static; }
+        #duesTable .group-row th[colspan] { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+        #duesTable th.even { width: 15%; }
+        #duesTable .group-locked { background: var(--info-soft); }
+        #duesTable .group-staged { background: var(--accent-soft); }
+        #duesTable td[data-copy] { cursor: copy; }
+        #duesTable td.copied { color: var(--brand-strong); }
+        .table td.lowlight { color: var(--text-subtle); }
         /* 12 columns need landscape; the Share PDF uses the same page. */
         @page { size: A4 landscape; margin: 10mm; }
         @media print {
@@ -206,12 +212,18 @@
             <div class="table-wrap">
                 <table class="table" id="duesTable">
                     <thead>
+                    <tr class="group-row">
+                        <th></th>
+                        <th colspan="2" class="group-locked">Locked data</th>
+                        <th colspan="2" class="group-staged">Staged data</th>
+                        <th></th>
+                    </tr>
                     <tr>
                         <th>Party</th>
-                        <th class="num">MBros pays</th>
-                        <th class="num">Pays MBros</th>
-                        <th class="num">MBros pays · with staged</th>
-                        <th class="num">Pays MBros · with staged</th>
+                        <th class="num even group-locked">MBros pays</th>
+                        <th class="num even group-locked">Pays MBros</th>
+                        <th class="num even group-staged">MBros pays</th>
+                        <th class="num even group-staged">Pays MBros</th>
                         <th class="nowrap">Last entry</th>
                     </tr>
                     </thead>
@@ -448,7 +460,6 @@
                 Mb.formatINR(running, 0),
                 entry.notes
             ], NUMERIC);
-            if (entry.staged) tr.className = 'staged-row';
             tr.cells[3].classList.add('route');
             tr.cells[11].className = 'note';
             if (running < 0) tr.cells[10].classList.add('negative');
@@ -514,17 +525,26 @@
         ].filter(Boolean).join(' · ');
 
         // A balance split into its two columns: what MBros pays, what the party pays MBros.
-        const split = balance => [balance > 0 ? Mb.formatINR(balance, 0) : '', balance < 0 ? Mb.formatINR(-balance, 0) : ''];
+        const split = balance => [Math.max(balance, 0), Math.max(-balance, 0)];
+        // Amount cells are tinted by group and keep their plain value for click-to-copy; zeros stay blank unless shown.
+        const addRow = (label, amounts, last, showZero = false) => {
+            const tr = addCells(body.insertRow(), [
+                label, ...amounts.map(amount => amount || showZero ? Mb.formatINR(amount, 0) : ''), last
+            ], [1, 2, 3, 4]);
+            amounts.forEach((amount, i) => {
+                const td = tr.cells[i + 1];
+                td.classList.add(i < 2 ? 'group-locked' : 'group-staged');
+                if (amount || showZero) td.dataset.copy = String(amount);
+            });
+            return tr;
+        };
         const totals = { current: [0, 0], withStaged: [0, 0] };
-        const addTo = (pair, balance) => balance > 0 ? pair[0] += balance : pair[1] -= balance;
+        const addTo = (pair, balance) => split(balance).forEach((amount, i) => pair[i] += amount);
 
         dues.forEach(({ name, current, withStaged, last }) => {
             addTo(totals.current, current);
             addTo(totals.withStaged, withStaged);
-            const tr = addCells(body.insertRow(), [name, ...split(current), ...split(withStaged), last], [1, 2, 3, 4]);
-            tr.cells[2].classList.add('negative');
-            tr.cells[4].classList.add('negative');
-            if (current !== withStaged) [3, 4].forEach(i => tr.cells[i].classList.add('staged-changed'));
+            addRow(name, [...split(current), ...split(withStaged)], last).cells[5].className = 'lowlight';
         });
 
         if (!dues.length) {
@@ -534,12 +554,9 @@
             td.textContent = query ? 'No parties match.' : 'Nothing is due. Every party is settled.';
         }
 
-        const formatPair = pair => pair.map(amount => Mb.formatINR(amount, 0));
-        addCells(body.insertRow(), ['Total', ...formatPair(totals.current), ...formatPair(totals.withStaged), ''], [1, 2, 3, 4])
-            .className = 'total-row';
+        addRow('Total', [...totals.current, ...totals.withStaged], '', true).className = 'total-row';
         const net = pair => pair[0] - pair[1];
-        addCells(body.insertRow(), ['Net', ...split(net(totals.current)), ...split(net(totals.withStaged)), ''], [1, 2, 3, 4])
-            .className = 'total-row';
+        addRow('Net', [...split(net(totals.current)), ...split(net(totals.withStaged))], '').className = 'total-row';
         setReportReady(true);
     }
 
@@ -636,6 +653,23 @@
         selected.clear();
         renderPartyList();
         renderStatement();
+    });
+    // Click an amount in Due per party to copy it as a plain number (no ₹, no commas); the cell says "Copied" briefly.
+    document.getElementById('duesTable').addEventListener('click', async event => {
+        const td = event.target.closest('td[data-copy]');
+        if (!td || td.classList.contains('copied')) return;
+        const shown = td.textContent;
+        try {
+            await navigator.clipboard.writeText(td.dataset.copy);
+            td.textContent = 'Copied';
+        } catch (error) {
+            td.textContent = 'Copy failed';
+        }
+        td.classList.add('copied');
+        setTimeout(() => {
+            td.textContent = shown;
+            td.classList.remove('copied');
+        }, 1000);
     });
     document.getElementById('includeStaged').addEventListener('change', () => {
         renderPartyList();
