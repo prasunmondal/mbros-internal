@@ -37,6 +37,7 @@ the lint here does not check them.
 |---|---|---|
 | main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
 | main | `db2.loads` | `app/mbros-statement/` |
+| staging (ID in `app/mbros-statement/`) | `temp.load`: staged transactions not yet in `db2.loads`, same columns plus `isHidden` | `app/mbros-statement/` |
 | main | `db2.deliveries` | `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statement/`, `app/daily/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
 | 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/deliveries/`, `app/customer-performance/`, `app/statement/`, `app/daily/` |

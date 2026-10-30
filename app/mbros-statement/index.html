@@ -53,6 +53,10 @@
         body[data-view="statement"] .dues-only, body[data-view="dues"] .statement-only { display: none; }
         .option-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
         .option-toggle input { accent-color: var(--brand); width: 16px; height: 16px; }
+        .options { display: flex; flex-wrap: wrap; column-gap: 24px; }
+        /* Staged rows (temp.load) are not in the loads sheet yet. */
+        .table tr.staged-row td { background: var(--accent-soft); }
+        .table td.staged-changed { background: var(--accent-soft); }
         /* 12 columns need landscape; the Share PDF uses the same page. */
         @page { size: A4 landscape; margin: 10mm; }
         @media print {
@@ -108,7 +112,10 @@
             <div class="party-list statement-only" id="partyList">
                 <span class="subtle">Loading parties…</span>
             </div>
-            <label class="option-toggle"><input type="checkbox" id="showLetterhead" checked> Letterhead on print and PDF</label>
+            <div class="options">
+                <label class="option-toggle statement-only"><input type="checkbox" id="includeStaged" disabled> Include staged transactions (temp.load)</label>
+                <label class="option-toggle"><input type="checkbox" id="showLetterhead" checked> Letterhead on print and PDF</label>
+            </div>
             <p class="subtle" style="margin-top: 8px;">Balance is what MBros owes the party: positive means MBros owes them, negative means they owe MBros.
                 Goods or money coming to MBros count as Received, going out as Paid. When MBros is the middle party, it owes the sender the sender amount and the receiver owes it the via sell amount.</p>
         </div>
@@ -203,11 +210,13 @@
                         <th>Party</th>
                         <th class="num">MBros pays</th>
                         <th class="num">Pays MBros</th>
+                        <th class="num">MBros pays · with staged</th>
+                        <th class="num">Pays MBros · with staged</th>
                         <th class="nowrap">Last entry</th>
                     </tr>
                     </thead>
                     <tbody>
-                        <tr><td colspan="4" class="empty-state">Loading…</td></tr>
+                        <tr><td colspan="6" class="empty-state">Loading…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -244,15 +253,23 @@
         return [];
     }
 
+    // Staged transactions, not yet moved into db2.loads; same columns as db2.loads.
+    const STAGING_SHEET_ID = '1X6HriHjIE0XfAblDlE7Uf5a8JTHu00kW2SWvTFKL78w';
+
     async function loadEntries() {
-        const data = await callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.loads", id: "mbros-github-site" }]);
+        const [loads, staged] = await callSheetsApi([
+            { type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.loads", id: "mbros-github-site" },
+            { type: "SELECT", spreadsheetId: STAGING_SHEET_ID, worksheet: "temp.load", id: "mbros-github-site-staged" }
+        ]);
         entriesByParty = new Map();
-        data[0].rows.forEach((row, index) => {
+        // Staged rows sort after the sheet's own rows of the same day.
+        const rows = [...loads.rows.map(row => ({ row })), ...staged.rows.map(row => ({ row, staged: true }))];
+        rows.forEach(({ row, staged }, index) => {
             flows(row).forEach(([party, amount, rate]) => {
                 if (!party || party === MBROS || !amount) return;
                 if (!entriesByParty.has(party)) entriesByParty.set(party, []);
                 entriesByParty.get(party).push({
-                    day: row.deliverySession, index, party, amount, rate,
+                    day: row.deliverySession, index, party, amount, rate, staged: !!staged,
                     type: row.transactionType,
                     route: [row.sender, row.via, row.receiver].filter(Boolean).join(' → '),
                     pc: row.loadPc, kg: row.loadKg, method: row.paymentMethod,
@@ -264,13 +281,17 @@
     }
 
     const balanceOf = entries => entries.reduce((sum, entry) => sum + entry.amount, 0);
+    const includeStaged = () => document.getElementById('includeStaged').checked;
+    // A party's entries, with staged ones only when asked for.
+    const entriesFor = (name, withStaged = includeStaged()) =>
+        (entriesByParty.get(name) || []).filter(entry => withStaged || !entry.staged);
 
     function renderPartyList() {
         const list = document.getElementById('partyList');
         const query = document.getElementById('partySearch').value.trim().toLowerCase();
         const names = [...entriesByParty.keys()]
             .sort((a, b) => a.localeCompare(b))
-            .filter(name => !query || name.toLowerCase().includes(query));
+            .filter(name => entriesFor(name).length && (!query || name.toLowerCase().includes(query)));
 
         list.replaceChildren();
         if (!names.length) {
@@ -296,7 +317,7 @@
             nameSpan.textContent = name;
             const balance = document.createElement('span');
             balance.className = 'subtle';
-            balance.textContent = Mb.formatINR(balanceOf(entriesByParty.get(name)), 0);
+            balance.textContent = Mb.formatINR(balanceOf(entriesFor(name)), 0);
             label.append(checkbox, nameSpan, balance);
             list.appendChild(label);
         });
@@ -337,14 +358,16 @@
         const to = document.getElementById('endDate').value;
         const body = document.getElementById('statementTable').tBodies[0];
         const summaryBody = document.getElementById('summaryTable').tBodies[0];
-        const names = [...selected].sort((a, b) => a.localeCompare(b));
+        // A party picked only for its staged rows drops out while staged rows are off.
+        const names = [...selected].filter(name => entriesFor(name).length).sort((a, b) => a.localeCompare(b));
         const status = document.getElementById('status');
         body.replaceChildren();
         summaryBody.replaceChildren();
 
         document.getElementById('statementTitle').textContent = names.length ? `MBros Statement · ${names.join(', ')}` : 'MBros Statement';
         document.getElementById('statementMeta').textContent = names.length
-            ? `Period: ${from || 'start'} to ${to || 'today'} · Generated ${Mb.todayIST()}` : '';
+            ? [`Period: ${from || 'start'} to ${to || 'today'}`, includeStaged() && 'Includes staged transactions', `Generated ${Mb.todayIST()}`]
+                .filter(Boolean).join(' · ') : '';
         document.getElementById('summaryCard').hidden = names.length < 2;
         setReportReady(false);
 
@@ -374,7 +397,7 @@
         const totals = { pc: 0, kg: 0, received: 0, paid: 0 };
 
         names.forEach(name => {
-            const entries = entriesByParty.get(name);
+            const entries = entriesFor(name);
             const partyOpening = balanceOf(entries.filter(entry => from && entry.day < from));
             const inRange = entries.filter(entry => (!from || entry.day >= from) && (!to || entry.day <= to));
             const sums = { kg: 0, received: 0, paid: 0 };
@@ -414,7 +437,7 @@
             const tr = addCells(body.insertRow(), [
                 entry.day,
                 entry.party,
-                entry.type,
+                entry.staged ? `${entry.type} · staged` : entry.type,
                 entry.route,
                 blankIfZero(entry.pc),
                 blankIfZero(entry.kg, 2),
@@ -425,6 +448,7 @@
                 Mb.formatINR(running, 0),
                 entry.notes
             ], NUMERIC);
+            if (entry.staged) tr.className = 'staged-row';
             tr.cells[3].classList.add('route');
             tr.cells[11].className = 'note';
             if (running < 0) tr.cells[10].classList.add('negative');
@@ -455,6 +479,7 @@
     }
 
     // Every party with something due on the "As on" date, biggest first; the search box filters them.
+    // Each row shows the due from the loads sheet alone and the due once the staged rows are added.
     function renderDues() {
         const to = document.getElementById('endDate').value;
         const query = document.getElementById('partySearch').value.trim().toLowerCase();
@@ -463,55 +488,58 @@
         setReportReady(false);
         if (!dataReady) return;
 
-        let settled = 0;
+        let settled = 0, stagedCount = 0;
         const dues = [];
         entriesByParty.forEach((entries, name) => {
             if (query && !name.toLowerCase().includes(query)) return;
             const upTo = entries.filter(entry => !to || entry.day <= to);
-            const balance = Math.round(balanceOf(upTo));
-            if (!balance) {
+            const current = Math.round(balanceOf(upTo.filter(entry => !entry.staged)));
+            const withStaged = Math.round(balanceOf(upTo));
+            stagedCount += upTo.filter(entry => entry.staged).length;
+            if (!current && !withStaged) {
                 if (upTo.length) settled++;
                 return;
             }
-            dues.push({ name, balance, last: upTo[upTo.length - 1].day });
+            dues.push({ name, current, withStaged, last: upTo[upTo.length - 1].day });
         });
-        dues.sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance) || a.name.localeCompare(b.name));
+        const size = due => Math.max(Math.abs(due.current), Math.abs(due.withStaged));
+        dues.sort((a, b) => size(b) - size(a) || a.name.localeCompare(b.name));
 
         document.getElementById('duesTitle').textContent = `Due per party · as on ${to || Mb.todayIST()}`;
         document.getElementById('duesMeta').textContent = [
             `${dues.length} ${dues.length === 1 ? 'party' : 'parties'} with dues, ${settled} settled`,
+            `${stagedCount} staged ${stagedCount === 1 ? 'entry' : 'entries'}`,
             query && `matching "${query}"`,
             `Generated ${Mb.todayIST()}`
         ].filter(Boolean).join(' · ');
 
-        let mbrosPays = 0, paysMbros = 0;
-        dues.forEach(({ name, balance, last }) => {
-            if (balance > 0) mbrosPays += balance;
-            else paysMbros -= balance;
-            addCells(body.insertRow(), [
-                name,
-                balance > 0 ? Mb.formatINR(balance, 0) : '',
-                balance < 0 ? Mb.formatINR(-balance, 0) : '',
-                last
-            ], [1, 2]).cells[2].classList.add('negative');
+        // A balance split into its two columns: what MBros pays, what the party pays MBros.
+        const split = balance => [balance > 0 ? Mb.formatINR(balance, 0) : '', balance < 0 ? Mb.formatINR(-balance, 0) : ''];
+        const totals = { current: [0, 0], withStaged: [0, 0] };
+        const addTo = (pair, balance) => balance > 0 ? pair[0] += balance : pair[1] -= balance;
+
+        dues.forEach(({ name, current, withStaged, last }) => {
+            addTo(totals.current, current);
+            addTo(totals.withStaged, withStaged);
+            const tr = addCells(body.insertRow(), [name, ...split(current), ...split(withStaged), last], [1, 2, 3, 4]);
+            tr.cells[2].classList.add('negative');
+            tr.cells[4].classList.add('negative');
+            if (current !== withStaged) [3, 4].forEach(i => tr.cells[i].classList.add('staged-changed'));
         });
 
         if (!dues.length) {
             const td = body.insertRow().insertCell();
-            td.colSpan = 4;
+            td.colSpan = 6;
             td.className = 'empty-state';
             td.textContent = query ? 'No parties match.' : 'Nothing is due. Every party is settled.';
         }
 
-        const net = mbrosPays - paysMbros;
-        addCells(body.insertRow(), ['Total', Mb.formatINR(mbrosPays, 0), Mb.formatINR(paysMbros, 0), ''], [1, 2])
+        const formatPair = pair => pair.map(amount => Mb.formatINR(amount, 0));
+        addCells(body.insertRow(), ['Total', ...formatPair(totals.current), ...formatPair(totals.withStaged), ''], [1, 2, 3, 4])
             .className = 'total-row';
-        addCells(body.insertRow(), [
-            net > 0 ? 'Net: MBros pays' : net < 0 ? 'Net: parties pay MBros' : 'Net: settled',
-            net > 0 ? Mb.formatINR(net, 0) : '',
-            net < 0 ? Mb.formatINR(-net, 0) : '',
-            ''
-        ], [1, 2]).className = 'total-row';
+        const net = pair => pair[0] - pair[1];
+        addCells(body.insertRow(), ['Net', ...split(net(totals.current)), ...split(net(totals.withStaged)), ''], [1, 2, 3, 4])
+            .className = 'total-row';
         setReportReady(true);
     }
 
@@ -583,7 +611,7 @@
             await loadEntries();
             dataReady = true;
             Mb.setStatus(status, null);
-            ['partySearch', 'selectAll', 'clearAll'].forEach(id => document.getElementById(id).disabled = false);
+            ['partySearch', 'selectAll', 'clearAll', 'includeStaged'].forEach(id => document.getElementById(id).disabled = false);
             renderPartyList();
             renderView();
         } catch (error) {
@@ -606,6 +634,10 @@
     });
     document.getElementById('clearAll').addEventListener('click', () => {
         selected.clear();
+        renderPartyList();
+        renderStatement();
+    });
+    document.getElementById('includeStaged').addEventListener('change', () => {
         renderPartyList();
         renderStatement();
     });
