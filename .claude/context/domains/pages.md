@@ -29,7 +29,7 @@ sources:
 | `app/statement/` | statement for one or more customers over a date range, combined running balance, per-customer summary, print + PDF share | `deliveries.2023` (only for ranges before 2026), `db2.deliveries` |
 | `app/deliveries/` | delivered KG per customer by date group, 2023 + current | `deliveries.2023`, `db2.deliveries` |
 | `app/profits/` | business dashboard: KPIs and trend charts | `cumilativeCalculations` |
-| `app/daily/` | daily sold / expenses / profit charts | `cumilativeCalculations` |
+| `app/daily/` | day summary report for a chosen date (`?date=YYYY-MM-DD`): loading, sales and dues, expenses and profit, trip and staff, notes, customer deliveries | `cumilativeCalculations`, `db2.deliveries`, `deliveries.2023` (days before 2026) |
 | `app/customer-profit/` | profit and debt movement per customer and date range | `db2.deliveries`, `cumilativeCalculations` |
 | `app/customer-performance/` | per-customer orders/week and avg order KG over 1/2/3/6/12 months, KG chart by day/week/month/year (timeline or years overlaid, with change vs previous period and last year), all-customer comparison | `deliveries.2023`, `db2.deliveries` |
 | `app/meters/` | meter reading difference and units to target | `apiData` (meter sheet) |

@@ -23,7 +23,10 @@ earns, plus pages customers use to pay.
   the `deliveries` worksheet.
 - **Delivery**: one sale/delivery to a customer, a row in the deliveries worksheets.
 - **cumilativeCalculations**: the worksheet with the daily business totals (spelling as in the
-  sheet). Columns read include `date`, `sold_amount`, `total_expenses`, `profit`, `net`.
+  sheet). One row per day (a couple of 2023 dates have two). `date` is `YYYY-MM-DD` on newer rows and a
+  UTC timestamp of IST midnight on older ones. Its `sold_amount` and `deliveredPc` match that day's
+  delivery rows on most days (1,042 of 1,124, checked 2026-10-30). `shortage` is a percentage
+  `[inferred: (kg − deliveredKg) / kg]`; `employeeSalaries` reads `{Name|Role|Amount}, …`.
 
 ## Business rules
 - **Balance on a date** (`app/balance/`): for each customer, the `khataBalance` of the latest

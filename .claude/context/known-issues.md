@@ -3,7 +3,6 @@ status: VERIFIED
 last_verified: 2026-10-29
 sources:
   - app/balance/index.html
-  - app/daily/index.html
   - app/customer-profit/index.html
   - pay/index.html
 ---
@@ -14,8 +13,6 @@ sources:
   Likely fix is `db2.deliveries`, but its balance column may not be `khataBalance`: needs owner.
 - `app/balance/`: the "first row wins" check is `!customerBalance[name]`, so a customer whose
   balance is 0 gets overwritten by later rows, even ones after the selected date `[inferred: bug]`.
-- `app/daily/`: the expense pie uses only the second row (`content[1]`), not a total or the
-  latest day `[inferred: bug]`.
 - `app/customer-profit/`: if the first matching delivery has no `cumilativeCalculations` row
   on the same timestamp and "All customers" is selected, `profitEntry.prev_due_balance` throws.
 - The internal app (`app/`) is public: no login, only `noindex`. Anyone with the URL can see

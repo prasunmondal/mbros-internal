@@ -4,16 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Daily summary · Mondal Brothers</title>
+    <title>Day summary · Mondal Brothers</title>
     <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
     <link rel="stylesheet" href="../../assets/css/site.css">
     <script src="../../assets/js/common.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
-        .chart-box { position: relative; height: 320px; }
+        .day-nav { display: flex; gap: 8px; align-items: flex-end; }
+        .facts td:first-child { color: var(--text-muted); }
+        .facts td.num { font-weight: 600; }
+        .facts tr.total-row td { color: var(--text); }
+        .notes-list { margin: 0; padding: 16px 20px 16px 36px; }
+        .notes-list li + li { margin-top: 6px; }
+        .day-title { margin-top: 4px; color: var(--text-muted); }
+        .table td.negative { color: var(--danger); }
+        @media print {
+            .grid-2 { grid-template-columns: 1fr 1fr; }
+            .table { font-size: 0.75rem; }
+            .table th, .table td { padding: 5px 8px; }
+        }
     </style>
 </head>
 <body data-page="daily">
@@ -23,27 +34,74 @@
 
         <div class="page-header">
             <div>
-                <h1>Daily summary</h1>
-                <p>Day-by-day sales, profit and expenses.</p>
+                <h1>Day summary</h1>
+                <p class="day-title" id="dayTitle">Loading, sales, expenses, profit and customer deliveries for one day.</p>
+            </div>
+            <div class="page-actions">
+                <button type="button" class="btn btn-secondary" id="printBtn" onclick="window.print()" disabled>Print</button>
             </div>
         </div>
 
-        <p id="status" class="status" hidden></p>
+        <div class="card card-body toolbar no-print">
+            <div class="field">
+                <label for="dayInput">Date</label>
+                <input type="date" id="dayInput" class="input" disabled>
+            </div>
+            <div class="day-nav">
+                <button type="button" class="btn btn-secondary" id="prevDay" title="Previous day with data" disabled>‹ Previous</button>
+                <button type="button" class="btn btn-secondary" id="nextDay" title="Next day with data" disabled>Next ›</button>
+                <button type="button" class="btn btn-secondary" id="latestDay" disabled>Latest</button>
+            </div>
+        </div>
 
-        <div class="grid grid-2" style="margin-top: 16px;">
-            <section class="card">
-                <div class="card-header"><h2>Sales &amp; profit over time</h2></div>
-                <div class="card-body"><div class="chart-box"><canvas id="salesChart"></canvas></div></div>
+        <p id="status" class="status" hidden style="margin-top: 16px;"></p>
+
+        <div id="report" hidden>
+            <div class="grid grid-2 section">
+                <section class="card">
+                    <div class="card-header"><h2>Loading &amp; delivery</h2></div>
+                    <div class="table-wrap"><table class="table facts" id="loadingTable"><tbody></tbody></table></div>
+                </section>
+                <section class="card">
+                    <div class="card-header"><h2>Sales &amp; dues</h2></div>
+                    <div class="table-wrap"><table class="table facts" id="salesTable"><tbody></tbody></table></div>
+                </section>
+                <section class="card">
+                    <div class="card-header"><h2>Expenses &amp; profit</h2></div>
+                    <div class="table-wrap"><table class="table facts" id="expenseTable"><tbody></tbody></table></div>
+                </section>
+                <section class="card">
+                    <div class="card-header"><h2>Trip &amp; staff</h2></div>
+                    <div class="table-wrap"><table class="table facts" id="tripTable"><tbody></tbody></table></div>
+                </section>
+            </div>
+
+            <section class="card section" id="notesCard" hidden>
+                <div class="card-header"><h2>Notes</h2></div>
+                <ul class="notes-list" id="notesList"></ul>
             </section>
 
-            <section class="card">
-                <div class="card-header"><h2>Expense breakdown</h2></div>
-                <div class="card-body"><div class="chart-box"><canvas id="expenseChart"></canvas></div></div>
-            </section>
-
-            <section class="card">
-                <div class="card-header"><h2>Revenue vs expenses</h2></div>
-                <div class="card-body"><div class="chart-box"><canvas id="revenueChart"></canvas></div></div>
+            <section class="card section">
+                <div class="card-header"><h2 id="customersTitle">Customers</h2></div>
+                <div class="table-wrap">
+                    <table class="table" id="customerTable">
+                        <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th class="num">PC</th>
+                            <th class="num">KG</th>
+                            <th class="num">Rate</th>
+                            <th class="num">Amount</th>
+                            <th class="num">Paid cash</th>
+                            <th class="num">Paid online</th>
+                            <th class="num">Discount</th>
+                            <th class="num">Previous balance</th>
+                            <th class="num">Balance</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
         </div>
 
@@ -52,69 +110,270 @@
 
 <script src="../../assets/js/config.js"></script>
 <script>
-    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
-    Chart.defaults.maintainAspectRatio = false;
+    const ARCHIVE_SHEET_ID = "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw";  // 2023–2025 deliveries
+    const CURRENT_START = '2026-01-01';   // first day in db2.deliveries; earlier days live in the archive
 
-    async function fetchData() {
-        const data = await callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "cumilativeCalculations", id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031" }]);
+    const num = value => Number(value) || 0;
+    // Newer rows hold YYYY-MM-DD; older ones a UTC timestamp of IST midnight.
+    const dayOf = value => (typeof value === 'string' && value.length === 10) ? value : Mb.toISTDate(value);
+
+    let daysByDate = new Map();       // date -> cumilativeCalculations rows (a few dates have two)
+    let dates = [];                   // sorted dates that have a day row
+    let deliveriesByDate = new Map(); // date -> delivery rows
+    let archiveLoad = null;
+    let archiveLoaded = false;
+
+    async function fetchRows(spreadsheetId, worksheet) {
+        const data = await callSheetsApi([{ type: "SELECT", spreadsheetId, worksheet, id: "mbros-github-site" }]);
         return data[0].rows;
     }
 
-    async function renderCharts() {
-        const status = document.getElementById("status");
-        Mb.setStatus(status, "info", "Loading daily figures…");
-
-        let content;
-        try {
-            content = await fetchData();
-        } catch (error) {
-            console.error("Error fetching data:", error);
-            Mb.setStatus(status, "error", "Could not load the daily figures. Please try again.");
-            return;
-        }
-        Mb.setStatus(status, null);
-
-        const labels = content.map(entry => new Date(entry.date).toISOString().split('T')[0]);
-        const soldAmounts = content.map(entry => entry.sold_amount || 0);
-        const profits = content.map(entry => entry.profit || 0);
-        const expenses = content.map(entry => entry.total_expenses || 0);
-
-        new Chart(document.getElementById("salesChart"), {
-            type: "line",
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: "Sold Amount", data: soldAmounts, borderColor: "#1f6f4a", backgroundColor: "#1f6f4a", fill: false, pointRadius: 0 },
-                    { label: "Profit", data: profits, borderColor: "#e0a526", backgroundColor: "#e0a526", fill: false, pointRadius: 0 }
-                ]
-            }
-        });
-
-        // Uses the second row only, as before (see known-issues).
-        new Chart(document.getElementById("expenseChart"), {
-            type: "pie",
-            data: {
-                labels: ["Car Expense", "Labour Expense", "Extra Expenses"],
-                datasets: [{
-                    data: [content[1].car_expense || 0, content[1].labour_expense || 0, content[1].extra_expenses || 0],
-                    backgroundColor: ["#1f6f4a", "#e0a526", "#5c8fd6"]
-                }]
-            }
-        });
-
-        new Chart(document.getElementById("revenueChart"), {
-            type: "bar",
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: "Sold Amount", data: soldAmounts, backgroundColor: "#1f6f4a" },
-                    { label: "Total Expenses", data: expenses, backgroundColor: "#d9773a" }
-                ]
-            }
+    function addDeliveries(rows) {
+        rows.filter(row => row.name).forEach(row => {
+            const day = dayOf(row.timestamp);
+            if (!deliveriesByDate.has(day)) deliveriesByDate.set(day, []);
+            deliveriesByDate.get(day).push(row);
         });
     }
 
-    renderCharts();
+    // The archive is large, so it loads only when a day before 2026 is opened.
+    function loadArchive() {
+        archiveLoad ??= fetchRows(ARCHIVE_SHEET_ID, "deliveries.2023").then(rows => {
+            addDeliveries(rows);
+            archiveLoaded = true;
+        }).catch(error => {
+            archiveLoad = null;
+            throw error;
+        });
+        return archiveLoad;
+    }
+
+    const inr = value => Mb.formatINR(value, 0);
+    const kg = value => Mb.formatNumber(value, 1) + ' kg';
+    const pc = value => Mb.formatNumber(value, 0) + ' pc';
+    const text = value => String(value ?? '').trim();
+
+    // Fill a label/value table; rows whose value is empty are skipped. A third item marks the total row.
+    function fillFacts(id, facts) {
+        const body = document.getElementById(id).tBodies[0];
+        body.replaceChildren();
+        facts.filter(([, value]) => value !== null && value !== '').forEach(([label, value, total]) => {
+            const tr = body.insertRow();
+            if (total) tr.className = 'total-row';
+            tr.insertCell().textContent = label;
+            const td = tr.insertCell();
+            td.className = 'num';
+            td.textContent = value;
+        });
+        if (!body.rows.length) {
+            const td = body.insertRow().insertCell();
+            td.colSpan = 2;
+            td.className = 'muted';
+            td.textContent = 'Nothing recorded.';
+        }
+    }
+
+    // Sum a column over the day's rows, or null when no row has it (so the line is hidden).
+    function sumOf(rows, key) {
+        const values = rows.map(row => row[key]).filter(value => value !== '' && value !== null && value !== undefined);
+        return values.length ? values.reduce((total, value) => total + num(value), 0) : null;
+    }
+    // Rates and percentages don't add up across rows; show the first recorded one.
+    const firstNum = (rows, key) => { const value = firstOf(rows, key); return value ? num(value) : null; };
+    const firstOf = (rows, key) => rows.map(row => text(row[key])).find(Boolean) || '';
+    const fmt = (value, format) => value === null ? null : format(value);
+
+    // "{Utpal|Driver|400}, {Jhantu|Loading+Delivery|350}" -> [['Utpal (Driver)', '₹400'], ...]
+    function staffLines(value) {
+        return [...text(value).matchAll(/\{([^}]*)\}/g)].map(match => {
+            const [name, role, amount] = match[1].split('|').map(part => part.trim());
+            return [`${name}${role ? ` (${role})` : ''}`, amount ? inr(amount) : '–'];
+        });
+    }
+
+    function renderDay(date) {
+        const status = document.getElementById('status');
+        const report = document.getElementById('report');
+        const days = daysByDate.get(date) || [];
+        document.getElementById('printBtn').disabled = true;
+        updateNav(date);
+        history.replaceState(null, '', `?date=${date}`);
+
+        if (date < CURRENT_START && !archiveLoaded) {
+            Mb.setStatus(status, 'info', 'Loading 2023–2025 deliveries…');
+            report.hidden = true;
+            loadArchive().then(() => {
+                if (document.getElementById('dayInput').value === date) renderDay(date);
+            }, error => {
+                console.error('Error fetching archive:', error);
+                Mb.setStatus(status, 'error', 'Could not load 2023–2025 deliveries. Pick the date again to retry.');
+            });
+            return;
+        }
+
+        const deliveries = deliveriesByDate.get(date) || [];
+        if (!days.length && !deliveries.length) {
+            Mb.setStatus(status, 'empty', `Nothing recorded on ${date}.`);
+            report.hidden = true;
+            document.getElementById('dayTitle').textContent = formatLongDate(date);
+            return;
+        }
+        Mb.setStatus(status, days.length > 1 ? 'empty' : null,
+            `The sheet has ${days.length} day rows for ${date}; amounts below add them together.`);
+        report.hidden = false;
+        document.getElementById('dayTitle').textContent = formatLongDate(date);
+
+        const loadedKg = sumOf(days, 'kg');
+        const deliveredKg = sumOf(days, 'deliveredKg');
+        fillFacts('loadingTable', [
+            ['Loading company', [firstOf(days, 'loadingCompany'), firstOf(days, 'loadingBranch'), firstOf(days, 'loadingArea')].filter(Boolean).join(', ')],
+            ['Farmer', firstOf(days, 'farmerName')],
+            ['Farm rate', firstOf(days, 'finalFarmRate') || firstOf(days, 'farm_rate')],
+            ['Loaded', fmt(sumOf(days, 'pc'), pc)],
+            ['Loaded weight', fmt(loadedKg, kg)],
+            ['Average bird weight', fmt(firstNum(days, 'avgLoadingWt'), value => Mb.formatNumber(value, 3) + ' kg')],
+            ['Delivered', fmt(sumOf(days, 'deliveredPc'), pc)],
+            ['Delivered weight', fmt(deliveredKg, kg)],
+            ['Shortage', fmt(firstNum(days, 'shortage'), value => Mb.formatNumber(value, 2) + '%')]
+        ]);
+
+        fillFacts('salesTable', [
+            ['Sold', fmt(sumOf(days, 'sold_amount'), inr)],
+            ['Paid by customers', fmt(sumOf(days, 'paid_amount'), inr)],
+            ['Discounts', fmt(sumOf(days, 'discounts'), inr)],
+            ['Due before the day', fmt(num(days[0]?.prev_due_balance), inr)],
+            ['Due after the day', fmt(num(days[days.length - 1]?.new_due_balance), inr), true]
+        ].filter(() => days.length));
+
+        fillFacts('expenseTable', [
+            ['Car', fmt(sumOf(days, 'car_expense'), inr)],
+            ['Labour', fmt(sumOf(days, 'labour_expense'), inr)],
+            ['Extra', fmt(sumOf(days, 'extra_expenses'), inr)],
+            ['Police', num(sumOf(days, 'police')) ? inr(sumOf(days, 'police')) : null],
+            ['Other', num(sumOf(days, 'other_expense_amount')) ? inr(sumOf(days, 'other_expense_amount')) : null],
+            ['Transport expenses', num(sumOf(days, 'transport_expenses')) ? inr(sumOf(days, 'transport_expenses')) : null],
+            ['Total expenses', fmt(sumOf(days, 'total_expenses'), inr), true],
+            ['Transport income', num(sumOf(days, 'transport_income')) ? inr(sumOf(days, 'transport_income')) : null],
+            ['Profit', fmt(sumOf(days, 'profit'), value => Mb.formatINR(value, 2)), true]
+        ]);
+
+        fillFacts('tripTable', [
+            ['Distance', fmt(sumOf(days, 'km'), value => Mb.formatNumber(value, 0) + ' km')],
+            ['Odometer at end', fmt(num(days[days.length - 1]?.trip_end_km) || null, value => Mb.formatNumber(value, 0))],
+            ['Supervisor', firstOf(days, 'supervisor')],
+            ...days.flatMap(day => staffLines(day.employeeSalaries)),
+            ['Raju salary', num(sumOf(days, 'RajuSalary')) ? inr(sumOf(days, 'RajuSalary')) : null]
+        ]);
+
+        const notes = days.flatMap(day => [
+            text(day.Notes),
+            text(day.other_expenses_note),
+            text(day.police_breakdown) && `Police: ${text(day.police_breakdown)}`,
+            text(day.adjustmentNote),
+            text(day.occasion) && `Occasion: ${text(day.occasion)}`
+        ]).filter(Boolean);
+        const notesList = document.getElementById('notesList');
+        notesList.replaceChildren(...notes.map(note => Object.assign(document.createElement('li'), { textContent: note })));
+        document.getElementById('notesCard').hidden = !notes.length;
+
+        renderCustomers(deliveries);
+        document.getElementById('printBtn').disabled = false;
+    }
+
+    function renderCustomers(rows) {
+        const body = document.getElementById('customerTable').tBodies[0];
+        body.replaceChildren();
+        document.getElementById('customersTitle').textContent = `Customers (${rows.length})`;
+        if (!rows.length) {
+            const td = body.insertRow().insertCell();
+            td.colSpan = 10;
+            td.className = 'empty-state';
+            td.textContent = 'No customer entries on this day.';
+            return;
+        }
+        const blank = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
+        const totals = { pc: 0, kg: 0, amount: 0, cash: 0, online: 0, discount: 0, prev: 0, balance: 0 };
+        [...rows].sort((a, b) => a.name.localeCompare(b.name)).forEach(row => {
+            totals.pc += num(row.deliveredPc);
+            totals.kg += num(row.deliveredKg);
+            totals.amount += num(row.deliverAmount);
+            totals.cash += num(row.paidCash);
+            totals.online += num(row.paidOnline);
+            totals.discount += num(row.discount);
+            totals.prev += num(row.prevAmount);
+            totals.balance += num(row.khataBalance);
+            const tr = body.insertRow();
+            [row.name, blank(row.deliveredPc), blank(row.deliveredKg, 1), blank(row.rate), blank(row.deliverAmount),
+                blank(row.paidCash), blank(row.paidOnline), blank(row.discount),
+                Mb.formatNumber(row.prevAmount, 0), Mb.formatNumber(row.khataBalance, 0)
+            ].forEach((value, i) => {
+                const td = tr.insertCell();
+                td.textContent = value;
+                if (i) td.className = 'num';
+            });
+            if (num(row.khataBalance) < 0) tr.cells[9].classList.add('negative');
+        });
+        const totalRow = body.insertRow();
+        totalRow.className = 'total-row';
+        ['Total', Mb.formatNumber(totals.pc, 0), Mb.formatNumber(totals.kg, 1), '', Mb.formatNumber(totals.amount, 0),
+            Mb.formatNumber(totals.cash, 0), Mb.formatNumber(totals.online, 0), Mb.formatNumber(totals.discount, 0),
+            Mb.formatNumber(totals.prev, 0), Mb.formatNumber(totals.balance, 0)
+        ].forEach((value, i) => {
+            const td = totalRow.insertCell();
+            td.textContent = value;
+            if (i) td.className = 'num';
+        });
+    }
+
+    function formatLongDate(date) {
+        return new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function updateNav(date) {
+        document.getElementById('dayInput').value = date;
+        document.getElementById('prevDay').disabled = !dates.some(d => d < date);
+        document.getElementById('nextDay').disabled = !dates.some(d => d > date);
+    }
+
+    function step(direction) {
+        const current = document.getElementById('dayInput').value;
+        const target = direction < 0 ? dates.filter(d => d < current).pop() : dates.find(d => d > current);
+        if (target) renderDay(target);
+    }
+
+    async function initialize() {
+        const status = document.getElementById('status');
+        Mb.setStatus(status, 'info', 'Loading daily figures…');
+        try {
+            const [days, deliveries] = await Promise.all([
+                fetchRows(MAIN_SHEET_ID, "cumilativeCalculations"),
+                fetchRows(MAIN_SHEET_ID, "db2.deliveries")
+            ]);
+            days.forEach(row => {
+                const date = dayOf(row.date);
+                if (!daysByDate.has(date)) daysByDate.set(date, []);
+                daysByDate.get(date).push(row);
+            });
+            dates = [...daysByDate.keys()].sort();
+            addDeliveries(deliveries);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Mb.setStatus(status, 'error', 'Could not load the daily figures. Please try again.');
+            return;
+        }
+        ['dayInput', 'latestDay'].forEach(id => document.getElementById(id).disabled = false);
+        const requested = new URLSearchParams(location.search).get('date');
+        renderDay(/^\d{4}-\d{2}-\d{2}$/.test(requested || '') ? requested : dates[dates.length - 1]);
+    }
+
+    document.getElementById('dayInput').addEventListener('change', event => {
+        if (event.target.value) renderDay(event.target.value);
+    });
+    document.getElementById('prevDay').addEventListener('click', () => step(-1));
+    document.getElementById('nextDay').addEventListener('click', () => step(1));
+    document.getElementById('latestDay').addEventListener('click', () => renderDay(dates[dates.length - 1]));
+
+    initialize();
 </script>
 </body>
 </html>
