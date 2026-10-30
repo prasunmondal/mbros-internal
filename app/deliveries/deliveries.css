@@ -195,3 +195,9 @@
     .year-report table { margin-top: 8mm; }
     .year-report tr, .year-report td, .year-report th { break-inside: avoid; }
 }
+
+@media screen {
+    :root[data-theme="dark"] .date-chip, :root[data-theme="dark"] .highlighted-date-chip { border-color: var(--border-strong); }
+    :root[data-theme="dark"] .highlighted-date-chip { color: #f3e7a1; }
+    :root[data-theme="dark"] .highlight-date-header { background-color: #5c5212 !important; }
+}

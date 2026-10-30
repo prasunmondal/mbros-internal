@@ -23,6 +23,9 @@
     --info: #2563eb;
     --info-soft: #eaf1fe;
     --highlight: #fff4b8;
+    --info-text: #1e3a8a;
+    --danger-text: #7f1d1d;
+    --row-hover: #fafbf9;
 
     --radius-sm: 6px;
     --radius: 10px;
@@ -33,6 +36,40 @@
     --font: "Inter", "Noto Sans Bengali", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --header-h: 60px;
     --content-max: 1280px;
+}
+
+/* Black theme, toggled from the app footer (assets/js/common.js sets data-theme on <html>).
+   Screen only: printing and the statement PDFs stay light. */
+@media screen {
+    :root[data-theme="dark"] {
+        color-scheme: dark;
+        --brand: #2e8b5f;
+        --brand-strong: #4fb583;
+        --brand-soft: #14291f;
+        --accent-soft: #2b2410;
+
+        --bg: #000000;
+        --surface: #111312;
+        --surface-muted: #1a1d1b;
+        --border: #262a28;
+        --border-strong: #363b38;
+
+        --text: #e6ebe7;
+        --text-muted: #a3ada6;
+        --text-subtle: #7a837c;
+
+        --danger: #f0675a;
+        --danger-soft: #3a1714;
+        --info: #6b9bff;
+        --info-soft: #14213d;
+        --highlight: #4a4210;
+        --info-text: #c3d4ff;
+        --danger-text: #ffc9c3;
+        --row-hover: #161917;
+
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+        --shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+    }
 }
 
 /* ---------- Base ---------- */
@@ -161,7 +198,7 @@ img { max-width: 100%; display: block; }
     font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
     color: var(--text-muted); white-space: nowrap;
 }
-.table tbody tr:hover td { background: #fafbf9; }
+.table tbody tr:hover td { background: var(--row-hover); }
 .table tfoot td, .table tr.total-row td { font-weight: 700; background: var(--surface-muted); border-bottom: none; }
 .table th.num, .table td.num { text-align: right; }
 
@@ -169,8 +206,8 @@ img { max-width: 100%; display: block; }
 
 .status { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.9rem; }
 .status[hidden] { display: none; }
-.status-info { background: var(--info-soft); color: #1e3a8a; }
-.status-error { background: var(--danger-soft); color: #7f1d1d; }
+.status-info { background: var(--info-soft); color: var(--info-text); }
+.status-error { background: var(--danger-soft); color: var(--danger-text); }
 .status-empty { background: var(--surface-muted); color: var(--text-muted); }
 
 .spinner {
@@ -228,6 +265,13 @@ img { max-width: 100%; display: block; }
 .section-title { margin-bottom: 12px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle); }
 
 .app-footer { padding: 24px 0; border-top: 1px solid var(--border); color: var(--text-subtle); font-size: 0.8rem; }
+.app-footer .container { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.theme-toggle {
+    padding: 5px 12px; border: 1px solid var(--border-strong); border-radius: 999px;
+    background: var(--surface); color: var(--text-muted);
+    font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.theme-toggle:hover { background: var(--surface-muted); color: var(--text); }
 
 .tool-card {
     display: flex; flex-direction: column; gap: 6px;

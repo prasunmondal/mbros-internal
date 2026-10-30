@@ -442,27 +442,34 @@
     const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     let chartView = "timeline";  // "timeline" or "years"
 
+    // Text, grid and card colours from the site theme tokens (light or black, see assets/css/site.css).
+    function themeColor(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
     function yearColor(index, count) {
         if (index === 0) return "#ef4444";
         if (index === 1) return "#f59e0b";
-        // #4b5563 → #9ca3af across the older years.
+        // #4b5563 → #9ca3af across the older years; on the black theme #d1d5db → #6b7280.
         const ratio = count <= 3 ? 0.5 : (index - 2) / (count - 3);
         const mix = (a, b) => Math.round(a + (b - a) * ratio).toString(16).padStart(2, "0");
+        if (document.documentElement.dataset.theme === "dark") return "#" + mix(0xd1, 0x6b) + mix(0xd5, 0x72) + mix(0xdb, 0x80);
         return "#" + mix(0x4b, 0x9c) + mix(0x55, 0xa3) + mix(0x63, 0xaf);
     }
 
     function chartOptions(tooltipCallbacks) {
+        const legend = themeColor("--text-muted"), ticks = themeColor("--text-subtle"), grid = themeColor("--border");
         return {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: "index", intersect: false },
             plugins: {
-                legend: { display: true, labels: { font: { size: 12, weight: 600 }, color: "#6b7280" } },
+                legend: { display: true, labels: { font: { size: 12, weight: 600 }, color: legend } },
                 tooltip: { callbacks: tooltipCallbacks }
             },
             scales: {
-                y: { beginAtZero: true, border: { display: false }, grid: { color: "#f3f4f6" }, ticks: { color: "#9ca3af" } },
-                x: { grid: { display: false }, ticks: { color: "#9ca3af", autoSkip: true, maxRotation: 0 } }
+                y: { beginAtZero: true, border: { display: false }, grid: { color: grid }, ticks: { color: ticks } },
+                x: { grid: { display: false }, ticks: { color: ticks, autoSkip: true, maxRotation: 0 } }
             }
         };
     }
@@ -477,7 +484,7 @@
             fill: true,
             pointRadius,
             pointBackgroundColor: color,
-            pointBorderColor: "#fff",
+            pointBorderColor: themeColor("--surface"),
             pointBorderWidth: 1
         };
     }
@@ -696,7 +703,7 @@
         });
     }
 
-    // Draw the chart onto a white card with its title, summary line and a footer, as a PNG file.
+    // Draw the chart onto a card in the current theme (white, or black on the black theme) with its title, summary line and a footer, as a PNG file.
     function chartImage() {
         const source = chart.canvas;
         const scale = source.width / source.clientWidth;  // device pixel ratio the chart was drawn at
@@ -715,17 +722,17 @@
         out.width = width * scale;
         out.height = height * scale;
         ctx.scale(scale, scale);
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = themeColor("--surface");
         ctx.fillRect(0, 0, width, height);
         ctx.textBaseline = "top";
-        ctx.fillStyle = "#1c2420";
+        ctx.fillStyle = themeColor("--text");
         ctx.font = "700 18px " + font;
         ctx.fillText(title, pad, pad);
-        ctx.fillStyle = "#5c665f";
+        ctx.fillStyle = themeColor("--text-muted");
         ctx.font = "14px " + font;
         lines.forEach((line, i) => ctx.fillText(line, pad, pad + 30 + i * 20));
         ctx.drawImage(source, pad, top, source.clientWidth, source.clientHeight);
-        ctx.fillStyle = "#8a938c";
+        ctx.fillStyle = themeColor("--text-subtle");
         ctx.font = "12px " + font;
         ctx.fillText("Mondal Brothers · data up to " + formatDate(dataEnd), pad, height - 26);
 
@@ -870,6 +877,9 @@
     document.getElementById("shareChart").addEventListener("click", shareChart);
     document.getElementById("chartRange").addEventListener("change", () =>
         renderChart(document.getElementById("customerSelect").value || ALL));
+    document.addEventListener("mb:themechange", () => {
+        if (chart) renderChart(document.getElementById("customerSelect").value || ALL);
+    });
 
     async function initialize() {
         const status = document.getElementById("status");

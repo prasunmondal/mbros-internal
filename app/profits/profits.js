@@ -4,6 +4,38 @@ Chart.register(ChartDataLabels);
 let chartInstances = {};
 let rawData = null;
 
+// Axis, legend and grid colours from the site theme tokens (light or black, see assets/css/site.css).
+function chartTheme() {
+    const css = getComputedStyle(document.documentElement);
+    const token = name => css.getPropertyValue(name).trim();
+    return {
+        legend: token('--text-muted'),
+        ticks: token('--text-subtle'),
+        grid: token('--border'),
+        surface: token('--surface'),
+        dark: document.documentElement.dataset.theme === 'dark'
+    };
+}
+
+// Redraw every chart in the new theme, keeping each chart's chosen grouping.
+function redrawCharts() {
+    if (!rawData) return;
+    const group = chart => document.querySelector(`.control-btn.active[data-chart="${chart}"]`)?.dataset.group || 'month';
+    updateProfitChart(group('profit'));
+    updateExpensesChart(group('expenses'));
+    updateDueBalanceChart(group('dueBalance'));
+    updateProfitPerKgChart(group('profitPerKg'));
+    updateTotalExpensesChart(group('totalExpenses'));
+    updateActualMoneyChart(group('actualMoney'));
+    updateActualMoneyBarChart(group('actualMoneyBar'));
+    updateActualMoneyLast12MonthsChart();
+    updateKgComparisonChart(group('kgComparison'));
+    updateProfitComparisonChart(group('profitComparison'));
+    updateActualMoneyComparisonChart(group('actualMoneyComparison'));
+    updateCustomOverlapChart();
+    updateCustomLinearChart();
+}
+
 async function fetchData() {
     try {
         rawData = await callSheetsApi([{
@@ -139,6 +171,7 @@ function groupDataByPeriod(groupBy, field) {
 }
 
 function getChartConfig(type = 'line') {
+    const theme = chartTheme();
     return {
         responsive: true,
         maintainAspectRatio: false,
@@ -146,7 +179,7 @@ function getChartConfig(type = 'line') {
         plugins: {
             legend: {
                 display: true,
-                labels: { font: { size: 12, weight: 600 }, color: '#6b7280' }
+                labels: { font: { size: 12, weight: 600 }, color: theme.legend }
             },
             datalabels: {
                 display: false
@@ -155,12 +188,12 @@ function getChartConfig(type = 'line') {
         scales: {
             y: {
                 beginAtZero: true,
-                grid: { drawBorder: false, color: '#f3f4f6' },
-                ticks: { color: '#9ca3af' }
+                grid: { drawBorder: false, color: theme.grid },
+                ticks: { color: theme.ticks }
             },
             x: {
                 grid: { display: false },
-                ticks: { color: '#9ca3af' }
+                ticks: { color: theme.ticks }
             }
         }
     };
@@ -187,7 +220,7 @@ function updateProfitChart(groupBy) {
                 fill: true,
                 pointRadius: 3,
                 pointBackgroundColor: '#2563eb',
-                pointBorderColor: '#fff',
+                pointBorderColor: chartTheme().surface,
                 pointBorderWidth: 1
             }]
         },
@@ -508,7 +541,7 @@ function populateBarChartYearFilters() {
         text.textContent = year;
         text.style.fontSize = '13px';
         text.style.fontWeight = '500';
-        text.style.color = '#6b7280';
+        text.style.color = 'var(--text-muted)';
 
         label.appendChild(checkbox);
         label.appendChild(text);
@@ -858,7 +891,7 @@ function updateActualMoneyLast12MonthsChart() {
                 legend: baseConfig.plugins.legend,
                 datalabels: {
                     display: true,
-                    color: '#9ca3af',
+                    color: chartTheme().ticks,
                     font: { weight: 'bold', size: 11 },
                     anchor: 'end',
                     align: 'end',
@@ -965,9 +998,9 @@ function sortLabelsByPeriod(labels, groupBy) {
 function generateGrayGradient(count) {
     if (count <= 0) return [];
 
-    // Dark gray to medium gray (not too light/faded)
-    const darkGray = { r: 75, g: 85, b: 99 };    // #4b5563
-    const mediumGray = { r: 156, g: 163, b: 175 }; // #9ca3af
+    // Dark gray to medium gray (not too light/faded); on the black theme, light gray to medium gray
+    const darkGray = chartTheme().dark ? { r: 209, g: 213, b: 219 } : { r: 75, g: 85, b: 99 }; // #d1d5db : #4b5563
+    const mediumGray = chartTheme().dark ? { r: 107, g: 114, b: 128 } : { r: 156, g: 163, b: 175 }; // #6b7280 : #9ca3af
 
     const gradient = [];
     for (let i = 0; i < count; i++) {
@@ -1284,5 +1317,6 @@ function setupControls() {
 }
 
 document.addEventListener("DOMContentLoaded", setupControls);
+document.addEventListener("mb:themechange", redrawCharts);
 
 window.addEventListener("load", fetchData);

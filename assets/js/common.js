@@ -45,6 +45,21 @@
         setTimeout(lock, Math.max(0, at + SESSION_MS - Date.now()));
     }
 
+    // Theme: light or black, remembered per browser. Set here in <head> so the page never flashes light.
+    const THEME_KEY = 'mb-theme';
+
+    function storedTheme() {
+        try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
+    }
+
+    function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        const button = document.querySelector('[data-theme-toggle]');
+        if (button) button.textContent = theme === 'dark' ? 'Light theme' : 'Black theme';
+    }
+
+    applyTheme(storedTheme());
+
     let unlock;
     // Resolves once the password is accepted; callSheetsApi waits on it, so nothing loads while locked.
     const ready = new Promise(resolve => { unlock = resolve; });
@@ -171,13 +186,22 @@
         document.body.insertAdjacentHTML('beforeend', `
             <footer class="app-footer">
                 <div class="container">
-                    Mondal Brothers internal tools · <a href="${url('')}">Public site</a> · <a href="${url('pay/')}">Payment page</a> · <a href="#" data-lock>Lock</a>
+                    <span>Mondal Brothers internal tools · <a href="${url('')}">Public site</a> · <a href="${url('pay/')}">Payment page</a> · <a href="#" data-lock>Lock</a></span>
+                    <button class="theme-toggle" type="button" data-theme-toggle></button>
                 </div>
             </footer>`);
 
         document.querySelector('[data-lock]').addEventListener('click', event => {
             event.preventDefault();
             lock();
+        });
+        applyTheme(storedTheme());
+        document.querySelector('[data-theme-toggle]').addEventListener('click', () => {
+            const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+            try { localStorage.setItem(THEME_KEY, theme); } catch { /* this page view only */ }
+            applyTheme(theme);
+            // Pages with charts listen for this to redraw in the new colours.
+            document.dispatchEvent(new CustomEvent('mb:themechange', { detail: { theme } }));
         });
         document.querySelector('.app-nav [aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
     }

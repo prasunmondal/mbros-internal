@@ -41,7 +41,11 @@ sources:
 
 ## Layout (ADR-003)
 - `assets/css/site.css`: design tokens (`:root`), base, components, app shell, public site,
-  print. Light theme only: chart colours in `app/profits/profits.js` are hard-coded for a light background.
+  print. A black theme overrides the tokens under `:root[data-theme="dark"]` (screen only, so print
+  and PDFs stay light); `assets/js/common.js` sets it from `localStorage` (`mb-theme`) and the app footer
+  has the toggle and fires `mb:themechange` on `document`. Public pages have no toggle. Charts
+  (`app/profits/profits.js`, `app/customer-performance/`) read axis, grid and legend colours from the
+  tokens and redraw on `mb:themechange`; series colours are the same in both themes.
 - `assets/js/common.js`: `Mb` namespace (`TOOLS`, `url`, `escapeHtml`, `toISTDate`, `todayIST`,
   `formatINR`, `formatNumber`, `setStatus`) and the app header/footer, inserted on
   DOMContentLoaded. It also runs the password gate: until the password (SHA-256 in `ACCESS_HASH`)
