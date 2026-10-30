@@ -252,8 +252,9 @@
 
     // Group archive + current rows by customer, in date order. Each row's `change` is its khata balance minus
     // the customer's previous khata balance, so the running balance always lands on the sheet's own balances.
-    // `unrecorded` is the part of that change the row's columns don't explain: 2023 rows often lack payment
-    // amounts, and a few archive rows' prevAmount differs from the previous row's balance.
+    // The part of that change the row's columns don't explain (2023 rows often lack payment amounts, and a few
+    // archive rows' prevAmount differs from the previous row's balance) counts as a cash payment when the
+    // balance fell, and as an adjustment when it rose.
     function buildCustomers() {
         rowsByCustomer = new Map();
         [...archiveRows, ...currentRows].forEach((row, index) => {
@@ -271,8 +272,10 @@
                 const explained = num(row.deliverAmount) - num(row.paidCash) - num(row.paidOnline)
                     - num(row.discount) + num(row.autoAdjust) + num(row.adjustments);
                 const unrecorded = row.change - explained;
-                row.unrecorded = Math.abs(unrecorded) > 0.5 ? unrecorded : 0;
-                row.adjustment = num(row.autoAdjust) + num(row.adjustments) + row.unrecorded;
+                row.unrecordedPayment = unrecorded < -0.5 ? -unrecorded : 0;
+                row.unrecordedIncrease = unrecorded > 0.5 ? unrecorded : 0;
+                row.cash = num(row.paidCash) + row.unrecordedPayment;
+                row.adjustment = num(row.autoAdjust) + num(row.adjustments) + row.unrecordedIncrease;
             });
         });
     }
@@ -435,7 +438,7 @@
             inRange.forEach(row => {
                 sums.kg += num(row.deliveredKg);
                 sums.delivered += num(row.deliverAmount);
-                sums.paid += num(row.paidCash) + num(row.paidOnline);
+                sums.paid += row.cash + num(row.paidOnline);
                 sums.discount += num(row.discount);
                 sums.adjustment += row.adjustment;
                 sums.change += row.change;
@@ -476,13 +479,14 @@
             totals.pc += num(row.deliveredPc);
             totals.kg += num(row.deliveredKg);
             totals.delivered += num(row.deliverAmount);
-            totals.cash += num(row.paidCash);
+            totals.cash += row.cash;
             totals.online += num(row.paidOnline);
             totals.discount += num(row.discount);
             totals.adjustment += adjustment;
 
             const notes = [row.discountNote, row.autoAdjustNote, row.adjustmentNote, row.notes,
-                row.unrecorded && `Unrecorded balance change ${Mb.formatNumber(row.unrecorded, 0)}`]
+                row.unrecordedPayment && `Payment not entered in sheet ${Mb.formatNumber(row.unrecordedPayment, 0)}`,
+                row.unrecordedIncrease && `Unrecorded balance change +${Mb.formatNumber(row.unrecordedIncrease, 0)}`]
                 .filter(Boolean).join(' · ');
             const tr = addCells(body.insertRow(), [
                 row.day,
@@ -491,7 +495,7 @@
                 blankIfZero(row.deliveredKg, 1),
                 blankIfZero(row.rate),
                 blankIfZero(row.deliverAmount),
-                blankIfZero(row.paidCash),
+                blankIfZero(row.cash),
                 blankIfZero(row.paidOnline),
                 blankIfZero(row.discount),
                 blankIfZero(adjustment),

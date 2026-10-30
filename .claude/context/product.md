@@ -39,10 +39,10 @@ earns, plus pages customers use to pay.
 - **Statement** (`app/statement/`): opening = each selected customer's last `khataBalance` before
   the start date (else the `prevAmount` of their first row), summed; the running balance then adds
   each row's `khataBalance` − the customer's previous `khataBalance`, in date order across all
-  selected customers, so it always lands on the sheet's balances. Any part of that change the row's
-  columns don't explain is shown as an adjustment noted "Unrecorded balance change"
-  `[inferred: chosen when the page was built, not owner-confirmed]`. The archive loads only for
-  ranges starting before 2026.
+  selected customers, so it always lands on the sheet's balances. A fall the row's columns don't
+  explain counts as a cash payment noted "Payment not entered in sheet" (owner, 2026-10-30); an
+  unexplained rise is shown as an adjustment `[inferred]`. The archive loads only for ranges
+  starting before 2026.
 - **Commission** (`app/calculator/`): commission % = total discount % − discount passed on %.
   Payable = paying amount − discount passed on. Defaults: 5% total, 3% passed on.
 - **Expenses** (`app/profits/profits.js`): broken down into car, labour and extra expenses
