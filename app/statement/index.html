@@ -47,13 +47,16 @@
         .print-frame, .print-frame > tbody, .print-frame > tbody > tr, .print-frame > tbody > tr > td { display: block; }
         .print-frame > thead { display: none; }
         .letterhead { margin-bottom: 16px; border-radius: var(--radius-sm); overflow: hidden; }
-        .letterhead-band { padding: 12px 16px 10px; background: var(--brand); color: #fff; border-bottom: 4px solid var(--accent); }
+        .letterhead-band {
+            padding: 12px 16px 10px; color: #fff; border-bottom: 4px solid #d4a72c;
+            background: linear-gradient(90deg, #0b1f4b 0%, #16367f 55%, #1f4fae 100%);
+        }
         .letterhead-name { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
         .letterhead-row, .letterhead-strip { display: flex; justify-content: space-between; gap: 16px; }
         .letterhead-row { margin-top: 2px; font-weight: 700; }
-        .letterhead-tagline { padding-left: 40px; color: #f5c75a; }
-        .letterhead-strip { padding: 5px 16px; background: var(--brand-soft); color: var(--text-muted); font-size: 0.85rem; }
-        .letterhead-strip a { color: var(--brand-strong); font-weight: 700; }
+        .letterhead-tagline { padding-left: 40px; color: #f3c85b; }
+        .letterhead-strip { padding: 5px 16px; background: #eaf0fb; color: #4b5a7a; font-size: 0.85rem; }
+        .letterhead-strip a { color: #0b1f4b; font-weight: 700; }
         .letterhead-strip > a { text-decoration: none; }
         #statementTable td:first-child { white-space: nowrap; }
         #statementTable.hide-sums td.sum { color: transparent; }   /* keeps the row's background, unlike visibility */
@@ -560,19 +563,25 @@
         const pageCount = doc.getNumberOfPages();
         for (let page = 1; page <= pageCount; page++) {
             doc.setPage(page);
-            doc.setFillColor('#1f6f4a').rect(0, 0, pageWidth, bandHeight, 'F');
-            doc.setFillColor('#e0a526').rect(0, bandHeight, pageWidth, 4, 'F');
-            doc.setFillColor('#e7f3ec').rect(0, bandHeight + 4, pageWidth, stripHeight, 'F');
+            // jsPDF has no gradients, so the navy-to-royal-blue band is drawn as thin vertical slices.
+            const slices = 80, from = [11, 31, 75], to = [31, 79, 174];   // #0b1f4b → #1f4fae
+            for (let i = 0; i < slices; i++) {
+                const t = i / (slices - 1);
+                doc.setFillColor(...from.map((c, k) => Math.round(c + (to[k] - c) * t)));
+                doc.rect(pageWidth * i / slices, 0, pageWidth / slices + 1, bandHeight, 'F');
+            }
+            doc.setFillColor('#d4a72c').rect(0, bandHeight, pageWidth, 4, 'F');
+            doc.setFillColor('#eaf0fb').rect(0, bandHeight + 4, pageWidth, stripHeight, 'F');
 
             doc.setFont('helvetica', 'bold').setFontSize(22).setTextColor('#ffffff');
             doc.text('Mondal Brothers', margin, 30);
-            doc.setFontSize(11).setTextColor('#f5c75a');
+            doc.setFontSize(11).setTextColor('#f3c85b');
             doc.text('Wholesale Chicken Distributor', margin + 40, 49);
             doc.setTextColor('#ffffff');
             doc.text('Contact: 9734075801', pageWidth - margin, 49, { align: 'right' });
 
             const stripY = bandHeight + 4 + 15;
-            doc.setFontSize(10).setTextColor('#17573a');
+            doc.setFontSize(10).setTextColor('#0b1f4b');
             let x = margin;
             if (phoneIcon) {
                 doc.addImage(phoneIcon, 'PNG', x, stripY - 9, 11, 11);
@@ -582,8 +591,8 @@
             const site = 'tinyurl.com/mondalbros';
             const siteX = pageWidth - margin - doc.getTextWidth(site);
             doc.textWithLink(site, siteX, stripY, { url: 'https://tinyurl.com/mondalbros' });
-            doc.setDrawColor('#17573a').setLineWidth(0.6).line(siteX, stripY + 2, pageWidth - margin, stripY + 2);
-            doc.setFont('helvetica', 'normal').setTextColor('#5c665f');
+            doc.setDrawColor('#0b1f4b').setLineWidth(0.6).line(siteX, stripY + 2, pageWidth - margin, stripY + 2);
+            doc.setFont('helvetica', 'normal').setTextColor('#4b5a7a');
             doc.text('Visit Website:', siteX - 6, stripY, { align: 'right' });
 
             doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor('#8a938c');
