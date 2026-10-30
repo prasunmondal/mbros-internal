@@ -33,7 +33,7 @@ sources:
 | `app/deliveries/` | delivered KG per customer by date group, 2023 + current | `deliveries.2023`, `db2.deliveries` |
 | `app/profits/` | business dashboard: KPIs and trend charts | `cumilativeCalculations` |
 | `app/daily/` | day summary report for a chosen date (`?date=YYYY-MM-DD`): loading, sales and dues, expenses and profit, trip and staff, notes, customer deliveries | `cumilativeCalculations`, `db2.deliveries`, `deliveries.2023` (days before 2026) |
-| `app/mbros-statement/` | MBros's ledger with one or more parties (suppliers, staff, accounts) over a date range: running balance, per-party summary, print + PDF share (landscape) | `db2.loads` |
+| `app/mbros-statement/` | MBros's ledger with one or more parties (suppliers, staff, accounts) over a date range: one plain sentence per party saying who pays whom at the end date, running balance, per-party table, print + PDF share (landscape) | `db2.loads` |
 | `app/customer-profit/` | profit and debt movement per customer and date range | `db2.deliveries`, `cumilativeCalculations` |
 | `app/customer-performance/` | per-customer orders/week and avg order KG over 1/2/3/6/12 months, KG chart by day/week/month/year (timeline or years overlaid, with change vs previous period and last year), all-customer comparison | `deliveries.2023`, `db2.deliveries` |
 | `app/meters/` | meter reading difference and units to target | `apiData` (meter sheet) |

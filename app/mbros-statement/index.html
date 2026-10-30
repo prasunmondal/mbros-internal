@@ -30,9 +30,11 @@
         .table td.note { color: var(--text-muted); font-size: 0.8rem; max-width: 260px; }
         .table td.route { white-space: nowrap; color: var(--text-muted); font-size: 0.85rem; }
         #statementTable td:first-child { white-space: nowrap; }
-        .totals-table { max-width: 460px; }
-        .totals-table td:last-child { font-weight: 700; }
-        .totals-table tr.total-row td { font-size: 1rem; }
+        .settlement { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+        .settlement li {
+            padding: 12px 16px; border-radius: var(--radius-sm); border-left: 4px solid var(--brand);
+            background: var(--brand-soft); font-size: 1.05rem; font-weight: 600;
+        }
         .option-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
         .option-toggle input { accent-color: var(--brand); width: 16px; height: 16px; }
         /* 12 columns need landscape; the Share PDF uses the same page. */
@@ -110,21 +112,9 @@
             </td></tr></thead>
             <tbody><tr><td>
 
-        <div class="section">
-            <h2 class="section-title">Summary</h2>
-            <table class="table totals-table" id="totalsTable">
-                <thead>
-                <tr><th>Item</th><th class="num">Amount</th></tr>
-                </thead>
-                <tbody>
-                <tr><td>Total PC</td><td class="num" id="pcStat">–</td></tr>
-                <tr><td>Total KG</td><td class="num" id="kgStat">–</td></tr>
-                <tr><td>Opening balance</td><td class="num" id="openingStat">–</td></tr>
-                <tr><td>Received</td><td class="num" id="receivedStat">–</td></tr>
-                <tr><td>Paid</td><td class="num" id="paidStat">–</td></tr>
-                <tr class="total-row"><td>Closing balance</td><td class="num" id="closingStat">–</td></tr>
-                </tbody>
-            </table>
+        <div class="section" id="settlementSection" hidden>
+            <h2 class="section-title" id="settlementTitle">Who pays whom</h2>
+            <ul class="settlement" id="settlementList"></ul>
         </div>
 
         <div class="card section" id="summaryCard" hidden>
@@ -279,9 +269,22 @@
     const NUMERIC = [4, 5, 6, 7, 8, 10];
     const blankIfZero = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
 
-    function setStat(id, value, decimals) {
-        document.getElementById(id).textContent = value === null ? '–'
-            : decimals === undefined ? Mb.formatINR(value, 0) : Mb.formatNumber(value, decimals);
+    // One plain sentence per party from its closing balance (positive: MBros owes the party).
+    function settlementLine(name, balance) {
+        const amount = Mb.formatINR(Math.abs(Math.round(balance)), 0);
+        if (Math.round(balance) > 0) return `MBros has to pay ${name} ${amount}.`;
+        if (Math.round(balance) < 0) return `${name} has to pay MBros ${amount}.`;
+        return `MBros and ${name} are settled. Nobody has to pay anything.`;
+    }
+
+    function renderSettlement(lines, asOf) {
+        document.getElementById('settlementSection').hidden = !lines;
+        if (lines) document.getElementById('settlementTitle').textContent = `Who pays whom · as on ${asOf}`;
+        document.getElementById('settlementList').replaceChildren(...(lines || []).map(line => {
+            const li = document.createElement('li');
+            li.textContent = line;
+            return li;
+        }));
     }
 
     function renderStatement() {
@@ -305,7 +308,7 @@
             td.colSpan = COLUMNS;
             td.className = 'empty-state';
             td.textContent = message;
-            ['openingStat', 'receivedStat', 'paidStat', 'closingStat', 'pcStat', 'kgStat'].forEach(id => setStat(id, null));
+            renderSettlement(null);
         };
 
         if (!dataReady) return;
@@ -322,6 +325,7 @@
 
         let opening = 0;
         const shown = [];
+        const settlement = [];
         const totals = { pc: 0, kg: 0, received: 0, paid: 0 };
 
         names.forEach(name => {
@@ -336,6 +340,7 @@
             });
             opening += partyOpening;
             shown.push(...inRange);
+            settlement.push(settlementLine(name, partyOpening + sums.received - sums.paid));
             addCells(summaryBody.insertRow(), [
                 name,
                 Mb.formatINR(partyOpening, 0),
@@ -400,12 +405,7 @@
         ], NUMERIC);
         totalRow.className = 'total-row';
 
-        setStat('pcStat', totals.pc, 0);
-        setStat('kgStat', totals.kg, 2);
-        setStat('openingStat', opening);
-        setStat('receivedStat', totals.received);
-        setStat('paidStat', totals.paid);
-        setStat('closingStat', running);
+        renderSettlement(settlement, to || Mb.todayIST());
         setReportReady(true);
     }
 
@@ -428,7 +428,10 @@
             status: document.getElementById('status'),
             letterhead: document.getElementById('showLetterhead').checked,
             orientation: 'landscape',
-            summary: document.getElementById('totalsTable'),
+            messages: {
+                title: document.getElementById('settlementTitle').textContent,
+                lines: [...document.querySelectorAll('#settlementList li')].map(li => li.textContent)
+            },
             cards: [
                 ...(document.getElementById('summaryCard').hidden ? [] : [{ table: document.getElementById('summaryTable'), title: 'By party' }]),
                 { table: document.getElementById('statementTable'), title, meta: document.getElementById('statementMeta').textContent }

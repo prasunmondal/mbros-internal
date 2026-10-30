@@ -45,12 +45,14 @@
         }
     }
 
+    // messages: { title, lines } drawn first as a heading over one highlighted box per sentence, or omitted.
     // summary: the totals table under a "SUMMARY" heading, or null. cards: [{ table, title, meta }], each a
     // .card.section. letterhead: draw the business header (.letterhead) at the top of every page.
     // orientation: 'portrait' or 'landscape', matching the page's @page rule.
-    function build({ summary, cards, letterhead, orientation = 'portrait' }) {
+    function build({ messages, summary, cards, letterhead, orientation = 'portrait' }) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation, unit: 'pt', format: 'a4' });
+        const BRAND = '#1f6f4a', BRAND_SOFT = '#e7f3ec';
         const TEXT = '#1c2420', MUTED = '#5c665f', SUBTLE = '#8a938c', BORDER = '#e2e5e0', SURFACE_MUTED = '#f1f3f0', DANGER = '#c0392b';
         const margin = 28.35;   // 10 mm
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -139,6 +141,28 @@
             y = doc.lastAutoTable.finalY;
         }
 
+        // Each message: a brand-soft box with a 3 pt brand bar on the left, bold 12 pt text that wraps.
+        if (messages?.lines.length) {
+            doc.setFont('helvetica', 'bold').setFontSize(9.6).setTextColor(SUBTLE);
+            doc.text(pdfText(messages.title).toUpperCase(), margin, baseline(y, 12, 9.6), { charSpace: 0.58 });
+            y += 12 + 9;
+            const boxWidth = contentWidth;
+            messages.lines.forEach(line => {
+                doc.setFont('helvetica', 'bold').setFontSize(12);
+                const wrapped = doc.splitTextToSize(pdfText(line), boxWidth - 27);
+                const height = 18 + wrapped.length * 16;
+                if (y + height > pageHeight - margin) {
+                    doc.addPage();
+                    y = bodyTop;
+                }
+                doc.setFillColor(BRAND_SOFT).roundedRect(margin, y, boxWidth, height, 4.5, 4.5, 'F');
+                doc.setFillColor(BRAND).rect(margin, y, 3, height, 'F');
+                doc.setTextColor(TEXT);
+                wrapped.forEach((text, i) => doc.text(text, margin + 15, baseline(y + 9 + i * 16, 16, 12)));
+                y += height + 6;
+            });
+            y -= 6;
+        }
         if (summary) {
             doc.setFont('helvetica', 'bold').setFontSize(9.6).setTextColor(SUBTLE);
             doc.text('SUMMARY', margin, baseline(y, 12, 9.6), { charSpace: 0.58 });
