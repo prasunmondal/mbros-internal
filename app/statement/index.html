@@ -605,7 +605,7 @@
         const fileName = ['statement', names.length > 3 ? `${names.length}-customers` : names.join('-'), from, to]
             .filter(Boolean).join('-').replace(/[^\w-]+/g, '-').replace(/-+/g, '-').toLowerCase() + '.pdf';
         const file = new File([statementPdf()], fileName, { type: 'application/pdf' });
-        const title = `Statement · ${names.join(', ')}`;
+        const title = document.getElementById('showTitleNames').checked ? `Statement · ${names.join(', ')}` : 'Statement';
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
