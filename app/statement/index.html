@@ -38,11 +38,34 @@
         #statementTable.hide-adjustment :is(th, td):nth-child(10),
         #statementTable.hide-counter-balance :is(th, td):nth-child(11),
         #statementTable.hide-notes :is(th, td):nth-child(13) { display: none; }
+        .statement-actions { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+        .totals-table { max-width: 460px; }
+        .totals-table td:last-child { font-weight: 700; }
+        .totals-table tr.total-row td { font-size: 1rem; }
+        /* The print frame is a table so its <thead> (the business header) repeats on every printed page.
+           On screen it is flattened to plain blocks and the header is hidden. */
+        .print-frame, .print-frame > tbody, .print-frame > tbody > tr, .print-frame > tbody > tr > td { display: block; }
+        .print-frame > thead { display: none; }
+        .letterhead { margin-bottom: 16px; border-radius: var(--radius-sm); overflow: hidden; }
+        .letterhead-band { padding: 12px 16px 10px; background: var(--brand); color: #fff; border-bottom: 4px solid var(--accent); }
+        .letterhead-name { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
+        .letterhead-row, .letterhead-strip { display: flex; justify-content: space-between; gap: 16px; }
+        .letterhead-row { margin-top: 2px; font-weight: 700; }
+        .letterhead-tagline { padding-left: 40px; color: #f5c75a; }
+        .letterhead-strip { padding: 5px 16px; background: var(--brand-soft); color: var(--text-muted); font-size: 0.85rem; }
+        .letterhead-strip a { color: var(--brand-strong); font-weight: 700; }
+        .letterhead-strip > a { text-decoration: none; }
+        #statementTable td:first-child { white-space: nowrap; }
         @media print {
             .table { font-size: 0.75rem; }
             .table th, .table td { padding: 5px 8px; }
-            .stat { padding: 10px 12px; }
-            .stat-value { font-size: 1.1rem; }
+            .print-frame { display: table; width: 100%; border-collapse: collapse; }
+            .print-frame > thead { display: table-header-group; }
+            .print-frame > tbody { display: table-row-group; }
+            .print-frame > tbody > tr, .print-frame > thead > tr { display: table-row; }
+            .print-frame > tbody > tr > td, .print-frame > thead > tr > td { display: table-cell; padding: 0; }
+            .card, .table-wrap { overflow: visible; }
+            .section:first-child { margin-top: 0; }
         }
     </style>
 </head>
@@ -51,11 +74,7 @@
 <main class="app-main wide">
     <div class="container">
 
-        <div class="page-header">
-            <div>
-                <h1>Customer statement</h1>
-                <p>Statement for one or more customers over a date range, with a combined running balance.</p>
-            </div>
+        <div class="statement-actions no-print">
             <div class="page-actions">
                 <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
                 <button type="button" class="btn btn-primary" id="sharePdf" title="Share this statement as a PDF" disabled>
@@ -101,12 +120,39 @@
 
         <p id="status" class="status" hidden style="margin-top: 16px;"></p>
 
-        <div class="stats section">
-            <div class="stat"><div class="stat-label">Opening balance</div><div class="stat-value" id="openingStat">–</div></div>
-            <div class="stat"><div class="stat-label">Delivered</div><div class="stat-value" id="deliveredStat">–</div></div>
-            <div class="stat"><div class="stat-label">Paid</div><div class="stat-value" id="paidStat">–</div></div>
-            <div class="stat"><div class="stat-label">Discount + adjustments</div><div class="stat-value" id="otherStat">–</div></div>
-            <div class="stat"><div class="stat-label">Closing balance</div><div class="stat-value" id="closingStat">–</div></div>
+        <table class="print-frame">
+            <thead><tr><td>
+                <div class="letterhead">
+                    <div class="letterhead-band">
+                        <div class="letterhead-name">Mondal Brothers</div>
+                        <div class="letterhead-row">
+                            <span class="letterhead-tagline">Wholesale Chicken Distributor</span>
+                            <span>Contact: 9734075801</span>
+                        </div>
+                    </div>
+                    <div class="letterhead-strip">
+                        <a href="tel:+919734075801">📞 Click to Call</a>
+                        <span>Visit Website: <a href="https://tinyurl.com/mondalbros">tinyurl.com/mondalbros</a></span>
+                    </div>
+                </div>
+            </td></tr></thead>
+            <tbody><tr><td>
+
+        <div class="section">
+            <h2 class="section-title">Summary</h2>
+            <table class="table totals-table" id="totalsTable">
+                <thead>
+                <tr><th>Item</th><th class="num">Amount</th></tr>
+                </thead>
+                <tbody>
+                <tr><td>Opening balance</td><td class="num" id="openingStat">–</td></tr>
+                <tr><td>Total delivered (PC / KG)</td><td class="num" id="quantityStat">–</td></tr>
+                <tr><td>Delivered</td><td class="num" id="deliveredStat">–</td></tr>
+                <tr><td>Paid</td><td class="num" id="paidStat">–</td></tr>
+                <tr><td>Discount + adjustments</td><td class="num" id="otherStat">–</td></tr>
+                <tr class="total-row"><td>Closing balance</td><td class="num" id="closingStat">–</td></tr>
+                </tbody>
+            </table>
         </div>
 
         <div class="card section" id="summaryCard" hidden>
@@ -141,7 +187,7 @@
                 <table class="table hide-counter-balance hide-notes" id="statementTable">
                     <thead>
                     <tr>
-                        <th>Date</th>
+                        <th class="nowrap">Date</th>
                         <th>Name</th>
                         <th class="num">PC</th>
                         <th class="num">KG</th>
@@ -162,6 +208,9 @@
                 </table>
             </div>
         </div>
+
+            </td></tr></tbody>
+        </table>
 
     </div>
 </main>
@@ -292,6 +341,7 @@
             td.className = 'empty-state';
             td.textContent = 'Select one or more customers to see their statement.';
             ['openingStat', 'deliveredStat', 'paidStat', 'otherStat', 'closingStat'].forEach(id => setStat(id, null));
+            document.getElementById('quantityStat').textContent = '–';
             return;
         }
         if (from && to && from > to) {
@@ -404,6 +454,8 @@
         totalRow.className = 'total-row';
 
         setStat('openingStat', opening);
+        document.getElementById('quantityStat').textContent =
+            `${Mb.formatNumber(totals.pc, 0)} pc / ${Mb.formatNumber(totals.kg, 1)} kg`;
         setStat('deliveredStat', totals.delivered);
         setStat('paidStat', totals.cash + totals.online);
         setStat('otherStat', totals.adjustment - totals.discount);
@@ -418,8 +470,10 @@
         const headers = [...table.tHead.rows[0].cells];
         const visible = headers.map((th, i) => i).filter(i => getComputedStyle(headers[i]).display !== 'none');
         const columnStyles = {};
+        // Dates and numbers never wrap ('wrap' sizes the column to its content); text columns take the rest.
         visible.forEach((i, position) => {
-            if (headers[i].classList.contains('num')) columnStyles[position] = { halign: 'right' };
+            if (headers[i].classList.contains('num')) columnStyles[position] = { halign: 'right', cellWidth: 'wrap' };
+            else if (headers[i].classList.contains('nowrap')) columnStyles[position] = { cellWidth: 'wrap' };
         });
         const rows = [...table.tBodies[0].rows].filter(tr => tr.cells.length === headers.length);
         return {
@@ -430,34 +484,49 @@
         };
     }
 
+    // The PDF's built-in font has no emoji, so draw one on a canvas and embed it as an image.
+    function emojiImage(emoji) {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.font = '52px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(emoji, 32, 36);
+            return canvas.toDataURL('image/png');
+        } catch (error) {
+            return null;
+        }
+    }
+
     function statementPdf() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
         const margin = 36;
+        const bandHeight = 62, stripHeight = 22;
+        const headerBottom = bandHeight + 4 + stripHeight + 4;   // tables on later pages start below the business header
         const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
 
-        doc.setFont('helvetica', 'bold').setFontSize(16).setTextColor('#1c2420');
-        doc.text('Mondal Brothers · Customer statement', margin, margin + 8);
-        doc.setFont('helvetica', 'normal').setFontSize(10).setTextColor('#5c665f');
-        const names = [...selected].sort((a, b) => a.localeCompare(b)).join(', ');
-        const nameLines = doc.splitTextToSize(names, pageWidth - margin * 2);
-        doc.text(nameLines, margin, margin + 26);
-        let y = margin + 26 + nameLines.length * 12;
+        let y = headerBottom + 18;
+        doc.setFont('helvetica', 'bold').setFontSize(11).setTextColor('#1c2420');
+        const titleLines = doc.splitTextToSize(pdfText(document.getElementById('statementTitle').textContent), pageWidth - margin * 2);
+        doc.text(titleLines, margin, y);
+        y += titleLines.length * 13;
+        doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor('#5c665f');
         doc.text(pdfText(document.getElementById('statementMeta').textContent), margin, y);
+        y += 12;
 
-        const stats = [...document.querySelectorAll('.stats .stat')].map(stat =>
-            `${stat.querySelector('.stat-label').textContent}: ${pdfText(stat.querySelector('.stat-value').textContent)}`);
-        doc.setTextColor('#1c2420');
-        doc.text(stats.join('   |   '), margin, y + 16);
-        y += 30;
-
-        const tableOptions = (table, startY) => ({
+        const tableOptions = (table, startY, extra = {}) => ({
             ...table,
+            ...extra,
             startY,
-            margin: { left: margin, right: margin },
+            margin: { top: headerBottom + 12, left: margin, right: margin, bottom: margin + 10 },
             styles: { fontSize: 8, cellPadding: 4 },
             headStyles: { fillColor: '#1f6f4a', textColor: '#ffffff' },
             didParseCell: data => {
+                if (data.section === 'head') data.cell.styles.halign = table.columnStyles[data.column.index]?.halign || 'left';
                 if (data.section !== 'body') return;
                 const rowClass = table.rowClasses[data.row.index];
                 if (rowClass === 'total-row') Object.assign(data.cell.styles, { fontStyle: 'bold', fillColor: '#f1f3f0' });
@@ -465,11 +534,48 @@
             }
         });
 
+        doc.autoTable(tableOptions(visibleTable(document.getElementById('totalsTable')), y, { tableWidth: 280 }));
+        y = doc.lastAutoTable.finalY + 14;
         if (!document.getElementById('summaryCard').hidden) {
             doc.autoTable(tableOptions(visibleTable(document.getElementById('summaryTable')), y));
-            y = doc.lastAutoTable.finalY + 18;
+            y = doc.lastAutoTable.finalY + 14;
         }
         doc.autoTable(tableOptions(visibleTable(document.getElementById('statementTable')), y));
+
+        // Business header and page number on every page: green band, gold rule, light strip with links.
+        const phoneIcon = emojiImage('📞');
+        const pageCount = doc.getNumberOfPages();
+        for (let page = 1; page <= pageCount; page++) {
+            doc.setPage(page);
+            doc.setFillColor('#1f6f4a').rect(0, 0, pageWidth, bandHeight, 'F');
+            doc.setFillColor('#e0a526').rect(0, bandHeight, pageWidth, 4, 'F');
+            doc.setFillColor('#e7f3ec').rect(0, bandHeight + 4, pageWidth, stripHeight, 'F');
+
+            doc.setFont('helvetica', 'bold').setFontSize(22).setTextColor('#ffffff');
+            doc.text('Mondal Brothers', margin, 30);
+            doc.setFontSize(11).setTextColor('#f5c75a');
+            doc.text('Wholesale Chicken Distributor', margin + 40, 49);
+            doc.setTextColor('#ffffff');
+            doc.text('Contact: 9734075801', pageWidth - margin, 49, { align: 'right' });
+
+            const stripY = bandHeight + 4 + 15;
+            doc.setFontSize(10).setTextColor('#17573a');
+            let x = margin;
+            if (phoneIcon) {
+                doc.addImage(phoneIcon, 'PNG', x, stripY - 9, 11, 11);
+                x += 15;
+            }
+            doc.textWithLink('Click to Call', x, stripY, { url: 'tel:+919734075801' });
+            const site = 'tinyurl.com/mondalbros';
+            const siteX = pageWidth - margin - doc.getTextWidth(site);
+            doc.textWithLink(site, siteX, stripY, { url: 'https://tinyurl.com/mondalbros' });
+            doc.setDrawColor('#17573a').setLineWidth(0.6).line(siteX, stripY + 2, pageWidth - margin, stripY + 2);
+            doc.setFont('helvetica', 'normal').setTextColor('#5c665f');
+            doc.text('Visit Website:', siteX - 6, stripY, { align: 'right' });
+
+            doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor('#8a938c');
+            doc.text(`Page ${page} of ${pageCount}`, pageWidth - margin, pageHeight - margin + 10, { align: 'right' });
+        }
         return doc.output('blob');
     }
 
