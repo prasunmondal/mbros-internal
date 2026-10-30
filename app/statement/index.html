@@ -61,6 +61,8 @@
         #statementTable td:first-child { white-space: nowrap; }
         #statementTable.hide-sums td.sum { color: transparent; }   /* keeps the row's background, unlike visibility */
         #statementTitle.hide-names #statementNames { display: none; }
+        /* Fixed page so the Share PDF (statementPdf) can reproduce the printed layout. */
+        @page { size: A4 portrait; margin: 10mm; }
         @media print {
             .table { font-size: 0.75rem; }
             .table th, .table td { padding: 5px 8px; }
@@ -544,7 +546,7 @@
     // The PDF's built-in font has no ₹ or minus sign, so swap them for ASCII.
     const pdfText = text => text.replace(/−/g, '-').replace(/₹/g, 'Rs ');
 
-    // Read a table as shown on screen: only visible columns, and rows that have every cell.
+    // Read a table as shown on screen: only visible columns; a single wide cell (empty state) spans them all.
     function visibleTable(table) {
         const headers = [...table.tHead.rows[0].cells];
         const visible = headers.map((th, i) => i).filter(i => getComputedStyle(headers[i]).display !== 'none');
@@ -554,12 +556,16 @@
             if (headers[i].classList.contains('num')) columnStyles[position] = { halign: 'right', cellWidth: 'wrap' };
             else if (headers[i].classList.contains('nowrap')) columnStyles[position] = { cellWidth: 'wrap' };
         });
-        const rows = [...table.tBodies[0].rows].filter(tr => tr.cells.length === headers.length);
+        const rows = [...table.tBodies[0].rows];
+        const full = tr => tr.cells.length === headers.length;
         return {
-            head: [visible.map(i => headers[i].textContent.trim())],
-            body: rows.map(tr => visible.map(i =>
-                table.classList.contains('hide-sums') && tr.cells[i].classList.contains('sum') ? '' : pdfText(tr.cells[i].textContent))),
+            id: table.id,
+            head: [visible.map(i => headers[i].textContent.trim().toUpperCase())],   // th is uppercase in CSS
+            body: rows.map(tr => full(tr)
+                ? visible.map(i => table.classList.contains('hide-sums') && tr.cells[i].classList.contains('sum') ? '' : pdfText(tr.cells[i].textContent))
+                : [{ content: pdfText(tr.cells[0].textContent), colSpan: visible.length }]),
             rowClasses: rows.map(tr => tr.className),
+            cellClasses: rows.map(tr => full(tr) ? visible.map(i => tr.cells[i].className) : [tr.cells[0].className]),
             columnStyles
         };
     }
@@ -580,91 +586,154 @@
         }
     }
 
+    // Draws the printed page (A4 portrait, 10 mm margins, see @page) with the same layout and colours as the
+    // print CSS. Sizes are the CSS pixel sizes × 0.75 (1 CSS px = 0.75 pt when printing at 100%).
     function statementPdf() {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-        const margin = 36;
-        const bandHeight = 62, stripHeight = 22;
-        const headerBottom = bandHeight + 4 + stripHeight + 4;   // tables on later pages start below the business header
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+        const TEXT = '#1c2420', MUTED = '#5c665f', SUBTLE = '#8a938c', BORDER = '#e2e5e0', SURFACE_MUTED = '#f1f3f0', DANGER = '#c0392b';
+        const margin = 28.35;   // 10 mm
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
+        const contentWidth = pageWidth - margin * 2;
+        // Text baseline inside a CSS line box of `lineHeight` starting at `top`.
+        const baseline = (top, lineHeight, size) => top + lineHeight / 2 + size * 0.35;
 
-        let y = headerBottom + 18;
-        doc.setFont('helvetica', 'bold').setFontSize(11).setTextColor('#1c2420');
-        const title = document.getElementById('statementTitle');
-        const titleText = title.classList.contains('hide-names') ? 'Statement' : title.textContent;
-        const titleLines = doc.splitTextToSize(pdfText(titleText), pageWidth - margin * 2);
-        doc.text(titleLines, margin, y);
-        y += titleLines.length * 13;
-        doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor('#5c665f');
-        doc.text(pdfText(document.getElementById('statementMeta').textContent), margin, y);
-        y += 12;
+        // Letterhead (.letterhead): band 63.7, gold rule 3, strip 22.8, then a 12 gap; repeats on every page.
+        const bandHeight = 63.7, ruleHeight = 3, stripHeight = 22.8;
+        const bodyTop = margin + bandHeight + ruleHeight + stripHeight + 12;
+        let y = bodyTop;
 
-        const tableOptions = (table, startY, extra = {}) => ({
-            ...table,
-            ...extra,
-            startY,
-            margin: { top: headerBottom + 12, left: margin, right: margin, bottom: margin + 10 },
-            styles: { fontSize: 8, cellPadding: 4 },
-            headStyles: { fillColor: '#1f6f4a', textColor: '#ffffff' },
+        const tableOptions = (table, extra = {}) => ({
+            head: table.head,
+            body: table.body,
+            columnStyles: table.columnStyles,
+            theme: 'plain',
+            margin: { top: bodyTop, left: margin, right: margin, bottom: margin },
+            styles: {
+                font: 'helvetica', fontSize: 9, textColor: TEXT, lineColor: BORDER, lineWidth: { bottom: 0.75 },
+                cellPadding: { top: 5.25, bottom: 5.25, left: 6, right: 6 }
+            },
+            headStyles: { fillColor: SURFACE_MUTED, textColor: MUTED, fontStyle: 'bold' },
             didParseCell: data => {
-                if (data.section === 'head') data.cell.styles.halign = table.columnStyles[data.column.index]?.halign || 'left';
-                if (data.section !== 'body') return;
+                const styles = data.cell.styles;
+                if (data.section === 'head') {
+                    styles.halign = table.columnStyles[data.column.index]?.halign || 'left';
+                    return;
+                }
                 const rowClass = table.rowClasses[data.row.index];
-                if (rowClass === 'total-row') Object.assign(data.cell.styles, { fontStyle: 'bold', fillColor: '#e7f3ec', textColor: '#17573a' });
-                if (rowClass === 'opening-row') Object.assign(data.cell.styles, { fontStyle: 'italic', textColor: '#5c665f' });
-            }
+                const cellClass = table.cellClasses[data.row.index][data.column.index] || '';
+                if (rowClass === 'opening-row') Object.assign(styles, { fontStyle: 'italic', textColor: MUTED });
+                if (rowClass === 'total-row') Object.assign(styles, { fontStyle: 'bold', fillColor: SURFACE_MUTED, lineWidth: 0 });
+                if (cellClass.includes('negative')) styles.textColor = DANGER;
+                if (cellClass.includes('note')) Object.assign(styles, { fontSize: 9.6, textColor: MUTED });
+                if (cellClass.includes('empty-state')) Object.assign(styles, { halign: 'center', textColor: MUTED, cellPadding: { top: 36, bottom: 36, left: 15, right: 15 } });
+                if (table.id === 'totalsTable') {
+                    if (data.column.index === table.head[0].length - 1) styles.fontStyle = 'bold';
+                    if (rowClass === 'total-row') styles.fontSize = 12;
+                }
+            },
+            ...extra
         });
 
+        // A .card.section: 21 gap, bordered box with a header (title, optional meta) above a full-width table.
+        function drawCard(table, title, meta) {
+            y += 21;
+            doc.setFont('helvetica', 'bold').setFontSize(15);
+            const titleLines = doc.splitTextToSize(pdfText(title), contentWidth - 30);
+            const headerHeight = 12 + titleLines.length * 18.75 + (meta ? 3 + 15.75 : 0) + 12;
+            if (y + headerHeight + 50 > pageHeight - margin) {   // keep the header with the first rows
+                doc.addPage();
+                y = bodyTop;
+            }
+            const cardTop = y;
+            const startPage = doc.getCurrentPageInfo().pageNumber;
+            let textTop = y + 12;
+            doc.setTextColor(TEXT);
+            titleLines.forEach(line => {
+                doc.text(line, margin + 15, baseline(textTop, 18.75, 15));
+                textTop += 18.75;
+            });
+            if (meta) {
+                doc.setFont('helvetica', 'normal').setFontSize(10.5).setTextColor(MUTED);
+                doc.text(pdfText(meta), margin + 15, baseline(textTop + 3, 15.75, 10.5));
+            }
+            y += headerHeight;
+            doc.setDrawColor(BORDER).setLineWidth(0.75).line(margin, y, pageWidth - margin, y);
+
+            const segments = [];   // the card's outline on each page it spans
+            doc.autoTable(tableOptions(table, {
+                startY: y,
+                margin: { top: bodyTop, left: margin + 0.75, right: margin + 0.75, bottom: margin },
+                didDrawPage: data => {
+                    const page = doc.getCurrentPageInfo().pageNumber;
+                    segments.push({ page, top: page === startPage ? cardTop : bodyTop, bottom: data.cursor.y });
+                }
+            }));
+            segments.forEach(({ page, top, bottom }) => {
+                doc.setPage(page);
+                doc.setDrawColor(BORDER).setLineWidth(0.75).roundedRect(margin, top, contentWidth, bottom - top, 7.5, 7.5, 'S');
+            });
+            doc.setPage(doc.getNumberOfPages());
+            y = doc.lastAutoTable.finalY;
+        }
+
         if (!document.getElementById('summarySection').hidden) {
-            doc.autoTable(tableOptions(visibleTable(document.getElementById('totalsTable')), y, { tableWidth: 280 }));
-            y = doc.lastAutoTable.finalY + 14;
+            doc.setFont('helvetica', 'bold').setFontSize(9.6).setTextColor(SUBTLE);
+            doc.text('SUMMARY', margin, baseline(y, 12, 9.6), { charSpace: 0.58 });
+            y += 12 + 9;
+            doc.autoTable(tableOptions(visibleTable(document.getElementById('totalsTable')), { startY: y, tableWidth: 345 }));
+            y = doc.lastAutoTable.finalY;
         }
         if (!document.getElementById('summaryCard').hidden) {
-            doc.autoTable(tableOptions(visibleTable(document.getElementById('summaryTable')), y));
-            y = doc.lastAutoTable.finalY + 14;
+            drawCard(visibleTable(document.getElementById('summaryTable')), 'By customer');
         }
-        doc.autoTable(tableOptions(visibleTable(document.getElementById('statementTable')), y));
+        const title = document.getElementById('statementTitle');
+        drawCard(visibleTable(document.getElementById('statementTable')),
+            title.classList.contains('hide-names') ? 'Statement' : title.textContent,
+            document.getElementById('statementMeta').textContent);
 
-        // Business header and page number on every page: green band, gold rule, light strip with links.
+        // Letterhead on every page: navy-to-blue band, gold rule, light strip with links.
         const phoneIcon = emojiImage('📞');
-        const pageCount = doc.getNumberOfPages();
-        for (let page = 1; page <= pageCount; page++) {
+        const left = margin + 12, right = pageWidth - margin - 12;
+        for (let page = 1; page <= doc.getNumberOfPages(); page++) {
             doc.setPage(page);
-            // jsPDF has no gradients, so the navy-to-royal-blue band is drawn as thin vertical slices.
-            const slices = 80, from = [11, 31, 75], to = [31, 79, 174];   // #0b1f4b → #1f4fae
+            // jsPDF has no gradients, so the band is thin vertical slices: #0b1f4b 0%, #16367f 55%, #1f4fae 100%.
+            const stops = [[0, [11, 31, 75]], [0.55, [22, 54, 127]], [1, [31, 79, 174]]];
+            const slices = 80;
             for (let i = 0; i < slices; i++) {
                 const t = i / (slices - 1);
-                doc.setFillColor(...from.map((c, k) => Math.round(c + (to[k] - c) * t)));
-                doc.rect(pageWidth * i / slices, 0, pageWidth / slices + 1, bandHeight, 'F');
+                const [[t0, c0], [t1, c1]] = t <= 0.55 ? [stops[0], stops[1]] : [stops[1], stops[2]];
+                const k = (t - t0) / (t1 - t0);
+                doc.setFillColor(...c0.map((c, n) => Math.round(c + (c1[n] - c) * k)));
+                doc.rect(margin + contentWidth * i / slices, margin, contentWidth / slices + 0.5, bandHeight, 'F');
             }
-            doc.setFillColor('#d4a72c').rect(0, bandHeight, pageWidth, 4, 'F');
-            doc.setFillColor('#eaf0fb').rect(0, bandHeight + 4, pageWidth, stripHeight, 'F');
+            doc.setFillColor('#d4a72c').rect(margin, margin + bandHeight, contentWidth, ruleHeight, 'F');
+            const stripTop = margin + bandHeight + ruleHeight;
+            doc.setFillColor('#eaf0fb').rect(margin, stripTop, contentWidth, stripHeight, 'F');
 
-            doc.setFont('helvetica', 'bold').setFontSize(22).setTextColor('#ffffff');
-            doc.text('Mondal Brothers', margin, 30);
-            doc.setFontSize(11).setTextColor('#f3c85b');
-            doc.text('Wholesale Chicken Distributor', margin + 40, 49);
+            doc.setFont('helvetica', 'bold').setFontSize(19.2).setTextColor('#ffffff');
+            doc.text('Mondal Brothers', left, baseline(margin + 9, 28.8, 19.2));
+            const rowY = baseline(margin + 9 + 28.8 + 1.5, 16.9, 11.25);
+            doc.setFontSize(11.25).setTextColor('#f3c85b');
+            doc.text('Wholesale Chicken Distributor', left + 30, rowY);
             doc.setTextColor('#ffffff');
-            doc.text('Contact: 9734075801', pageWidth - margin, 49, { align: 'right' });
+            doc.text('Contact: 9734075801', right, rowY, { align: 'right' });
 
-            const stripY = bandHeight + 4 + 15;
-            doc.setFontSize(10).setTextColor('#0b1f4b');
-            let x = margin;
+            const stripY = baseline(stripTop, stripHeight, 10.2);
+            doc.setFontSize(10.2).setTextColor('#0b1f4b');
+            let x = left;
             if (phoneIcon) {
-                doc.addImage(phoneIcon, 'PNG', x, stripY - 9, 11, 11);
-                x += 15;
+                doc.addImage(phoneIcon, 'PNG', x, stripY - 8.5, 10.5, 10.5);
+                x += 13.5;
             }
             doc.textWithLink('Click to Call', x, stripY, { url: 'tel:+919734075801' });
             const site = 'tinyurl.com/mondalbros';
-            const siteX = pageWidth - margin - doc.getTextWidth(site);
+            const siteX = right - doc.getTextWidth(site);
             doc.textWithLink(site, siteX, stripY, { url: 'https://tinyurl.com/mondalbros' });
-            doc.setDrawColor('#0b1f4b').setLineWidth(0.6).line(siteX, stripY + 2, pageWidth - margin, stripY + 2);
+            doc.setDrawColor('#0b1f4b').setLineWidth(0.6).line(siteX, stripY + 1.5, right, stripY + 1.5);
             doc.setFont('helvetica', 'normal').setTextColor('#4b5a7a');
-            doc.text('Visit Website:', siteX - 6, stripY, { align: 'right' });
-
-            doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor('#8a938c');
-            doc.text(`Page ${page} of ${pageCount}`, pageWidth - margin, pageHeight - margin + 10, { align: 'right' });
+            doc.text('Visit Website: ', siteX, stripY, { align: 'right' });
         }
         return doc.output('blob');
     }
