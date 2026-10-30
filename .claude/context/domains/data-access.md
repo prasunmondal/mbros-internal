@@ -28,6 +28,9 @@ the lint here does not check them.
 - `fetchWithRetry`: 3 retries, exponential back-off from 1 s. It exists because engine failures
   (timeouts, quota, concurrency) come back as HTML without CORS headers.
 - Every page uses `type: "SELECT"` only. There are no writes from this repo.
+- `DataCache` keeps each SELECT result in IndexedDB, keyed by the operation without its `id`, so
+  all app pages and browser tabs reuse a worksheet already fetched. A page reload (F5) or a fresh
+  password unlock clears it; `callSheetsApi` then sends only the operations not in the cache.
 
 ## Data sources
 | Spreadsheet | Worksheet | Read by |
