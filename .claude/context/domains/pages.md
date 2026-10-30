@@ -26,7 +26,7 @@ sources:
 | `pay/` | customer UPI payment (QR + UPI link), Bengali + English | none |
 | `app/` | internal overview, cards built from `Mb.TOOLS` | none |
 | `app/balance/` | customer khata balances as of a date | `deliveries` |
-| `app/statement/` | statement for one or more customers over a date range, combined running balance, per-customer summary | `db2.deliveries` |
+| `app/statement/` | statement for one or more customers over a date range, combined running balance, per-customer summary, print + PDF share | `deliveries.2023` (only for ranges before 2026), `db2.deliveries` |
 | `app/deliveries/` | delivered KG per customer by date group, 2023 + current | `deliveries.2023`, `db2.deliveries` |
 | `app/profits/` | business dashboard: KPIs and trend charts | `cumilativeCalculations` |
 | `app/daily/` | daily sold / expenses / profit charts | `cumilativeCalculations` |

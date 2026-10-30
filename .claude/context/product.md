@@ -33,9 +33,16 @@ earns, plus pages customers use to pay.
   − `paidOnline` − `discount` + `autoAdjust` + `adjustments`, and each row's `prevAmount` is the
   customer's previous `khataBalance`. Held for every row on 2026-10-30 `[inferred: from data, not owner-stated]`.
   `totalBalance` adds `otherBalances` on top; the statement uses `khataBalance`.
+  The 2023–2025 archive does not hold to this: ~1,900 rows (mostly 2023) lack payment amounts and
+  ~47 rows' `prevAmount` differs from the previous balance. Each customer's last 2025 balance does
+  equal their first 2026 `prevAmount` (checked 2026-10-30).
 - **Statement** (`app/statement/`): opening = each selected customer's last `khataBalance` before
   the start date (else the `prevAmount` of their first row), summed; the running balance then adds
-  each row's `khataBalance` − `prevAmount` in date order across all selected customers.
+  each row's `khataBalance` − the customer's previous `khataBalance`, in date order across all
+  selected customers, so it always lands on the sheet's balances. Any part of that change the row's
+  columns don't explain is shown as an adjustment noted "Unrecorded balance change"
+  `[inferred: chosen when the page was built, not owner-confirmed]`. The archive loads only for
+  ranges starting before 2026.
 - **Commission** (`app/calculator/`): commission % = total discount % − discount passed on %.
   Payable = paying amount − discount passed on. Defaults: 5% total, 3% passed on.
 - **Expenses** (`app/profits/profits.js`): broken down into car, labour and extra expenses

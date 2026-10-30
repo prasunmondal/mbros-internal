@@ -81,7 +81,7 @@
 
         <div class="statement-actions no-print">
             <div class="page-actions">
-                <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+                <button type="button" class="btn btn-secondary" id="printBtn" onclick="window.print()" disabled>Print</button>
                 <button type="button" class="btn btn-primary" id="sharePdf" title="Share this statement as a PDF" disabled>
                     <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
                     Share PDF
@@ -126,7 +126,7 @@
                 <label><input type="checkbox" id="showSums" checked> Totals in closing row</label>
                 <label><input type="checkbox" id="showTitleNames" checked> Name in title</label>
             </div>
-            <p class="subtle" style="margin-top: 8px;">Records start on 2026-01-01. Balance in the list is each customer's latest khata balance.</p>
+            <p class="subtle" style="margin-top: 8px;">Records from 2023 load automatically when the range starts before 2026. Balance in the list is each customer's latest khata balance.</p>
         </div>
 
         <p id="status" class="status" hidden style="margin-top: 16px;"></p>
@@ -156,8 +156,9 @@
                 <tr><th>Item</th><th class="num">Amount</th></tr>
                 </thead>
                 <tbody>
+                <tr><td>Total delivered PC</td><td class="num" id="pcStat">–</td></tr>
+                <tr><td>Total delivered KG</td><td class="num" id="kgStat">–</td></tr>
                 <tr><td>Opening balance</td><td class="num" id="openingStat">–</td></tr>
-                <tr><td>Total delivered (PC / KG)</td><td class="num" id="quantityStat">–</td></tr>
                 <tr><td>Delivered</td><td class="num" id="deliveredStat">–</td></tr>
                 <tr><td>Paid</td><td class="num" id="paidStat">–</td></tr>
                 <tr><td>Discount + adjustments</td><td class="num" id="otherStat">–</td></tr>
@@ -234,25 +235,71 @@
     // Timestamps arrive as YYYY-MM-DD; fall back to IST conversion if a full timestamp ever appears.
     const dayOf = timestamp => (typeof timestamp === 'string' && timestamp.length === 10) ? timestamp : Mb.toISTDate(timestamp);
 
-    let rowsByCustomer = new Map();   // name -> rows in sheet (date) order
+    const ARCHIVE_SHEET_ID = "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw";  // 2023–2025 deliveries
+    const CURRENT_START = '2026-01-01';   // first day in db2.deliveries; earlier days live in the archive
+
+    let rowsByCustomer = new Map();   // name -> rows in date order
+    let currentRows = [], archiveRows = [];
+    let archiveLoad = null;           // promise, set once the archive has been requested
+    let archiveLoaded = false;
+    let dataReady = false;
     const selected = new Set();
 
-    async function loadDeliveries() {
-        const data = await callSheetsApi([{
-            type: "SELECT",
-            spreadsheetId: MAIN_SHEET_ID,
-            worksheet: "db2.deliveries",
-            id: "mbros-github-site"
-        }]);
+    async function fetchRows(spreadsheetId, worksheet) {
+        const data = await callSheetsApi([{ type: "SELECT", spreadsheetId, worksheet, id: "mbros-github-site" }]);
+        return data[0].rows.filter(row => row.name);
+    }
+
+    // Group archive + current rows by customer, in date order. Each row's `change` is its khata balance minus
+    // the customer's previous khata balance, so the running balance always lands on the sheet's own balances.
+    // `unrecorded` is the part of that change the row's columns don't explain: 2023 rows often lack payment
+    // amounts, and a few archive rows' prevAmount differs from the previous row's balance.
+    function buildCustomers() {
         rowsByCustomer = new Map();
-        data[0].rows.forEach((row, index) => {
-            if (!row.name) return;
+        [...archiveRows, ...currentRows].forEach((row, index) => {
             row.day = dayOf(row.timestamp);
             row.index = index;
             if (!rowsByCustomer.has(row.name)) rowsByCustomer.set(row.name, []);
             rowsByCustomer.get(row.name).push(row);
         });
-        rowsByCustomer.forEach(rows => rows.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index));
+        rowsByCustomer.forEach(rows => {
+            rows.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
+            rows.forEach((row, i) => {
+                const previous = i ? num(rows[i - 1].khataBalance) : num(row.prevAmount);
+                row.change = num(row.khataBalance) - previous;
+                // khataBalance = prevAmount + deliverAmount − paidCash − paidOnline − discount + autoAdjust + adjustments
+                const explained = num(row.deliverAmount) - num(row.paidCash) - num(row.paidOnline)
+                    - num(row.discount) + num(row.autoAdjust) + num(row.adjustments);
+                const unrecorded = row.change - explained;
+                row.unrecorded = Math.abs(unrecorded) > 0.5 ? unrecorded : 0;
+                row.adjustment = num(row.autoAdjust) + num(row.adjustments) + row.unrecorded;
+            });
+        });
+    }
+
+    async function loadDeliveries() {
+        currentRows = await fetchRows(MAIN_SHEET_ID, "db2.deliveries");
+        buildCustomers();
+    }
+
+    // The archive is large, so it loads only when a statement reaches back before 2026.
+    function loadArchive() {
+        archiveLoad ??= fetchRows(ARCHIVE_SHEET_ID, "deliveries.2023").then(rows => {
+            archiveRows = rows;
+            archiveLoaded = true;
+            buildCustomers();
+            renderCustomerList();
+        }).catch(error => {
+            archiveLoad = null;   // allow a retry on the next change
+            throw error;
+        });
+        return archiveLoad;
+    }
+
+    // Print and Share only work on a finished statement.
+    function setReportReady(ready) {
+        document.getElementById('printBtn').disabled = !ready;
+        document.getElementById('sharePdf').disabled = !ready;
     }
 
     function renderCustomerList() {
@@ -344,21 +391,37 @@
             ? `Period: ${from || 'start'} to ${to || 'today'} · Generated ${Mb.todayIST()}` : '';
         document.getElementById('summaryCard').hidden = names.length < 2;
 
-        document.getElementById('sharePdf').disabled = !names.length;
-        if (!names.length) {
+        const status = document.getElementById('status');
+        const showEmpty = message => {
             const td = body.insertRow().insertCell();
             td.colSpan = 13;
             td.className = 'empty-state';
-            td.textContent = 'Select one or more customers to see their statement.';
+            td.textContent = message;
             ['openingStat', 'deliveredStat', 'paidStat', 'otherStat', 'closingStat'].forEach(id => setStat(id, null));
-            document.getElementById('quantityStat').textContent = '–';
+            ['pcStat', 'kgStat'].forEach(id => document.getElementById(id).textContent = '–');
+        };
+
+        setReportReady(false);
+        if (!dataReady) return;
+        if (!names.length) {
+            showEmpty('Select one or more customers to see their statement.');
             return;
         }
         if (from && to && from > to) {
-            Mb.setStatus(document.getElementById('status'), 'error', '"From" date is after "To" date.');
+            Mb.setStatus(status, 'error', '"From" date is after "To" date.');
+            showEmpty('Fix the date range to see the statement.');
             return;
         }
-        Mb.setStatus(document.getElementById('status'), null);
+        if ((!from || from < CURRENT_START) && !archiveLoaded) {
+            Mb.setStatus(status, 'info', 'Loading 2023–2025 records…');
+            showEmpty('Loading older records…');
+            loadArchive().then(renderStatement, error => {
+                console.error('Error fetching archive:', error);
+                Mb.setStatus(status, 'error', 'Could not load 2023–2025 records. Change the dates to try again.');
+            });
+            return;
+        }
+        Mb.setStatus(status, null);
 
         let opening = 0;
         const entries = [];
@@ -374,9 +437,8 @@
                 sums.delivered += num(row.deliverAmount);
                 sums.paid += num(row.paidCash) + num(row.paidOnline);
                 sums.discount += num(row.discount);
-                sums.adjustment += num(row.autoAdjust) + num(row.adjustments);
-                // khataBalance = prevAmount + deliverAmount − paidCash − paidOnline − discount + autoAdjust + adjustments
-                sums.change += num(row.khataBalance) - num(row.prevAmount);
+                sums.adjustment += row.adjustment;
+                sums.change += row.change;
             });
             opening += customerOpening;
             entries.push(...inRange);
@@ -398,7 +460,7 @@
         // Each new selection or date range resets these toggles; the user can override until the next change.
         columnToggle('name').checked = names.length > 1;
         columnToggle('discount').checked = entries.some(row => num(row.discount));
-        columnToggle('adjustment').checked = entries.some(row => num(row.autoAdjust) + num(row.adjustments));
+        columnToggle('adjustment').checked = entries.some(row => row.adjustment);
         applyColumns();
 
         // The label sits in the date column so it stays visible when the name column is hidden.
@@ -409,8 +471,8 @@
 
         let running = opening;
         entries.forEach(row => {
-            const adjustment = num(row.autoAdjust) + num(row.adjustments);
-            running += num(row.khataBalance) - num(row.prevAmount);
+            const adjustment = row.adjustment;
+            running += row.change;
             totals.pc += num(row.deliveredPc);
             totals.kg += num(row.deliveredKg);
             totals.delivered += num(row.deliverAmount);
@@ -419,7 +481,8 @@
             totals.discount += num(row.discount);
             totals.adjustment += adjustment;
 
-            const notes = [row.discountNote, row.autoAdjustNote, row.adjustmentNote, row.notes]
+            const notes = [row.discountNote, row.autoAdjustNote, row.adjustmentNote, row.notes,
+                row.unrecorded && `Unrecorded balance change ${Mb.formatNumber(row.unrecorded, 0)}`]
                 .filter(Boolean).join(' · ');
             const tr = addCells(body.insertRow(), [
                 row.day,
@@ -465,12 +528,13 @@
         [...totalRow.cells].slice(2, 10).forEach(td => td.classList.add('sum'));
 
         setStat('openingStat', opening);
-        document.getElementById('quantityStat').textContent =
-            `${Mb.formatNumber(totals.pc, 0)} pc / ${Mb.formatNumber(totals.kg, 1)} kg`;
+        document.getElementById('pcStat').textContent = Mb.formatNumber(totals.pc, 0);
+        document.getElementById('kgStat').textContent = Mb.formatNumber(totals.kg, 1);
         setStat('deliveredStat', totals.delivered);
         setStat('paidStat', totals.cash + totals.online);
         setStat('otherStat', totals.adjustment - totals.discount);
         setStat('closingStat', running);
+        setReportReady(true);
     }
 
     // The PDF's built-in font has no ₹ or minus sign, so swap them for ASCII.
@@ -643,6 +707,7 @@
         Mb.setStatus(status, 'info', 'Loading deliveries…');
         try {
             await loadDeliveries();
+            dataReady = true;
             Mb.setStatus(status, null);
             ['customerSearch', 'selectAll', 'clearAll'].forEach(id => document.getElementById(id).disabled = false);
             renderCustomerList();

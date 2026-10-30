@@ -34,7 +34,7 @@ the lint here does not check them.
 | main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
 | main | `db2.deliveries` | `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statement/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
-| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/deliveries/`, `app/customer-performance/` |
+| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/deliveries/`, `app/customer-performance/`, `app/statement/` |
 | meter sheet (ID in `app/meters/`) | `apiData` | `app/meters/` |
 
 `deliveries` no longer exists: on 2026-10-29 the engine answered "Worksheet not found: deliveries",
