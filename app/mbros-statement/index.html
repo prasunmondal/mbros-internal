@@ -514,12 +514,13 @@
             const upTo = entries.filter(entry => !to || entry.day <= to);
             const current = Math.round(balanceOf(upTo.filter(entry => !entry.staged)));
             const withStaged = Math.round(balanceOf(upTo));
-            stagedCount += upTo.filter(entry => entry.staged).length;
+            const staged = upTo.filter(entry => entry.staged).length;
+            stagedCount += staged;
             if (!current && !withStaged) {
                 if (upTo.length) settled++;
                 return;
             }
-            dues.push({ name, current, withStaged, last: upTo[upTo.length - 1].day });
+            dues.push({ name, current, withStaged, staged, last: upTo[upTo.length - 1].day });
         });
         const size = due => Math.max(Math.abs(due.current), Math.abs(due.withStaged));
         dues.sort((a, b) => size(b) - size(a) || a.name.localeCompare(b.name));
@@ -532,27 +533,29 @@
             `Generated ${Mb.todayIST()}`
         ].filter(Boolean).join(' · ');
 
-        // A balance split into its two columns: what MBros pays, what the party pays MBros.
-        const split = balance => [Math.max(balance, 0), Math.max(-balance, 0)];
-        // Amount cells are tinted by group and keep their plain value for click-to-copy; zeros stay blank unless shown.
-        const addRow = (label, amounts, last, showZero = false) => {
+        // A balance split into its two columns: what MBros pays, what the party pays MBros; null leaves a cell blank.
+        const split = balance => [balance > 0 ? balance : null, balance < 0 ? -balance : null];
+        // Amount cells are tinted by group and keep their plain value for click-to-copy.
+        const addRow = (label, amounts, last) => {
             const tr = addCells(body.insertRow(), [
-                label, ...amounts.map(amount => amount || showZero ? Mb.formatINR(amount, 0) : ''), last
+                label, ...amounts.map(amount => amount === null ? '' : Mb.formatINR(amount, 0)), last
             ], [1, 2, 3, 4]);
             amounts.forEach((amount, i) => {
                 const td = tr.cells[i + 1];
                 td.classList.add(i < 2 ? 'group-locked' : 'group-staged', i % 2 ? 'pays-mbros' : 'mbros-pays');
-                if (amount || showZero) td.dataset.copy = String(amount);
+                if (amount !== null) td.dataset.copy = String(amount);
             });
             return tr;
         };
         const totals = { current: [0, 0], withStaged: [0, 0] };
-        const addTo = (pair, balance) => split(balance).forEach((amount, i) => pair[i] += amount);
+        const addTo = (pair, balance) => split(balance).forEach((amount, i) => pair[i] += amount || 0);
 
-        dues.forEach(({ name, current, withStaged, last }) => {
+        // The staged columns stay blank for a party with no staged entries; staged entries that settle it show ₹0.
+        dues.forEach(({ name, current, withStaged, staged, last }) => {
             addTo(totals.current, current);
             addTo(totals.withStaged, withStaged);
-            addRow(name, [...split(current), ...split(withStaged)], last).cells[5].className = 'lowlight';
+            const stagedCells = !staged ? [null, null] : withStaged ? split(withStaged) : [0, 0];
+            addRow(name, [...split(current), ...stagedCells], last).cells[5].className = 'lowlight';
         });
 
         if (!dues.length) {
@@ -562,7 +565,7 @@
             td.textContent = query ? 'No parties match.' : 'Nothing is due. Every party is settled.';
         }
 
-        addRow('Total', [...totals.current, ...totals.withStaged], '', true).className = 'total-row';
+        addRow('Total', [...totals.current, ...totals.withStaged], '').className = 'total-row';
         const net = pair => pair[0] - pair[1];
         addRow('Net', [...split(net(totals.current)), ...split(net(totals.withStaged))], '').className = 'total-row';
         setReportReady(true);
