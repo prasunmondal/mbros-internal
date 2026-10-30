@@ -56,6 +56,8 @@
         .letterhead-strip a { color: var(--brand-strong); font-weight: 700; }
         .letterhead-strip > a { text-decoration: none; }
         #statementTable td:first-child { white-space: nowrap; }
+        #statementTable.hide-sums td.sum { color: transparent; }   /* keeps the row's background, unlike visibility */
+        #statementTitle.hide-names #statementNames { display: none; }
         @media print {
             .table { font-size: 0.75rem; }
             .table th, .table td { padding: 5px 8px; }
@@ -115,6 +117,12 @@
                 <label><input type="checkbox" data-column="counter-balance"> Counter Balance</label>
                 <label><input type="checkbox" data-column="notes"> Notes</label>
             </div>
+            <div class="column-toggles">
+                <span class="label">Show</span>
+                <label><input type="checkbox" id="showSummary" checked> Summary</label>
+                <label><input type="checkbox" id="showSums" checked> Totals in closing row</label>
+                <label><input type="checkbox" id="showTitleNames" checked> Name in title</label>
+            </div>
             <p class="subtle" style="margin-top: 8px;">Records start on 2026-01-01. Balance in the list is each customer's latest khata balance.</p>
         </div>
 
@@ -138,7 +146,7 @@
             </td></tr></thead>
             <tbody><tr><td>
 
-        <div class="section">
+        <div class="section" id="summarySection">
             <h2 class="section-title">Summary</h2>
             <table class="table totals-table" id="totalsTable">
                 <thead>
@@ -179,7 +187,7 @@
         <div class="card section">
             <div class="card-header">
                 <div>
-                    <h2 id="statementTitle">Statement</h2>
+                    <h2 id="statementTitle">Statement<span id="statementNames"></span></h2>
                     <p class="statement-meta" id="statementMeta"></p>
                 </div>
             </div>
@@ -328,8 +336,7 @@
         body.replaceChildren();
         summaryBody.replaceChildren();
 
-        document.getElementById('statementTitle').textContent = names.length
-            ? `Statement · ${names.join(', ')}` : 'Statement';
+        document.getElementById('statementNames').textContent = names.length ? ` · ${names.join(', ')}` : '';
         document.getElementById('statementMeta').textContent = names.length
             ? `Period: ${from || 'start'} to ${to || 'today'} · Generated ${Mb.todayIST()}` : '';
         document.getElementById('summaryCard').hidden = names.length < 2;
@@ -452,6 +459,7 @@
             ''
         ], 2);
         totalRow.className = 'total-row';
+        [...totalRow.cells].slice(2, 10).forEach(td => td.classList.add('sum'));
 
         setStat('openingStat', opening);
         document.getElementById('quantityStat').textContent =
@@ -478,7 +486,8 @@
         const rows = [...table.tBodies[0].rows].filter(tr => tr.cells.length === headers.length);
         return {
             head: [visible.map(i => headers[i].textContent.trim())],
-            body: rows.map(tr => visible.map(i => pdfText(tr.cells[i].textContent))),
+            body: rows.map(tr => visible.map(i =>
+                table.classList.contains('hide-sums') && tr.cells[i].classList.contains('sum') ? '' : pdfText(tr.cells[i].textContent))),
             rowClasses: rows.map(tr => tr.className),
             columnStyles
         };
@@ -511,7 +520,9 @@
 
         let y = headerBottom + 18;
         doc.setFont('helvetica', 'bold').setFontSize(11).setTextColor('#1c2420');
-        const titleLines = doc.splitTextToSize(pdfText(document.getElementById('statementTitle').textContent), pageWidth - margin * 2);
+        const title = document.getElementById('statementTitle');
+        const titleText = title.classList.contains('hide-names') ? 'Statement' : title.textContent;
+        const titleLines = doc.splitTextToSize(pdfText(titleText), pageWidth - margin * 2);
         doc.text(titleLines, margin, y);
         y += titleLines.length * 13;
         doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor('#5c665f');
@@ -529,13 +540,15 @@
                 if (data.section === 'head') data.cell.styles.halign = table.columnStyles[data.column.index]?.halign || 'left';
                 if (data.section !== 'body') return;
                 const rowClass = table.rowClasses[data.row.index];
-                if (rowClass === 'total-row') Object.assign(data.cell.styles, { fontStyle: 'bold', fillColor: '#f1f3f0' });
+                if (rowClass === 'total-row') Object.assign(data.cell.styles, { fontStyle: 'bold', fillColor: '#e7f3ec', textColor: '#17573a' });
                 if (rowClass === 'opening-row') Object.assign(data.cell.styles, { fontStyle: 'italic', textColor: '#5c665f' });
             }
         });
 
-        doc.autoTable(tableOptions(visibleTable(document.getElementById('totalsTable')), y, { tableWidth: 280 }));
-        y = doc.lastAutoTable.finalY + 14;
+        if (!document.getElementById('summarySection').hidden) {
+            doc.autoTable(tableOptions(visibleTable(document.getElementById('totalsTable')), y, { tableWidth: 280 }));
+            y = doc.lastAutoTable.finalY + 14;
+        }
         if (!document.getElementById('summaryCard').hidden) {
             doc.autoTable(tableOptions(visibleTable(document.getElementById('summaryTable')), y));
             y = doc.lastAutoTable.finalY + 14;
@@ -643,6 +656,12 @@
         renderStatement();
     });
     document.querySelectorAll('#columnToggles input').forEach(box => box.addEventListener('change', applyColumns));
+    document.getElementById('showSummary').addEventListener('change', event =>
+        document.getElementById('summarySection').hidden = !event.target.checked);
+    document.getElementById('showSums').addEventListener('change', event =>
+        document.getElementById('statementTable').classList.toggle('hide-sums', !event.target.checked));
+    document.getElementById('showTitleNames').addEventListener('change', event =>
+        document.getElementById('statementTitle').classList.toggle('hide-names', !event.target.checked));
     document.getElementById('sharePdf').addEventListener('click', shareStatement);
     ['startDate', 'endDate'].forEach(id => document.getElementById(id).addEventListener('change', renderStatement));
 
