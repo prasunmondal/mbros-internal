@@ -26,7 +26,7 @@
     // Password gate for every app page. A deterrent only: this is a static site, so the hash is
     // public and the engine URL still answers without it (see context/known-issues.md).
     // ACCESS_HASH is the SHA-256 hex of the password; changing it signs every device out.
-    const ACCESS_HASH = '362a945ed1f1d7d21e574f65bea48928db2e198815fc1bb8c6fb965eb0acf293';
+    const ACCESS_HASH = '58cc26784282971f2b6966b587a3ece669163e5f7e90e7c3bbfe7ce7f5666ced';
     const ACCESS_KEY = 'mb-access';
     const SESSION_MS = 0.5 * 60 * 60 * 1000; // an unlock lasts 0.5 hours, then the password is asked again
 
