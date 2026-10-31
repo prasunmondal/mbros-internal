@@ -110,6 +110,7 @@
                     const groupFill = groupFillOf(isGroup ? data.cell.raw.className : table.headClasses[data.column.index]);
                     if (groupFill) styles.fillColor = groupFill;
                     if (!isGroup) styles.textColor = payColorOf(table.headClasses[data.column.index]) || styles.textColor;
+                    if (/\blowlight\b/.test(table.headClasses[data.column.index] || '')) Object.assign(styles, { fontSize: 7.8, textColor: SUBTLE });   // 0.65rem
                     return;
                 }
                 const rowClass = table.rowClasses[data.row.index];
@@ -119,7 +120,7 @@
                 if (groupFillOf(cellClass)) styles.fillColor = groupFillOf(cellClass);
                 if (payColorOf(cellClass)) styles.textColor = payColorOf(cellClass);
                 if (cellClass.includes('negative')) styles.textColor = DANGER;
-                if (cellClass.includes('lowlight')) styles.textColor = SUBTLE;
+                if (cellClass.includes('lowlight')) Object.assign(styles, { fontSize: 6.75, textColor: SUBTLE });   // 0.75em
                 if (cellClass.includes('note')) Object.assign(styles, { fontSize: 9.6, textColor: MUTED });
                 if (cellClass.includes('route')) Object.assign(styles, { fontSize: 10.2, textColor: MUTED });
                 if (cellClass.includes('empty-state')) Object.assign(styles, { halign: 'center', textColor: MUTED, cellPadding: { top: 36, bottom: 36, left: 15, right: 15 } });

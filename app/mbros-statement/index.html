@@ -53,11 +53,8 @@
         body[data-view="statement"] .dues-only, body[data-view="dues"] .statement-only { display: none; }
         .option-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
         .option-toggle input { accent-color: var(--brand); width: 16px; height: 16px; }
-        .options { display: flex; flex-wrap: wrap; column-gap: 24px; }
-        /* Due per party: column groups over equal-width amount columns. */
-        #duesTable .group-row th { text-align: center; position: static; }
-        #duesTable .group-row th[colspan] { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
-        #duesTable th.even { width: 15%; }
+        /* Due per party: one equal-width amount column per group (locked, staged). */
+        #duesTable th.even { width: 20%; }
         /* Light column-group tints; on the black theme a faint wash, since the soft tokens are too deep there. */
         #duesTable { --group-locked: var(--info-soft); --group-staged: var(--accent-soft); }
         @media screen {
@@ -65,12 +62,14 @@
         }
         #duesTable .group-locked { background: var(--group-locked); }
         #duesTable .group-staged { background: var(--group-staged); }
-        /* MBros pays in green, the party pays MBros in red, headers and amounts alike. */
-        #duesTable .mbros-pays { color: var(--brand-strong); }
-        #duesTable .pays-mbros { color: var(--danger); }
+        /* One amount column per group: green when MBros pays, red when the party pays MBros. */
+        .mbros-pays { color: var(--brand-strong); }
+        .pays-mbros { color: var(--danger); }
         #duesTable td[data-copy] { cursor: copy; }
         #duesTable td.copied { color: var(--brand-strong); }
-        .table td.lowlight { color: var(--text-subtle); }
+        /* Last entry in Due per party: smaller and lighter, header included. */
+        .table td.lowlight { color: var(--text-subtle); font-size: 0.75em; }
+        #duesTable th.lowlight { color: var(--text-subtle); font-size: 0.65rem; }
         /* 12 columns need landscape; the Share PDF uses the same page. */
         @page { size: A4 landscape; margin: 10mm; }
         @media print {
@@ -106,10 +105,6 @@
 
         <div class="card card-body no-print">
             <div class="toolbar">
-                <div class="field grow">
-                    <label for="partySearch">Parties</label>
-                    <input type="search" id="partySearch" class="input" placeholder="Search parties…" disabled>
-                </div>
                 <div class="field statement-only">
                     <label for="startDate">From</label>
                     <input type="date" id="startDate" class="input">
@@ -119,19 +114,14 @@
                     <input type="date" id="endDate" class="input">
                 </div>
                 <div class="picker-actions statement-only">
-                    <button type="button" class="btn btn-secondary" id="selectAll" disabled>Select shown</button>
+                    <button type="button" class="btn btn-secondary" id="selectAll" disabled>Select all</button>
                     <button type="button" class="btn btn-secondary" id="clearAll" disabled>Clear</button>
                 </div>
             </div>
             <div class="party-list statement-only" id="partyList">
                 <span class="subtle">Loading parties…</span>
             </div>
-            <div class="options">
-                <label class="option-toggle statement-only"><input type="checkbox" id="includeStaged" disabled> Include staged transactions (temp.load)</label>
-                <label class="option-toggle"><input type="checkbox" id="showLetterhead" checked> Letterhead on print and PDF</label>
-            </div>
-            <p class="subtle" style="margin-top: 8px;">Balance is what MBros owes the party: positive means MBros owes them, negative means they owe MBros.
-                Goods or money coming to MBros count as Received, going out as Paid. When MBros is the middle party, it owes the sender the sender amount and the receiver owes it the via sell amount.</p>
+            <label class="option-toggle statement-only"><input type="checkbox" id="includeStaged" disabled> Include staged transactions (temp.load)</label>
         </div>
 
         <p id="status" class="status" hidden style="margin-top: 16px;"></p>
@@ -215,28 +205,21 @@
                 <div>
                     <h2 id="duesTitle">Due per party</h2>
                     <p class="statement-meta" id="duesMeta"></p>
+                    <p class="statement-meta" id="duesLegend"><span class="mbros-pays">Green: MBros pays the party</span> · <span class="pays-mbros">Red: the party pays MBros</span></p>
                 </div>
             </div>
             <div class="table-wrap">
                 <table class="table" id="duesTable">
                     <thead>
-                    <tr class="group-row">
-                        <th></th>
-                        <th colspan="2" class="group-locked">Locked data</th>
-                        <th colspan="2" class="group-staged">Staged data</th>
-                        <th></th>
-                    </tr>
                     <tr>
                         <th>Party</th>
-                        <th class="num even group-locked mbros-pays">MBros pays</th>
-                        <th class="num even group-locked pays-mbros">Pays MBros</th>
-                        <th class="num even group-staged mbros-pays">MBros pays</th>
-                        <th class="num even group-staged pays-mbros">Pays MBros</th>
-                        <th class="nowrap">Last entry</th>
+                        <th class="num even group-locked">Locked data</th>
+                        <th class="num even group-staged">Staged data</th>
+                        <th class="nowrap lowlight">Last entry</th>
                     </tr>
                     </thead>
                     <tbody>
-                        <tr><td colspan="6" class="empty-state">Loading…</td></tr>
+                        <tr><td colspan="4" class="empty-state">Loading…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -276,6 +259,9 @@
     // Staged transactions, not yet moved into db2.loads; same columns as db2.loads.
     const STAGING_SHEET_ID = '1X6HriHjIE0XfAblDlE7Uf5a8JTHu00kW2SWvTFKL78w';
 
+    // Parties left off this page entirely (party list, statement, Due per party). Exact names as in the sheet.
+    const HIDDEN_PARTIES = ['MBros Canara'];
+
     async function loadEntries() {
         const [loads, staged] = await callSheetsApi([
             { type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.loads", id: "mbros-github-site" },
@@ -286,7 +272,7 @@
         const rows = [...loads.rows.map(row => ({ row })), ...staged.rows.map(row => ({ row, staged: true }))];
         rows.forEach(({ row, staged }, index) => {
             flows(row).forEach(([party, amount, rate]) => {
-                if (!party || party === MBROS || !amount) return;
+                if (!party || party === MBROS || HIDDEN_PARTIES.includes(party) || !amount) return;
                 if (!entriesByParty.has(party)) entriesByParty.set(party, []);
                 entriesByParty.get(party).push({
                     day: row.deliverySession, index, party, amount, rate, staged: !!staged,
@@ -308,16 +294,15 @@
 
     function renderPartyList() {
         const list = document.getElementById('partyList');
-        const query = document.getElementById('partySearch').value.trim().toLowerCase();
         const names = [...entriesByParty.keys()]
             .sort((a, b) => a.localeCompare(b))
-            .filter(name => entriesFor(name).length && (!query || name.toLowerCase().includes(query)));
+            .filter(name => entriesFor(name).length);
 
         list.replaceChildren();
         if (!names.length) {
             const empty = document.createElement('span');
             empty.className = 'subtle';
-            empty.textContent = 'No parties match.';
+            empty.textContent = 'No parties.';
             list.appendChild(empty);
             return;
         }
@@ -497,11 +482,10 @@
         setReportReady(true);
     }
 
-    // Every party with something due on the "As on" date, biggest first; the search box filters them.
+    // Every party with something due on the "As on" date, biggest first.
     // Each row shows the due from the loads sheet alone and the due once the staged rows are added.
     function renderDues() {
         const to = document.getElementById('endDate').value;
-        const query = document.getElementById('partySearch').value.trim().toLowerCase();
         const body = document.getElementById('duesTable').tBodies[0];
         body.replaceChildren();
         setReportReady(false);
@@ -510,7 +494,6 @@
         let settled = 0, stagedCount = 0;
         const dues = [];
         entriesByParty.forEach((entries, name) => {
-            if (query && !name.toLowerCase().includes(query)) return;
             const upTo = entries.filter(entry => !to || entry.day <= to);
             const current = Math.round(balanceOf(upTo.filter(entry => !entry.staged)));
             const withStaged = Math.round(balanceOf(upTo));
@@ -529,45 +512,43 @@
         document.getElementById('duesMeta').textContent = [
             `${dues.length} ${dues.length === 1 ? 'party' : 'parties'} with dues, ${settled} settled`,
             `${stagedCount} staged ${stagedCount === 1 ? 'entry' : 'entries'}`,
-            query && `matching "${query}"`,
             `Generated ${Mb.todayIST()}`
         ].filter(Boolean).join(' · ');
 
-        // A balance split into its two columns: what MBros pays, what the party pays MBros; null leaves a cell blank.
-        const split = balance => [balance > 0 ? balance : null, balance < 0 ? -balance : null];
-        // Amount cells are tinted by group and keep their plain value for click-to-copy.
-        const addRow = (label, amounts, last) => {
+        // One amount per group, [locked, staged], each a balance (+ MBros pays, − the party pays MBros) or null for blank.
+        // The amount shows without sign; its colour says who pays. Cells keep the plain amount for click-to-copy.
+        const addRow = (label, balances, last) => {
             const tr = addCells(body.insertRow(), [
-                label, ...amounts.map(amount => amount === null ? '' : Mb.formatINR(amount, 0)), last
-            ], [1, 2, 3, 4]);
-            amounts.forEach((amount, i) => {
+                label, ...balances.map(balance => balance === null ? '' : Mb.formatINR(Math.abs(balance), 0)), last
+            ], [1, 2]);
+            balances.forEach((balance, i) => {
                 const td = tr.cells[i + 1];
-                td.classList.add(i < 2 ? 'group-locked' : 'group-staged', i % 2 ? 'pays-mbros' : 'mbros-pays');
-                if (amount !== null) td.dataset.copy = String(amount);
+                td.classList.add(i ? 'group-staged' : 'group-locked');
+                if (balance) td.classList.add(balance > 0 ? 'mbros-pays' : 'pays-mbros');
+                if (balance !== null) td.dataset.copy = String(Math.abs(balance));
             });
+            tr.cells[3].className = 'lowlight';
             return tr;
         };
-        const totals = { current: [0, 0], withStaged: [0, 0] };
-        const addTo = (pair, balance) => split(balance).forEach((amount, i) => pair[i] += amount || 0);
+        // Totals per direction, then the net: [locked, staged] each.
+        const totals = { mbrosPays: [0, 0], paysMbros: [0, 0] };
 
-        // The staged columns stay blank for a party with no staged entries; staged entries that settle it show ₹0.
+        // The staged column stays blank for a party with no staged entries; staged entries that settle it show ₹0.
         dues.forEach(({ name, current, withStaged, staged, last }) => {
-            addTo(totals.current, current);
-            addTo(totals.withStaged, withStaged);
-            const stagedCells = !staged ? [null, null] : withStaged ? split(withStaged) : [0, 0];
-            addRow(name, [...split(current), ...stagedCells], last).cells[5].className = 'lowlight';
+            [current, withStaged].forEach((balance, i) => balance > 0 ? totals.mbrosPays[i] += balance : totals.paysMbros[i] += balance);
+            addRow(name, [current, staged ? withStaged : null], last);
         });
 
         if (!dues.length) {
             const td = body.insertRow().insertCell();
-            td.colSpan = 6;
+            td.colSpan = 4;
             td.className = 'empty-state';
-            td.textContent = query ? 'No parties match.' : 'Nothing is due. Every party is settled.';
+            td.textContent = 'Nothing is due. Every party is settled.';
         }
 
-        addRow('Total', [...totals.current, ...totals.withStaged], '').className = 'total-row';
-        const net = pair => pair[0] - pair[1];
-        addRow('Net', [...split(net(totals.current)), ...split(net(totals.withStaged))], '').className = 'total-row';
+        addRow('Total MBros pays', totals.mbrosPays, '').className = 'total-row';
+        addRow('Total parties pay MBros', totals.paysMbros, '').className = 'total-row';
+        addRow('Net', [0, 1].map(i => totals.mbrosPays[i] + totals.paysMbros[i]), '').className = 'total-row';
         setReportReady(true);
     }
 
@@ -600,7 +581,7 @@
             fileName: ['mbros-statement', names.length > 3 ? `${names.length}-parties` : names.join('-'), from, to].filter(Boolean).join('-'),
             title,
             status: document.getElementById('status'),
-            letterhead: document.getElementById('showLetterhead').checked,
+            letterhead: true,
             orientation: 'landscape',
             messages: {
                 title: document.getElementById('settlementTitle').textContent,
@@ -619,9 +600,9 @@
             fileName: `mbros-dues-${document.getElementById('endDate').value || Mb.todayIST()}`,
             title,
             status: document.getElementById('status'),
-            letterhead: document.getElementById('showLetterhead').checked,
+            letterhead: true,
             orientation: 'landscape',
-            cards: [{ table: document.getElementById('duesTable'), title, meta: document.getElementById('duesMeta').textContent }]
+            cards: [{ table: document.getElementById('duesTable'), title, meta: `${document.getElementById('duesMeta').textContent} · ${document.getElementById('duesLegend').textContent}` }]
         });
     }
 
@@ -639,7 +620,7 @@
             await loadEntries();
             dataReady = true;
             Mb.setStatus(status, null);
-            ['partySearch', 'selectAll', 'clearAll', 'includeStaged'].forEach(id => document.getElementById(id).disabled = false);
+            ['selectAll', 'clearAll', 'includeStaged'].forEach(id => document.getElementById(id).disabled = false);
             renderPartyList();
             renderView();
         } catch (error) {
@@ -649,10 +630,6 @@
         }
     }
 
-    document.getElementById('partySearch').addEventListener('input', () => {
-        renderPartyList();
-        if (currentView() === 'dues') renderDues();
-    });
     document.querySelectorAll('.view-switch button').forEach(button =>
         button.addEventListener('click', () => setView(button.dataset.view)));
     document.getElementById('selectAll').addEventListener('click', () => {
@@ -686,8 +663,6 @@
         renderPartyList();
         renderStatement();
     });
-    document.getElementById('showLetterhead').addEventListener('change', event =>
-        document.getElementById('printFrame').classList.toggle('no-letterhead', !event.target.checked));
     document.getElementById('sharePdf').addEventListener('click', shareStatement);
     ['startDate', 'endDate'].forEach(id => document.getElementById(id).addEventListener('change', renderView));
 
