@@ -30,6 +30,8 @@
         .table td.note { color: var(--text-muted); font-size: 0.8rem; max-width: 260px; }
         .table td.route { white-space: nowrap; color: var(--text-muted); font-size: 0.85rem; }
         #statementTable td:first-child { white-space: nowrap; }
+        /* Statement columns with no value in any entry row; the Share PDF drops them too (hidden th). */
+        #statementTable .col-empty { display: none; }
         .settlement { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
         .settlement li {
             padding: 12px 16px; border-radius: var(--radius-sm); border-left: 4px solid var(--brand);
@@ -350,6 +352,12 @@
     }
 
     const NUMERIC = [4, 5, 6, 7, 8, 10];
+
+    // Hide column i when empty[i]; rows with a colspan cell are left alone. No flags shows every column.
+    function hideEmptyColumns(table, empty = []) {
+        const rows = [table.tHead.rows[0], ...table.tBodies[0].rows].filter(tr => tr.cells.length === COLUMNS);
+        rows.forEach(tr => [...tr.cells].forEach((cell, i) => cell.classList.toggle('col-empty', !!empty[i])));
+    }
     const blankIfZero = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
 
     // One plain sentence per party from its closing balance (positive: MBros owes the party).
@@ -380,6 +388,7 @@
         const status = document.getElementById('status');
         body.replaceChildren();
         summaryBody.replaceChildren();
+        hideEmptyColumns(document.getElementById('statementTable'));
 
         document.getElementById('statementTitle').textContent = names.length ? `MBros Statement · ${names.join(', ')}` : 'MBros Statement';
         document.getElementById('statementMeta').textContent = names.length
@@ -444,6 +453,7 @@
         openingRow.className = 'opening-row';
 
         let running = opening;
+        const rowValues = [];
         shown.forEach(entry => {
             running += entry.amount;
             totals.pc += num(entry.pc);
@@ -451,7 +461,7 @@
             if (entry.amount > 0) totals.received += entry.amount;
             else totals.paid -= entry.amount;
 
-            const tr = addCells(body.insertRow(), [
+            const values = [
                 entry.day,
                 entry.party,
                 entry.staged ? `${entry.type} · staged` : entry.type,
@@ -464,7 +474,9 @@
                 entry.method,
                 Mb.formatINR(running, 0),
                 entry.notes
-            ], NUMERIC);
+            ];
+            rowValues.push(values);
+            const tr = addCells(body.insertRow(), values, NUMERIC);
             tr.cells[3].classList.add('route');
             tr.cells[11].className = 'note';
             if (running < 0) tr.cells[10].classList.add('negative');
@@ -489,6 +501,12 @@
             ''
         ], NUMERIC);
         totalRow.className = 'total-row';
+
+        // Only entry rows decide: the opening and closing rows always carry a label, balance and totals.
+        if (rowValues.length) {
+            hideEmptyColumns(document.getElementById('statementTable'),
+                rowValues[0].map((_, i) => rowValues.every(values => values[i] == null || String(values[i]).trim() === '')));
+        }
 
         renderSettlement(settlement, to || Mb.todayIST());
         setReportReady(true);
