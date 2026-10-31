@@ -64,8 +64,8 @@ sources:
   its print: same `@page` size and orientation, print CSS sizes × 0.75. A print CSS change on those pages
   needs the same change there. It reads extra `<thead>` rows above the column row as column groups, and gives
   columns whose `th` has class `even` one shared width; `group-locked` / `group-staged` cells get the light group tints. Both pages print the letterhead (`.print-frame` + `.letterhead` in
-  `assets/css/site.css`, repeated on every page) and pass it to the PDF, always (no page
-  switches it off any more; the `.no-letterhead` rule in `assets/css/site.css` is unused).
+  `assets/css/site.css`, repeated on every page) and pass it to the PDF; on `app/mbros-statement/` a checkbox
+  switches it off for both on the Statement tab only (`.no-letterhead`); Due per party always has it.
 - Dates are shown in IST. `Mb.toISTDate` is the shared helper; `app/deliveries/deliveries.js` and
   `customer-profit` still use their own IST helpers (logic kept as it was).
 - `app/deliveries/deliveries.js` and `app/profits/profits.js` were moved out of their HTML unchanged; their markup keeps

@@ -53,6 +53,7 @@
         body[data-view="statement"] .dues-only, body[data-view="dues"] .statement-only { display: none; }
         .option-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
         .option-toggle input { accent-color: var(--brand); width: 16px; height: 16px; }
+        .options { display: flex; flex-wrap: wrap; column-gap: 24px; }
         /* Due per party: one equal-width amount column per group (locked, staged). */
         #duesTable th.even { width: 20%; }
         /* Light column-group tints; on the black theme a faint wash, since the soft tokens are too deep there. */
@@ -121,7 +122,10 @@
             <div class="party-list statement-only" id="partyList">
                 <span class="subtle">Loading parties…</span>
             </div>
-            <label class="option-toggle statement-only"><input type="checkbox" id="includeStaged" disabled> Include staged transactions (temp.load)</label>
+            <div class="options statement-only">
+                <label class="option-toggle"><input type="checkbox" id="includeStaged" disabled> Include staged transactions (temp.load)</label>
+                <label class="option-toggle"><input type="checkbox" id="showLetterhead" checked> Letterhead on print and PDF</label>
+            </div>
         </div>
 
         <p id="status" class="status" hidden style="margin-top: 16px;"></p>
@@ -560,8 +564,13 @@
         document.querySelectorAll('.view-switch button').forEach(button =>
             button.setAttribute('aria-selected', String(button.dataset.view === view)));
         Mb.setStatus(document.getElementById('status'), null);
+        syncLetterhead();
         renderView();
     }
+
+    // The letterhead is optional on the statement (checkbox) and always printed on Due per party.
+    const letterheadOn = () => currentView() === 'dues' || document.getElementById('showLetterhead').checked;
+    const syncLetterhead = () => document.getElementById('printFrame').classList.toggle('no-letterhead', !letterheadOn());
 
     // Print and Share only work on a finished statement.
     function setReportReady(ready) {
@@ -581,7 +590,7 @@
             fileName: ['mbros-statement', names.length > 3 ? `${names.length}-parties` : names.join('-'), from, to].filter(Boolean).join('-'),
             title,
             status: document.getElementById('status'),
-            letterhead: true,
+            letterhead: letterheadOn(),
             orientation: 'landscape',
             messages: {
                 title: document.getElementById('settlementTitle').textContent,
@@ -659,6 +668,7 @@
             td.classList.remove('copied');
         }, 1000);
     });
+    document.getElementById('showLetterhead').addEventListener('change', syncLetterhead);
     document.getElementById('includeStaged').addEventListener('change', () => {
         renderPartyList();
         renderStatement();
