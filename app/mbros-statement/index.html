@@ -72,6 +72,9 @@
         .pays-mbros { color: var(--danger); }
         #duesTable td[data-copy] { cursor: copy; }
         #duesTable td.copied { color: var(--brand-strong); }
+        /* Party name in Due per party opens that party's statement. */
+        #duesTable td[data-party] { cursor: pointer; }
+        @media screen { #duesTable td[data-party]:hover { color: var(--brand-strong); text-decoration: underline; } }
         /* Last entry in Due per party: smaller and lighter, header included. */
         .table td.lowlight { color: var(--text-subtle); font-size: 0.75em; }
         #duesTable th.lowlight { color: var(--text-subtle); font-size: 0.65rem; }
@@ -546,7 +549,10 @@
         // The staged column stays blank for a party with no staged entries; staged entries that settle it show ₹0.
         dues.forEach(({ name, current, withStaged, staged, last }) => {
             [current, withStaged].forEach((balance, i) => balance > 0 ? totals.mbrosPays[i] += balance : totals.paysMbros[i] += balance);
-            addRow(name, [current, staged ? withStaged : null], last);
+            const tr = addRow(name, [current, staged ? withStaged : null], last);
+            tr.cells[0].dataset.party = name;
+            tr.cells[0].title = `Open ${name}'s statement`;
+            if (staged) tr.cells[0].dataset.staged = '1';
         });
 
         if (!dues.length) {
@@ -658,6 +664,18 @@
         renderStatement();
     });
     // Click an amount in Due per party to copy it as a plain number (no ₹, no commas); the cell says "Copied" briefly.
+    // Click a party name in Due per party to open the statement for that party alone.
+    // Staged transactions are included when that party's row shows a staged amount, so the totals match.
+    document.getElementById('duesTable').addEventListener('click', event => {
+        const td = event.target.closest('td[data-party]');
+        if (!td) return;
+        selected.clear();
+        selected.add(td.dataset.party);
+        document.getElementById('includeStaged').checked = !!td.dataset.staged;
+        renderPartyList();
+        setView('statement');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
     document.getElementById('duesTable').addEventListener('click', async event => {
         const td = event.target.closest('td[data-copy]');
         if (!td || td.classList.contains('copied')) return;
