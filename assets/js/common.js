@@ -206,7 +206,34 @@
         document.querySelector('.app-nav [aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
     }
 
+    // Put each page's description behind a small "i" button next to its title, to save space.
+    // A <p> with an id is live page content (e.g. the day title on Day Summary), so it stays visible.
+    function compactPageHeader() {
+        document.querySelectorAll('.page-header').forEach(header => {
+            const h1 = header.querySelector('h1');
+            const desc = h1 && [...h1.parentElement.children].find(el => el.tagName === 'P' && !el.id);
+            if (!desc) return;
+            const row = document.createElement('div');
+            row.className = 'page-title';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'page-info no-print';
+            button.textContent = 'i';
+            button.title = 'About this page';
+            button.setAttribute('aria-label', 'About this page');
+            button.setAttribute('aria-expanded', 'false');
+            button.addEventListener('click', () => {
+                const open = header.classList.toggle('show-desc');
+                button.setAttribute('aria-expanded', String(open));
+            });
+            h1.replaceWith(row);
+            row.append(h1, button);
+            desc.classList.add('page-desc');
+        });
+    }
+
     function start() {
+        compactPageHeader();
         renderShell();
         renderLock();
     }

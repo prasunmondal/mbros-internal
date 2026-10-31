@@ -255,11 +255,27 @@ img { max-width: 100%; display: block; }
 .app-main.wide .container { max-width: 1600px; }
 
 .page-header {
-    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px;
-    margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 16px;
 }
-.page-header p { margin-top: 4px; color: var(--text-muted); }
-.page-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.page-header > div:first-child { min-width: 0; }
+.page-header h1 { font-size: 1.4rem; }
+.page-header p { margin-top: 4px; color: var(--text-muted); font-size: 0.9rem; }
+.page-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+/* Title row: h1 plus the "i" button that shows the page description (common.js moves the description behind it). */
+.page-title { display: flex; align-items: center; gap: 8px; }
+.page-info {
+    display: grid; place-items: center; flex: none;
+    width: 22px; height: 22px; padding: 0; border-radius: 50%;
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-muted);
+    font: italic 700 0.75rem/1 Georgia, serif; cursor: pointer;
+}
+.page-info:hover, .page-info[aria-expanded="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-strong); }
+.page-desc { display: none; }
+.page-header.show-desc .page-desc { display: block; }
+/* Icon-only button (Print, Share). Give it a title and aria-label. */
+.btn-icon { padding: 8px; }
+.btn-icon svg { display: block; width: 18px; height: 18px; }
 
 .section { margin-top: 28px; }
 .section-title { margin-bottom: 12px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle); }
@@ -292,6 +308,8 @@ img { max-width: 100%; display: block; }
     .app-header .brand > span:last-child { display: none; }
     .app-main { padding-top: 20px; }
     h1 { font-size: 1.45rem; }
+    .page-header { margin-bottom: 12px; }
+    .page-header h1 { font-size: 1.15rem; }
 }
 
 /* ---------- Public site ---------- */
