@@ -85,7 +85,7 @@
                     <h1>Mondal Brothers Internal</h1>
                     <div class="field">
                         <label for="mbPassword">Password</label>
-                        <input class="input" id="mbPassword" type="password" autocomplete="current-password" required autofocus>
+                        <input class="input" id="mbPassword" type="password" inputmode="numeric" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="current-password" required autofocus>
                     </div>
                     <div class="status status-error" hidden></div>
                     <button class="btn btn-primary btn-block" type="submit">Unlock</button>
