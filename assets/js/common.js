@@ -143,12 +143,19 @@
         return toISTDate(Date.now());
     }
 
-    function formatNumber(value, decimals = 2) {
+    // Sitewide: money and counts show no decimals, KG shows 3, rates show paise only when they have any.
+    function formatNumber(value, decimals = 0) {
         const number = Number(value) || 0;
         return number.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
     }
 
-    function formatINR(value, decimals = 2) {
+    // A rate per KG: 112 stays "112", 112.5 shows "112.50".
+    function formatRate(value) {
+        const number = Number(value) || 0;
+        return formatNumber(number, Number.isInteger(Math.round(number * 100) / 100) ? 0 : 2);
+    }
+
+    function formatINR(value, decimals = 0) {
         const number = Number(value) || 0;
         return (number < 0 ? '−₹' : '₹') + formatNumber(Math.abs(number), decimals);
     }
@@ -238,7 +245,7 @@
         renderLock();
     }
 
-    window.Mb = { TOOLS, ready, url, escapeHtml, toISTDate, todayIST, formatNumber, formatINR, setStatus };
+    window.Mb = { TOOLS, ready, url, escapeHtml, toISTDate, todayIST, formatNumber, formatRate, formatINR, setStatus };
 
     // Loaded in <head>, so `Mb` exists before page scripts run; the shell goes in once the body is parsed.
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

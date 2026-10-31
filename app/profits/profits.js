@@ -142,7 +142,7 @@ function updateKPIs() {
         dueBalanceElement.textContent = `₹${latestDueBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
     }
     if (totalKgElement) {
-        totalKgElement.textContent = `${totalKg.toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG`;
+        totalKgElement.textContent = `${totalKg.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} KG`;
     }
     if (totalTripsElement) {
         totalTripsElement.textContent = totalTrips;
@@ -690,7 +690,7 @@ function updateActualMoneyBarChart(groupBy) {
                             const breakdown = breakdownMap[`${periodLabel}-${year}`];
 
                             if (!breakdown) {
-                                return `${label}: ₹${context.parsed.y.toLocaleString('en-IN')}`;
+                                return `${label}: ₹${context.parsed.y.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
                             }
 
                             const profit = breakdown.profit;
@@ -698,9 +698,9 @@ function updateActualMoneyBarChart(groupBy) {
                             const actual = breakdown.actualMoney;
 
                             return [
-                                `↓ ₹${profit.toLocaleString('en-IN')} (profit)`,
-                                `→ ₹${Math.abs(debt).toLocaleString('en-IN')} (debt${debt > 0 ? ' increase' : ' decrease'})`,
-                                `= ₹${actual.toLocaleString('en-IN')} (actual)`
+                                `↓ ₹${profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (profit)`,
+                                `→ ₹${Math.abs(debt).toLocaleString('en-IN', { maximumFractionDigits: 0 })} (debt${debt > 0 ? ' increase' : ' decrease'})`,
+                                `= ₹${actual.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (actual)`
                             ];
                         }
                     }
@@ -912,7 +912,7 @@ function updateActualMoneyLast12MonthsChart() {
                             const breakdown = breakdownMap[periodLabel];
 
                             if (!breakdown) {
-                                return `₹${context.parsed.y.toLocaleString('en-IN')}`;
+                                return `₹${context.parsed.y.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
                             }
 
                             const profit = breakdown.profit;
@@ -920,9 +920,9 @@ function updateActualMoneyLast12MonthsChart() {
                             const actual = breakdown.actualMoney;
 
                             return [
-                                `↓ ₹${profit.toLocaleString('en-IN')} (profit)`,
-                                `→ ₹${Math.abs(debt).toLocaleString('en-IN')} (debt${debt > 0 ? ' increase' : ' decrease'})`,
-                                `= ₹${actual.toLocaleString('en-IN')} (actual)`
+                                `↓ ₹${profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (profit)`,
+                                `→ ₹${Math.abs(debt).toLocaleString('en-IN', { maximumFractionDigits: 0 })} (debt${debt > 0 ? ' increase' : ' decrease'})`,
+                                `= ₹${actual.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (actual)`
                             ];
                         }
                     }

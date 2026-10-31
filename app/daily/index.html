@@ -149,7 +149,7 @@
     }
 
     const inr = value => Mb.formatINR(value, 0);
-    const kg = value => Mb.formatNumber(value, 1) + ' kg';
+    const kg = value => Mb.formatNumber(value, 3) + ' kg';
     const pc = value => Mb.formatNumber(value, 0) + ' pc';
     const text = value => String(value ?? '').trim();
 
@@ -254,7 +254,7 @@
             ['Transport expenses', num(sumOf(days, 'transport_expenses')) ? inr(sumOf(days, 'transport_expenses')) : null],
             ['Total expenses', fmt(sumOf(days, 'total_expenses'), inr), true],
             ['Transport income', num(sumOf(days, 'transport_income')) ? inr(sumOf(days, 'transport_income')) : null],
-            ['Profit', fmt(sumOf(days, 'profit'), value => Mb.formatINR(value, 2)), true]
+            ['Profit', fmt(sumOf(days, 'profit'), inr), true]
         ]);
 
         fillFacts('tripTable', [
@@ -303,7 +303,7 @@
             totals.prev += num(row.prevAmount);
             totals.balance += num(row.khataBalance);
             const tr = body.insertRow();
-            [row.name, blank(row.deliveredPc), blank(row.deliveredKg, 1), blank(row.rate), blank(row.deliverAmount),
+            [row.name, blank(row.deliveredPc), blank(row.deliveredKg, 3), num(row.rate) ? Mb.formatRate(row.rate) : '', blank(row.deliverAmount),
                 blank(row.paidCash), blank(row.paidOnline), blank(row.discount),
                 Mb.formatNumber(row.prevAmount, 0), Mb.formatNumber(row.khataBalance, 0)
             ].forEach((value, i) => {
@@ -315,7 +315,7 @@
         });
         const totalRow = body.insertRow();
         totalRow.className = 'total-row';
-        ['Total', Mb.formatNumber(totals.pc, 0), Mb.formatNumber(totals.kg, 1), '', Mb.formatNumber(totals.amount, 0),
+        ['Total', Mb.formatNumber(totals.pc, 0), Mb.formatNumber(totals.kg, 3), '', Mb.formatNumber(totals.amount, 0),
             Mb.formatNumber(totals.cash, 0), Mb.formatNumber(totals.online, 0), Mb.formatNumber(totals.discount, 0),
             Mb.formatNumber(totals.prev, 0), Mb.formatNumber(totals.balance, 0)
         ].forEach((value, i) => {

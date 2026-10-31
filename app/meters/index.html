@@ -102,8 +102,8 @@
                     const difference = currentValue - initialValue;
                     const unitsRequired = targetUnits - difference;
 
-                    differenceCell.textContent = difference;
-                    unitsCell.textContent = unitsRequired;
+                    differenceCell.textContent = Mb.formatNumber(difference);
+                    unitsCell.textContent = Mb.formatNumber(unitsRequired);
                     unitsCell.classList.toggle("units-left", true);
                     unitsCell.classList.toggle("negative", unitsRequired < 0);
                 };

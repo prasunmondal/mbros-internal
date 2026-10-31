@@ -429,7 +429,7 @@
             addCells(summaryBody.insertRow(), [
                 name,
                 Mb.formatINR(customerOpening, 0),
-                Mb.formatNumber(sums.kg, 1),
+                Mb.formatNumber(sums.kg, 3),
                 Mb.formatINR(sums.delivered, 0),
                 Mb.formatINR(sums.paid, 0),
                 Mb.formatINR(sums.discount, 0),
@@ -472,8 +472,8 @@
                 row.day,
                 row.name,
                 blankIfZero(row.deliveredPc),
-                blankIfZero(row.deliveredKg, 1),
-                blankIfZero(row.rate),
+                blankIfZero(row.deliveredKg, 3),
+                num(row.rate) ? Mb.formatRate(row.rate) : '',
                 blankIfZero(row.deliverAmount),
                 blankIfZero(row.cash),
                 blankIfZero(row.paidOnline),
@@ -497,7 +497,7 @@
         const totalRow = addCells(body.insertRow(), [
             to ? `Closing · ${to}` : 'Closing balance', '',
             Mb.formatNumber(totals.pc, 0),
-            Mb.formatNumber(totals.kg, 1),
+            Mb.formatNumber(totals.kg, 3),
             '',
             Mb.formatNumber(totals.delivered, 0),
             Mb.formatNumber(totals.cash, 0),
@@ -513,7 +513,7 @@
 
         setStat('openingStat', opening);
         document.getElementById('pcStat').textContent = Mb.formatNumber(totals.pc, 0);
-        document.getElementById('kgStat').textContent = Mb.formatNumber(totals.kg, 1);
+        document.getElementById('kgStat').textContent = Mb.formatNumber(totals.kg, 3);
         setStat('deliveredStat', totals.delivered);
         setStat('paidStat', totals.cash + totals.online);
         setStat('otherStat', totals.adjustment - totals.discount);

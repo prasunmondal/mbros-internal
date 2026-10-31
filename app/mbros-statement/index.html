@@ -438,7 +438,7 @@
             addCells(summaryBody.insertRow(), [
                 name,
                 Mb.formatINR(partyOpening, 0),
-                Mb.formatNumber(sums.kg, 1),
+                Mb.formatNumber(sums.kg, 3),
                 Mb.formatINR(sums.received, 0),
                 Mb.formatINR(sums.paid, 0),
                 Mb.formatINR(partyOpening + sums.received - sums.paid, 0)
@@ -467,8 +467,8 @@
                 entry.staged ? `${entry.type} · staged` : entry.type,
                 entry.route,
                 blankIfZero(entry.pc),
-                blankIfZero(entry.kg, 2),
-                blankIfZero(entry.rate, 2),
+                blankIfZero(entry.kg, 3),
+                num(entry.rate) ? Mb.formatRate(entry.rate) : '',
                 entry.amount > 0 ? Mb.formatNumber(entry.amount, 0) : '',
                 entry.amount < 0 ? Mb.formatNumber(-entry.amount, 0) : '',
                 entry.method,
@@ -492,7 +492,7 @@
         const totalRow = addCells(body.insertRow(), [
             to ? `Closing · ${to}` : 'Closing balance', '', '', '',
             Mb.formatNumber(totals.pc, 0),
-            Mb.formatNumber(totals.kg, 2),
+            Mb.formatNumber(totals.kg, 3),
             '',
             Mb.formatNumber(totals.received, 0),
             Mb.formatNumber(totals.paid, 0),

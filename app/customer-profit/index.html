@@ -180,14 +180,14 @@
                 c.orderId,
                 convertToIST(c.timestamp).toLocaleString(),
                 c.deliveredPc,
-                c.deliveredKg,
-                c.rate,
-                c.deliverAmount,
-                profitEntry ? profitEntry.profit.toFixed(2) : "N/A",
-                profitEntry ? profitEntry.deliveredKg.toFixed(3) : "N/A",
-                c.deliveredKg,
-                c.discount,
-                profitEntry ? profitValue.toFixed(2) : 0
+                Mb.formatNumber(c.deliveredKg, 3),
+                Mb.formatRate(c.rate),
+                Mb.formatNumber(c.deliverAmount),
+                profitEntry ? Mb.formatNumber(profitEntry.profit) : "N/A",
+                profitEntry ? Mb.formatNumber(profitEntry.deliveredKg, 3) : "N/A",
+                Mb.formatNumber(c.deliveredKg, 3),
+                Mb.formatNumber(c.discount),
+                profitEntry ? Mb.formatNumber(profitValue) : 0
             ].forEach((value, i) => {
                 const td = row.insertCell();
                 td.textContent = value;
@@ -204,7 +204,7 @@
 
         const totalRow = tableBody.insertRow();
         totalRow.className = "total-row";
-        ["TOTAL", "", "", totalCustKgDelivered, "", totalAmountDelivered, "", "", totalCustKgDelivered.toFixed(3), totalDiscount, totalProfit.toFixed(2)]
+        ["TOTAL", "", "", Mb.formatNumber(totalCustKgDelivered, 3), "", Mb.formatNumber(totalAmountDelivered), "", "", Mb.formatNumber(totalCustKgDelivered, 3), Mb.formatNumber(totalDiscount), Mb.formatNumber(totalProfit)]
             .forEach((value, i) => {
                 const td = totalRow.insertCell();
                 td.textContent = value;
@@ -213,7 +213,7 @@
 
         const hasRows = filteredCustomers.length > 0;
         setStat("profitDisplay", hasRows ? totalProfit : null);
-        setStat("profitDisplayDebtIncrementAdjusted", hasRows ? totalProfit.toFixed(2) - (finalBalance - startingBalance) : null);
+        setStat("profitDisplayDebtIncrementAdjusted", hasRows ? totalProfit - (finalBalance - startingBalance) : null);
         setStat("startingDebt", hasRows ? startingBalance : null);
         setStat("finalDebt", hasRows ? finalBalance : null);
         setStat("debtIncreased", hasRows ? (finalBalance - startingBalance) : null);

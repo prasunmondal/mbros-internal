@@ -346,13 +346,13 @@
         setText("statFreq", Mb.formatNumber(m3.perWeek, 1));
         setText("statFreqNote", note.text, note.cls);
         note = changeNote(m3.avgKg, prev3.avgKg, "prior 3 mo");
-        setText("statAvg", Mb.formatNumber(m3.avgKg, 1) + " kg");
+        setText("statAvg", Mb.formatNumber(m3.avgKg, 3) + " kg");
         setText("statAvgNote", note.text, note.cls);
 
         const kg30 = list.filter(o => o.date > addDays(today, -30)).reduce((s, o) => s + o.kg, 0);
         const kgPrev30 = list.filter(o => o.date > addDays(today, -60) && o.date <= addDays(today, -30)).reduce((s, o) => s + o.kg, 0);
         note = changeNote(kg30, kgPrev30, "prior 30 days");
-        setText("statKg30", Mb.formatNumber(kg30, 0) + " kg");
+        setText("statKg30", Mb.formatNumber(kg30, 3) + " kg");
         setText("statKg30Note", note.text, note.cls);
 
         if (name === ALL) {
@@ -410,16 +410,16 @@
             cell(row, p.label);
             cell(row, m.orders, "num");
             cell(row, Mb.formatNumber(m.perWeek, 2), "num");
-            cell(row, Mb.formatNumber(m.avgKg, 1), "num");
-            cell(row, Mb.formatNumber(m.kgPerWeek, 1), "num");
-            cell(row, Mb.formatNumber(m.kg, 1), "num");
+            cell(row, Mb.formatNumber(m.avgKg, 3), "num");
+            cell(row, Mb.formatNumber(m.kgPerWeek, 3), "num");
+            cell(row, Mb.formatNumber(m.kg, 3), "num");
             // Same window one year earlier.
             const lastYearKg = list
                 .filter(o => o.date >= monthsBefore(from, 12) && o.date <= monthsBefore(today, 12))
                 .reduce((s, o) => s + o.kg, 0);
             const yoy = changeNote(m.kg, lastYearKg, "");
             cell(row, lastYearKg ? yoy.text.replace(" vs ", "") : "–", "num " + yoy.cls);
-            cell(row, m.kg ? Mb.formatNumber(m.rate, 2) : "–", "num");
+            cell(row, m.kg ? Mb.formatRate(m.rate) : "–", "num");
             cell(row, Mb.formatINR(m.amount, 0), "num");
             cell(row, Mb.formatINR(paid, 0), "num");
             cell(row, m.amount ? Mb.formatNumber(paid / m.amount * 100, 0) + "%" : "–", "num");
@@ -537,7 +537,7 @@
     }
 
     function kgText(kg) {
-        return Mb.formatNumber(kg, 0) + " kg";
+        return Mb.formatNumber(kg, 3) + " kg";
     }
 
     // Change against the previous bucket and the same bucket last year (one comparison for years).
@@ -624,11 +624,11 @@
                     if (groupBy === "day") return formatDate(start, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
                     return bucketLabel(start, groupBy) + partial;
                 },
-                label: item => "Delivered KG: " + Mb.formatNumber(item.raw, 1) + " kg",
+                label: item => "Delivered KG: " + Mb.formatNumber(item.raw, 3) + " kg",
                 afterLabel: item => {
                     const v = values[item.dataIndex];
                     const lines = [v.orders + (v.orders === 1 ? " order" : " orders") +
-                        (v.orders ? " · avg " + Mb.formatNumber(v.kg / v.orders, 1) + " kg" : "")];
+                        (v.orders ? " · avg " + Mb.formatNumber(v.kg / v.orders, 3) + " kg" : "")];
                     bucketChanges(daily, keys[item.dataIndex], groupBy).forEach(c => lines.push(
                         changeText(c).text + " vs " + c.label + " (" + kgText(c.other) + (c.partial ? ", same days" : "") + ")"));
                     return lines;
@@ -686,7 +686,7 @@
                         " – " + formatDate(range.end, { day: "2-digit", month: "short" });
                     return labels[i];
                 },
-                label: item => item.dataset.label + ": " + Mb.formatNumber(item.raw, 1) + " kg" +
+                label: item => item.dataset.label + ": " + Mb.formatNumber(item.raw, 3) + " kg" +
                     (+item.dataset.label === thisYear && slotRange(thisYear, item.dataIndex, groupBy).end > dataEnd ? " (so far)" : ""),
                 // Each year against the year before it, over the same days.
                 footer: items => {
@@ -832,7 +832,7 @@
             PERIODS.forEach(p => {
                 const m = metrics(name, list, monthsBefore(today, p.months), today);
                 cell(row, m.orders ? Mb.formatNumber(m.perWeek, 1) : "–", "num edge");
-                cell(row, m.orders ? Mb.formatNumber(m.avgKg, 1) : "–", "num");
+                cell(row, m.orders ? Mb.formatNumber(m.avgKg, 3) : "–", "num");
             });
             const balance = latestBalance(name);
             cell(row, balance === null ? "–" : Mb.formatINR(balance, 0), "num edge");

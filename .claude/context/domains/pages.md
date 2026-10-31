@@ -47,11 +47,14 @@ sources:
   (`app/profits/profits.js`, `app/customer-performance/`) read axis, grid and legend colours from the
   tokens and redraw on `mb:themechange`; series colours are the same in both themes.
 - `assets/js/common.js`: `Mb` namespace (`TOOLS`, `url`, `escapeHtml`, `toISTDate`, `todayIST`,
-  `formatINR`, `formatNumber`, `setStatus`) and the app header/footer, inserted on
+  `formatINR`, `formatNumber`, `formatRate`, `setStatus`) and the app header/footer, inserted on
   DOMContentLoaded. It also runs the password gate: until the password (SHA-256 in `ACCESS_HASH`)
   is entered, the page is hidden and `Mb.ready` stays pending, and `callSheetsApi` awaits it.
   Unlock is remembered per browser in `localStorage` for `SESSION_MS` (30 minutes), then the page
   locks itself (an open page reloads to the gate); the footer "Lock" link clears it early. It resolves the site root from its own URL, so links work under any base path.
+- Number display (owner, 2026-10-31): money, counts, units and kilometres show no decimals; KG
+  always shows 3; rates show paise only when they have any (`Mb.formatRate`). Percentages and
+  orders per week keep 1–2 decimals.
 - `pay/` and `index.html` use `assets/css/site.css` only, without `assets/js/common.js`.
 
 ## Shared patterns
