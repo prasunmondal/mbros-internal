@@ -9,6 +9,8 @@
     const TOOLS = [
         { id: 'profits', path: 'app/profits/', title: 'Business Dashboard', group: 'Analytics',
           description: 'Profit, expenses, due balance and year-over-year trends.' },
+        { id: 'mbros-statement', path: 'app/mbros-statement/', title: 'MBros Statement', group: 'Reports',
+          description: 'Loads and payments between MBros and each supplier or party, with a running balance.' },
         { id: 'deliveries', path: 'app/deliveries/', title: 'Past Deliveries', group: 'Reports',
           description: 'Delivered KG per customer across date groups and years.' },
         { id: 'statement', path: 'app/statement/', title: 'Customer Statement', group: 'Reports',
@@ -18,9 +20,7 @@
         { id: 'daily', path: 'app/daily/', title: 'Day Summary', group: 'Reports',
           description: 'One day: loading, sales, dues, expenses, profit, staff and customer deliveries.' },
         { id: 'customer-profit', path: 'app/customer-profit/', title: 'Customer Profit', group: 'Reports',
-          description: 'Profit and debt movement for a customer over a date range.' },
-        { id: 'mbros-statement', path: 'app/mbros-statement/', title: 'MBros Statement', group: 'Reports',
-          description: 'Loads and payments between MBros and each supplier or party, with a running balance.' }
+          description: 'Profit and debt movement for a customer over a date range.' }
     ];
 
     // Password gate for every app page. A deterrent only: this is a static site, so the hash is
