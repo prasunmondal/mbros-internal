@@ -53,8 +53,9 @@
     }
 
     // messages: { title, lines } drawn first as a heading over one highlighted box per sentence, or omitted.
-    // summary: the totals table under a "SUMMARY" heading, or null. cards: [{ table, title, meta }], each a
-    // .card.section. letterhead: draw the business header (.letterhead) at the top of every page.
+    // summary: the totals table under a "SUMMARY" heading, or null. cards: [{ table, title, meta, footer }], each a
+    // .card.section; footer is optional, a list of elements drawn as muted lines under the card, keeping the
+    // green/red of spans with class mbros-pays / pays-mbros. letterhead: draw the business header (.letterhead) at the top of every page.
     // orientation: 'portrait' or 'landscape', matching the page's @page rule.
     function build({ messages, summary, cards, letterhead, orientation = 'portrait' }) {
         const { jsPDF } = window.jspdf;
@@ -174,6 +175,25 @@
             y = doc.lastAutoTable.finalY;
         }
 
+        // Lines under a card (.statement-meta: 10.5 pt muted, 15.75 line), one per element, 9 gap above the first.
+        function drawFooter(elements) {
+            y += 9;
+            elements.forEach(element => {
+                if (y + 15.75 > pageHeight - margin) {
+                    doc.addPage();
+                    y = bodyTop;
+                }
+                let x = margin + 15;
+                doc.setFont('helvetica', 'normal').setFontSize(10.5);
+                [...element.childNodes].forEach(node => {
+                    const text = pdfText(node.textContent);
+                    doc.setTextColor(payColorOf(node.className) || MUTED).text(text, x, baseline(y, 15.75, 10.5));
+                    x += doc.getTextWidth(text);
+                });
+                y += 15.75;
+            });
+        }
+
         // Each message: a brand-soft box with a 3 pt brand bar on the left, bold 12 pt text that wraps.
         if (messages?.lines.length) {
             doc.setFont('helvetica', 'bold').setFontSize(9.6).setTextColor(SUBTLE);
@@ -203,7 +223,10 @@
             doc.autoTable(tableOptions(visibleTable(summary), { startY: y, tableWidth: 345 }, true));
             y = doc.lastAutoTable.finalY;
         }
-        cards.forEach(card => drawCard(visibleTable(card.table), card.title, card.meta));
+        cards.forEach(card => {
+            drawCard(visibleTable(card.table), card.title, card.meta);
+            if (card.footer) drawFooter(card.footer);
+        });
 
         if (letterhead) drawLetterhead(doc, { margin, pageWidth, contentWidth, bandHeight, ruleHeight, stripHeight, baseline });
         return doc.output('blob');

@@ -56,6 +56,10 @@
         .options { display: flex; flex-wrap: wrap; column-gap: 24px; }
         /* Due per party: one equal-width amount column per group (locked, staged). */
         #duesTable th.even { width: 20%; }
+        /* The title is for print and the PDF only; on screen the tab already says what this is. */
+        @media screen { .dues-only > .card-header { display: none; } }
+        .dues-footer { padding: 12px 20px 16px; }
+        .dues-footer .statement-meta:first-child { margin-top: 0; }
         /* Light column-group tints; on the black theme a faint wash, since the soft tokens are too deep there. */
         #duesTable { --group-locked: var(--info-soft); --group-staged: var(--accent-soft); }
         @media screen {
@@ -71,8 +75,8 @@
         /* Last entry in Due per party: smaller and lighter, header included. */
         .table td.lowlight { color: var(--text-subtle); font-size: 0.75em; }
         #duesTable th.lowlight { color: var(--text-subtle); font-size: 0.65rem; }
-        /* 12 columns need landscape; the Share PDF uses the same page. */
-        @page { size: A4 landscape; margin: 10mm; }
+        /* Portrait on both tabs; the Share PDF uses the same page. */
+        @page { size: A4 portrait; margin: 10mm; }
         @media print {
             .table { font-size: 0.75rem; }
             .table th, .table td { padding: 5px 8px; }
@@ -208,8 +212,6 @@
             <div class="card-header">
                 <div>
                     <h2 id="duesTitle">Due per party</h2>
-                    <p class="statement-meta" id="duesMeta"></p>
-                    <p class="statement-meta" id="duesLegend"><span class="mbros-pays">Green: MBros pays the party</span> · <span class="pays-mbros">Red: the party pays MBros</span></p>
                 </div>
             </div>
             <div class="table-wrap">
@@ -226,6 +228,10 @@
                         <tr><td colspan="4" class="empty-state">Loading…</td></tr>
                     </tbody>
                 </table>
+            </div>
+            <div class="dues-footer">
+                <p class="statement-meta" id="duesMeta"></p>
+                <p class="statement-meta" id="duesLegend"><span class="mbros-pays">Green: MBros pays the party</span> · <span class="pays-mbros">Red: the party pays MBros</span></p>
             </div>
         </div>
 
@@ -591,7 +597,7 @@
             title,
             status: document.getElementById('status'),
             letterhead: letterheadOn(),
-            orientation: 'landscape',
+            orientation: 'portrait',
             messages: {
                 title: document.getElementById('settlementTitle').textContent,
                 lines: [...document.querySelectorAll('#settlementList li')].map(li => li.textContent)
@@ -610,8 +616,8 @@
             title,
             status: document.getElementById('status'),
             letterhead: true,
-            orientation: 'landscape',
-            cards: [{ table: document.getElementById('duesTable'), title, meta: `${document.getElementById('duesMeta').textContent} · ${document.getElementById('duesLegend').textContent}` }]
+            orientation: 'portrait',
+            cards: [{ table: document.getElementById('duesTable'), title, footer: [document.getElementById('duesMeta'), document.getElementById('duesLegend')] }]
         });
     }
 
