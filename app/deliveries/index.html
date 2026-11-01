@@ -30,9 +30,6 @@
                 <h1>Delivery report</h1>
                 <p>Delivered KG per customer, grouped by event period and compared across years.</p>
             </div>
-            <div id="loading" class="status status-info no-print" role="status" style="display: none;">
-                <span class="spinner" aria-hidden="true"></span> Fetching data…
-            </div>
         </div>
 
         <input type="date" id="calendarDate" hidden>
@@ -49,6 +46,7 @@
                         <button type="button" class="btn btn-secondary btn-icon" data-publish onclick="printReport()" title="Print PDF" aria-label="Print PDF" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg></button>
                         <button type="button" class="btn btn-secondary btn-icon" data-publish onclick="shareReportPdf()" title="Share PDF" aria-label="Share PDF" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
                         <button type="button" class="btn btn-secondary btn-icon" data-publish onclick="shareReportLink()" title="Share link" aria-label="Share link" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></button>
+                        <button type="button" class="btn btn-secondary btn-icon" data-publish onclick="showReportQr()" title="QR code for the link" aria-label="QR code for the link" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></button>
                     </div>
                     <div id="shareStatus" class="status" hidden></div>
                 </div>
@@ -74,6 +72,9 @@
 
             <section>
                 <div id="reportBanner" class="card report-banner">Delivered KG Report</div>
+                <div id="loading" class="status status-info no-print" role="status" style="display: none;">
+                    <span class="spinner" aria-hidden="true"></span> Fetching data…
+                </div>
 
                 <div id="yearReports">
                     <div class="card empty-state">
@@ -87,7 +88,18 @@
     </div>
 </main>
 
+<!-- QR code of the share link (showReportQr). The QR stays black on white in both themes so phones can scan it. -->
+<dialog id="qrDialog" class="qr-dialog" aria-labelledby="qrDialogTitle">
+    <div class="qr-dialog-head">
+        <h2 id="qrDialogTitle">Scan to open this report</h2>
+        <button type="button" class="btn btn-secondary btn-icon" onclick="document.getElementById('qrDialog').close()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div id="qrCode" class="qr-code"></div>
+    <p class="qr-note">Opens the same report on the phone that scans it, after the password.</p>
+</dialog>
+
 <script src="../../assets/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="../../assets/js/statement-pdf.js"></script>

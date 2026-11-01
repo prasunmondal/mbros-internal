@@ -28,8 +28,21 @@
 .publish-actions .btn { margin-top: 0; }
 #shareStatus { margin-top: 10px; }
 
-/* "Fetching data…" at the right end of the page header. */
-#loading { flex: none; padding: 7px 12px; }
+/* "Fetching data…" under the report banner, full width like it. */
+#loading { margin: -8px 0 20px; justify-content: center; }
+
+/* QR code dialog for the share link. */
+.qr-dialog {
+    width: min(360px, calc(100vw - 32px)); padding: 20px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+}
+.qr-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.qr-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.qr-dialog-head h2 { font-size: 1.05rem; }
+.qr-code { padding: 8px; border-radius: var(--radius-sm); background: #fff; }
+.qr-code svg { display: block; width: 100%; height: auto; }
+.qr-note { margin-top: 12px; color: var(--text-muted); font-size: 0.85rem; text-align: center; }
 
 /* Date groups */
 .date-group {
@@ -179,6 +192,8 @@
 #yearReports .year-report { overflow-x: auto; }
 
 @media (max-width: 900px) {
+    /* Phones: the report sits below the controls, so keep "Fetching data…" in view under the app header. */
+    #loading { position: fixed; top: calc(var(--header-h) + 8px); left: 12px; right: 12px; z-index: 15; margin: 0; box-shadow: var(--shadow); }
     .report-layout { grid-template-columns: minmax(0, 1fr); }
     .controls { position: static; max-height: none; }
 }

@@ -1941,6 +1941,41 @@ async function shareReportLink() {
 }
 
 
+// Show the share link as a QR code, so another phone can scan it and open the same report.
+function showReportQr() {
+
+    const status =
+        document.getElementById("shareStatus");
+
+    if (!getAllSelectedDates().length) {
+        Mb.setStatus(status, "error", "Add at least one date before sharing.");
+        return;
+    }
+
+    if (!window.qrcode) {
+        Mb.setStatus(status, "error", "QR tools did not load. Check the connection and reload.");
+        return;
+    }
+
+    Mb.setStatus(status, null);
+
+    const link = buildShareLink();
+
+    // Keep the address bar in step, as Share link does.
+    history.replaceState(null, "", link);
+
+    // Type 0 picks the smallest QR that fits; level M survives a slightly smudged screen.
+    const qr = qrcode(0, "M");
+    qr.addData(link);
+    qr.make();
+
+    document.getElementById("qrCode").innerHTML =
+        qr.createSvgTag({ cellSize: 4, margin: 8, scalable: true, title: `${getReportTitle()} - Delivery Report` });
+
+    document.getElementById("qrDialog").showModal();
+}
+
+
 // Rebuild the report from a shared link's query string; returns true when it held any dates.
 function restoreFromShareLink() {
 
