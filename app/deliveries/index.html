@@ -30,6 +30,9 @@
                 <h1>Delivery report</h1>
                 <p>Delivered KG per customer, grouped by event period and compared across years.</p>
             </div>
+            <div id="loading" class="status status-info no-print" role="status" style="display: none;">
+                <span class="spinner" aria-hidden="true"></span> Fetching data…
+            </div>
         </div>
 
         <input type="date" id="calendarDate" hidden>
@@ -65,9 +68,6 @@
 
                 <div class="control-section">
                     <button type="button" class="btn btn-primary btn-block" onclick="fetchData()">Get delivered KG</button>
-                    <p id="loading" class="status status-info" style="display: none;">
-                        <span class="spinner" aria-hidden="true"></span> Fetching data…
-                    </p>
                 </div>
 
             </aside>

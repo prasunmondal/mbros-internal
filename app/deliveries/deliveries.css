@@ -28,7 +28,8 @@
 .publish-actions .btn { margin-top: 0; }
 #shareStatus { margin-top: 10px; }
 
-#loading { margin-top: 10px; }
+/* "Fetching data…" at the right end of the page header. */
+#loading { flex: none; padding: 7px 12px; }
 
 /* Date groups */
 .date-group {

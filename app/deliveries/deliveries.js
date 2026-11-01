@@ -1005,7 +1005,7 @@ async function fetchData() {
 
     document.getElementById(
         "loading"
-    ).style.display = "block";
+    ).style.display = "flex";
 
 
     try {
