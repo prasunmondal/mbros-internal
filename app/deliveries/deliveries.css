@@ -23,6 +23,11 @@
 .control-section .label { display: block; margin-bottom: 8px; }
 .control-section .btn { margin-top: 8px; }
 
+/* Print / Share PDF / Share link icons under the report title; disabled until a report is shown. */
+.publish-actions { display: flex; gap: 8px; margin-top: 10px; }
+.publish-actions .btn { margin-top: 0; }
+#shareStatus { margin-top: 10px; }
+
 #loading { margin-top: 10px; }
 
 /* Date groups */

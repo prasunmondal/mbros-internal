@@ -41,6 +41,13 @@
                 <div class="control-section">
                     <label class="label" for="reportTitle">Report title</label>
                     <input type="text" id="reportTitle" class="input" value="Durga Puja" placeholder="Enter report title">
+                    <!-- Enabled by updatePublishActions() once a report is on screen. -->
+                    <div class="publish-actions">
+                        <button type="button" class="btn btn-secondary btn-icon" data-publish onclick="printReport()" title="Print PDF" aria-label="Print PDF" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg></button>
+                        <button type="button" class="btn btn-secondary btn-icon" data-publish onclick="shareReportPdf()" title="Share PDF" aria-label="Share PDF" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+                        <button type="button" class="btn btn-secondary btn-icon" data-publish onclick="shareReportLink()" title="Share link" aria-label="Share link" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></button>
+                    </div>
+                    <div id="shareStatus" class="status" hidden></div>
                 </div>
 
                 <div class="control-section">
@@ -58,9 +65,6 @@
 
                 <div class="control-section">
                     <button type="button" class="btn btn-primary btn-block" onclick="fetchData()">Get delivered KG</button>
-                    <button type="button" class="btn btn-secondary btn-block" onclick="printReport()">Print report</button>
-                    <button type="button" class="btn btn-secondary btn-block" onclick="shareReportLink()">Share link</button>
-                    <div id="shareStatus" class="status" hidden></div>
                     <p id="loading" class="status status-info" style="display: none;">
                         <span class="spinner" aria-hidden="true"></span> Fetching data…
                     </p>
@@ -84,6 +88,9 @@
 </main>
 
 <script src="../../assets/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="../../assets/js/statement-pdf.js"></script>
 <script src="deliveries.js"></script>
 </body>
 </html>

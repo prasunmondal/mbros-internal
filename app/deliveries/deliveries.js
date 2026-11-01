@@ -1136,6 +1136,8 @@ function renderDateGroupReports(
 
     if (!validGroups.length) {
 
+        updatePublishActions();
+
         container.innerHTML = `
             <div class="empty-state">
 
@@ -1173,6 +1175,26 @@ function renderDateGroupReports(
 
 
     applyDateHighlights();
+
+    updatePublishActions();
+}
+
+
+// Print / Share PDF / Share link only make sense once a report is on screen.
+function updatePublishActions() {
+
+    const ready =
+        !!document.querySelector("#yearReports .year-report table");
+
+    document
+        .querySelectorAll("[data-publish]")
+        .forEach(button => {
+            button.disabled = !ready;
+        });
+
+    if (!ready) {
+        Mb.setStatus(document.getElementById("shareStatus"), null);
+    }
 }
 
 
@@ -1721,6 +1743,122 @@ function printReport() {
 
     window.print();
 
+}
+
+
+/* ============================================================
+   SHARE AS PDF
+   ============================================================
+   Redraws the report tables on screen the way they print (deliveries.css @media print): A4
+   portrait, 18 mm top/bottom and 15 mm side margins, one group per page, same colours and
+   highlighted dates. Sizes are the CSS pixel sizes × 0.75 (1 CSS px = 0.75 pt at 100%).
+   A print CSS change here needs the same change in buildReportPdf. */
+
+function buildReportPdf() {
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+    const TEXT = "#1c2420", BRAND = "#1f6f4a", BORDER = "#e2e5e0", SURFACE_MUTED = "#f1f3f0";
+    const HIGHLIGHT_CELL = "#fff4b8", HIGHLIGHT_HEADER = "#ffe36e";
+    const mm = 72 / 25.4;
+    const margin = { top: 18 * mm, bottom: 18 * mm, left: 15 * mm, right: 15 * mm };
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // The PDF's built-in font has no ₹ or minus sign.
+    const pdfText = text => String(text).replace(/−/g, "-").replace(/₹/g, "Rs ").trim();
+
+    document.querySelectorAll("#yearReports .year-report").forEach((report, index) => {
+
+        if (index > 0) doc.addPage();   // .year-report + .year-report { break-before: page }
+
+        const table = report.querySelector("table");
+        if (!table) return;
+
+        // Title: h2 1.1rem bold, 10px gap, 1px rule under it.
+        let y = margin.top;
+        doc.setFont("helvetica", "bold").setFontSize(13.2).setTextColor(TEXT);
+        const titleLines = doc.splitTextToSize(pdfText(report.querySelector(".year-title")?.textContent || ""), pageWidth - margin.left - margin.right);
+        titleLines.forEach(line => {
+            y += 13.2 * 1.2;
+            doc.text(line, margin.left, y - 3.5);
+        });
+        y += 7.5;
+        doc.setDrawColor(BORDER).setLineWidth(0.75).line(margin.left, y, pageWidth - margin.right, y);
+        y += 8 * mm;   // print: table margin-top 8 mm
+
+        // Header: a date column shows its date, with the weekday drawn small underneath (didDrawCell).
+        const headCells = [...table.tHead.rows[0].cells];
+        const head = headCells.map(th => {
+            const lines = [...th.querySelectorAll("div")].map(div => pdfText(div.textContent));
+            return lines.length ? { content: `${lines[0]}\n `, day: lines[1] || "", className: th.className } : { content: pdfText(th.textContent), className: th.className };
+        });
+
+        const bodyRows = [...table.tBodies[0].rows];
+        const body = bodyRows.map(tr => [...tr.cells].map(td => pdfText(td.textContent)));
+        const cellClass = (row, column) => bodyRows[row].cells[column]?.className || "";
+
+        doc.autoTable({
+            startY: y,
+            head: [head.map(h => h.content)],
+            body,
+            theme: "grid",
+            margin,
+            styles: {
+                font: "helvetica", fontSize: 9.84, textColor: TEXT, halign: "center", valign: "middle",
+                lineColor: BORDER, lineWidth: 0.75, cellPadding: { top: 5.25, bottom: 5.25, left: 6.75, right: 6.75 }
+            },
+            headStyles: { fillColor: SURFACE_MUTED, textColor: TEXT, fontStyle: "bold" },
+            columnStyles: { 0: { halign: "left" } },
+            didParseCell: data => {
+                const styles = data.cell.styles;
+                if (data.section === "head") {
+                    const className = head[data.column.index].className;
+                    if (/\bclickable-date\b/.test(className)) styles.textColor = BRAND;
+                    if (/\bhighlight-date-header\b/.test(className)) styles.fillColor = HIGHLIGHT_HEADER;
+                    return;
+                }
+                const className = cellClass(data.row.index, data.column.index);
+                const rowClass = bodyRows[data.row.index].className;
+                if (rowClass.includes("total-row") || /\btotal-col\b/.test(className)) Object.assign(styles, { fontStyle: "bold", fillColor: SURFACE_MUTED });
+                if (/\bhighlight-date-cell\b/.test(className)) Object.assign(styles, { fontStyle: "bold", fillColor: HIGHLIGHT_CELL });
+            },
+            didDrawCell: data => {
+                const day = data.section === "head" && head[data.column.index].day;
+                if (!day) return;
+                // Weekday: 11px normal, under the date line.
+                doc.setFont("helvetica", "normal").setFontSize(8.25).setTextColor(BRAND);
+                doc.text(day, data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height - data.cell.padding("bottom") - 2, { align: "center" });
+            }
+        });
+    });
+
+    return doc.output("blob");
+}
+
+
+async function shareReportPdf() {
+
+    const status =
+        document.getElementById("shareStatus");
+
+    if (!document.querySelector("#yearReports .year-report table")) {
+        Mb.setStatus(status, "error", "Get the report first, then share it as a PDF.");
+        return;
+    }
+
+    if (!window.jspdf || !window.StatementPdf) {
+        Mb.setStatus(status, "error", "PDF tools did not load. Check the connection and reload.");
+        return;
+    }
+
+    Mb.setStatus(status, null);
+
+    await StatementPdf.shareFile({
+        blob: buildReportPdf(),
+        fileName: `${getReportTitle()}-delivery-report`,
+        title: `${getReportTitle()} - Delivery Report`
+    });
 }
 
 

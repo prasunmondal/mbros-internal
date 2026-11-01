@@ -284,8 +284,14 @@
             Mb.setStatus(status, 'error', 'PDF tools did not load. Check the connection and reload.');
             return;
         }
+        await shareFile({ blob: build(content), fileName, title });
+    }
+
+    // Share a ready PDF blob: phones get the share sheet (WhatsApp etc.); elsewhere it downloads.
+    // Also used by pages with their own PDF layout (app/deliveries/).
+    async function shareFile({ blob, fileName, title }) {
         fileName = fileName.replace(/[^\w-]+/g, '-').replace(/-+/g, '-').toLowerCase() + '.pdf';
-        const file = new File([build(content)], fileName, { type: 'application/pdf' });
+        const file = new File([blob], fileName, { type: 'application/pdf' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
@@ -302,5 +308,5 @@
         setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
 
-    window.StatementPdf = { share };
+    window.StatementPdf = { share, shareFile };
 })();

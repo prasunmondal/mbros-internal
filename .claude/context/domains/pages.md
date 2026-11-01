@@ -32,7 +32,7 @@ sources:
 | `app/` | internal overview, cards built from `Mb.TOOLS` | none |
 | `app/balance/` | customer khata balances as of a date | `deliveries` |
 | `app/statement/` | statement for one or more customers over a date range, combined running balance, per-customer summary, print + PDF share | `deliveries.2023` (only for ranges before 2026), `db2.deliveries` |
-| `app/deliveries/` | delivered KG per customer by date group, 2023 + current. "Share link" puts the title, date groups and highlighted dates in the query string (`title`, one `g` per group, `h`); opening the link rebuilds them and fetches the report (data itself is never in the link) | `deliveries.2023`, `db2.deliveries` |
+| `app/deliveries/` | delivered KG per customer by date group, 2023 + current. "Share link" puts the title, date groups and highlighted dates in the query string (`title`, one `g` per group, `h`); opening the link rebuilds them and fetches the report (data itself is never in the link). "Share PDF" redraws the on-screen report tables like its print (portrait, one group per page, highlighted dates) | `deliveries.2023`, `db2.deliveries` |
 | `app/profits/` | business dashboard: KPIs and trend charts | `cumilativeCalculations` |
 | `app/daily/` | day summary report for a chosen date (`?date=YYYY-MM-DD`): loading, sales and dues, expenses and profit, trip and staff, notes, customer deliveries | `cumilativeCalculations`, `db2.deliveries`, `deliveries.2023` (days before 2026) |
 | `app/mbros-statement/` | MBros's ledger with one or more parties (suppliers, staff, accounts) over a date range: one plain sentence per party saying who pays whom at the end date, running balance (columns with no value in any entry row are hidden, in print and PDF too), per-party table, print + PDF share (portrait). A checkbox adds staged rows from `temp.load`, marked "staged". A sliding switch picks the tab, "Due per party" first and default: every party with a non-zero balance on the "As on" date, biggest first, one equal-width amount column each for "Locked data" and "Staged data" (locked + staged, blank for a party with no staged rows), coloured green when MBros pays and red when the party pays MBros; total per direction and net for both, covering every party; title shown in print and PDF only, counts and colour legend under the table; print and Share PDF follow the active tab. Parties in `HIDDEN_PARTIES` (in the page) are left off entirely | `db2.loads`, `temp.load` |
@@ -68,8 +68,9 @@ sources:
 - Data pages: load → `Mb.setStatus(…, "info")` → `callSheetsApi([...])` → transform `rows` →
   build DOM with `textContent` → clear status, or show an error status on failure.
 - Share buttons: phones get the Web Share sheet, other browsers download the file
-  (`app/customer-performance/` PNG; `app/statement/` and `app/mbros-statement/` PDF via version-pinned jsPDF +
-  jspdf-autotable from jsDelivr).
+  (`app/customer-performance/` PNG; `app/statement/`, `app/mbros-statement/` and `app/deliveries/` PDF via version-pinned jsPDF +
+  jspdf-autotable from jsDelivr). `StatementPdf.shareFile` does the share-or-download for any PDF blob;
+  `app/deliveries/deliveries.js` (`buildReportPdf`) has its own layout, so a change to its print CSS needs the same change there.
 - Statement PDFs: `assets/js/statement-pdf.js` (`StatementPdf.share`) redraws the page's own tables to look like
   its print: same `@page` size and orientation, print CSS sizes × 0.75. A print CSS change on those pages
   needs the same change there. It reads extra `<thead>` rows above the column row as column groups, and gives
