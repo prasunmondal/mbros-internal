@@ -12,8 +12,11 @@
   "icons": [
     { "src": "assets/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "assets/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "assets/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "assets/img/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "assets/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "assets/img/screenshot-wide.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Overview of the internal tools on desktop" },
+    { "src": "assets/img/screenshot-narrow.png", "sizes": "824x1830", "type": "image/png", "form_factor": "narrow", "label": "Overview of the internal tools on a phone" }
   ],
   "shortcuts": [
     { "name": "Business Dashboard", "url": "./app/profits/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] },
