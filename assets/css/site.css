@@ -209,6 +209,8 @@ img { max-width: 100%; display: block; }
 .status-info { background: var(--info-soft); color: var(--info-text); }
 .status-error { background: var(--danger-soft); color: var(--danger-text); }
 .status-empty { background: var(--surface-muted); color: var(--text-muted); }
+.status-success { background: var(--brand-soft); color: var(--brand-strong); }
+.status > span { min-width: 0; overflow-wrap: anywhere; } /* long text such as a shared link wraps */
 
 .spinner {
     display: inline-block; vertical-align: -3px;

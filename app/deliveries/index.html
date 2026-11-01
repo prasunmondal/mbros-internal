@@ -59,6 +59,8 @@
                 <div class="control-section">
                     <button type="button" class="btn btn-primary btn-block" onclick="fetchData()">Get delivered KG</button>
                     <button type="button" class="btn btn-secondary btn-block" onclick="printReport()">Print report</button>
+                    <button type="button" class="btn btn-secondary btn-block" onclick="shareReportLink()">Share link</button>
+                    <div id="shareStatus" class="status" hidden></div>
                     <p id="loading" class="status status-info" style="display: none;">
                         <span class="spinner" aria-hidden="true"></span> Fetching data…
                     </p>

@@ -1725,6 +1725,117 @@ function printReport() {
 
 
 /* ============================================================
+   SHARE AS LINK
+   ============================================================
+   The link carries the whole report setup in its query string, so opening it rebuilds the same
+   report: ?title=…&g=<dates of group 1>&g=<dates of group 2>&h=<highlighted dates>.
+   Dates are YYYY-MM-DD joined by commas; an empty `g=` keeps an empty group. Data is not in the
+   link: it is fetched fresh on open (behind the password gate, like any app page). */
+
+const SHARE_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function buildShareLink() {
+
+    const params = new URLSearchParams();
+
+    params.set("title", getReportTitle());
+
+    dateGroups.forEach(group =>
+        params.append("g", group.dates.join(","))
+    );
+
+    if (highlightedDates.length) {
+        params.set("h", highlightedDates.join(","));
+    }
+
+    const url = new URL(location.href);
+    url.search = params.toString();
+    url.hash = "";
+    return url.href;
+}
+
+
+function parseShareDates(value) {
+
+    return [...new Set(
+        String(value || "")
+            .split(",")
+            .map(d => d.trim())
+            .filter(d => SHARE_DATE.test(d))
+    )].sort();
+}
+
+
+async function shareReportLink() {
+
+    const status =
+        document.getElementById("shareStatus");
+
+    if (!getAllSelectedDates().length) {
+        Mb.setStatus(status, "error", "Add at least one date before sharing.");
+        return;
+    }
+
+    const link = buildShareLink();
+
+    // Keep the address bar in step, so a refresh or bookmark gives the same report too.
+    history.replaceState(null, "", link);
+
+    // Phones: the share sheet (WhatsApp etc.). Elsewhere: copy to the clipboard.
+    if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+        try {
+            await navigator.share({ title: `${getReportTitle()} - Delivery Report`, url: link });
+            Mb.setStatus(status, null);
+            return;
+        } catch (error) {
+            if (error.name === "AbortError") return;
+        }
+    }
+
+    try {
+        await navigator.clipboard.writeText(link);
+        Mb.setStatus(status, "success", "Link copied. Anyone opening it sees this report after unlocking.");
+    } catch {
+        // Clipboard blocked (e.g. plain http): show the link so it can be copied by hand.
+        Mb.setStatus(status, "info", link);
+        status.querySelector(".spinner")?.remove();
+    }
+}
+
+
+// Rebuild the report from a shared link's query string; returns true when it held any dates.
+function restoreFromShareLink() {
+
+    const params = new URLSearchParams(location.search);
+
+    if (!params.has("g")) {
+        return false;
+    }
+
+    const title = params.get("title");
+    const titleInput = document.getElementById("reportTitle");
+
+    if (title !== null && titleInput) {
+        titleInput.value = title;
+        const banner = document.getElementById("reportBanner");
+        if (banner) banner.textContent = `${getReportTitle()} - Delivery Report`;
+    }
+
+    dateGroups = params.getAll("g").map(value => ({
+        id: nextGroupId++,
+        dates: parseShareDates(value)
+    }));
+
+    highlightedDates = parseShareDates(params.get("h"));
+
+    renderDateGroups();
+    renderHighlightedDates();
+
+    return getAllSelectedDates().length > 0;
+}
+
+
+/* ============================================================
    INITIALIZATION
    ============================================================ */
 
@@ -1813,6 +1924,14 @@ document.addEventListener(
 
                 }
             );
+        }
+
+
+        // Opened from a shared link: rebuild the setup and load the report straight away.
+        if (restoreFromShareLink()) {
+
+            fetchData();
+
         }
 
     }
