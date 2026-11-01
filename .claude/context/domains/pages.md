@@ -61,6 +61,8 @@ sources:
 - Installable app (ADR-004): `manifest.webmanifest` and `sw.js` at the root; every app page `<head>`
   links the manifest and has the Apple/theme meta tags, and `assets/js/common.js` registers the worker. Site
   files are network first with an offline fallback; sheet data is never cached by the worker.
+  The header shows an "Install app" button only while Chrome/Edge report the app installable
+  (`beforeinstallprompt`); Safari and Firefox never show it.
 
 ## Shared patterns
 - Data pages: load → `Mb.setStatus(…, "info")` → `callSheetsApi([...])` → transform `rows` →

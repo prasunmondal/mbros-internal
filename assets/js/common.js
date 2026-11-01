@@ -187,8 +187,15 @@
                         <span>Mondal Brothers <span class="brand-sub">Internal</span></span>
                     </a>
                     <nav class="app-nav" aria-label="Tools">${links}</nav>
+                    <button class="btn btn-primary app-install" type="button" data-install hidden title="Install as an app on this device" aria-label="Install app">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                        <span>Install app</span>
+                    </button>
                 </div>
             </header>`);
+
+        document.querySelector('[data-install]').addEventListener('click', promptInstall);
+        updateInstallButton();
 
         document.body.insertAdjacentHTML('beforeend', `
             <footer class="app-footer">
@@ -243,6 +250,36 @@
         compactPageHeader();
         renderShell();
         renderLock();
+    }
+
+    // "Install app" button in the header. Chrome/Edge fire `beforeinstallprompt` only while the app
+    // is installable and not yet installed; we keep the event and show the button instead of
+    // Chrome's own mini-infobar. Other browsers (Safari, Firefox) never fire it, so no button there.
+    let installPrompt = null;
+
+    function updateInstallButton() {
+        const button = document.querySelector('[data-install]');
+        if (button) button.hidden = !installPrompt;
+    }
+
+    window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        installPrompt = event;
+        updateInstallButton();
+    });
+
+    window.addEventListener('appinstalled', () => {
+        installPrompt = null;
+        updateInstallButton();
+    });
+
+    async function promptInstall() {
+        if (!installPrompt) return;
+        const prompt = installPrompt;
+        installPrompt = null; // an event can be prompted only once
+        updateInstallButton();
+        await prompt.prompt();
+        // If dismissed, Chrome fires beforeinstallprompt again later and the button comes back.
     }
 
     // Installable app (PWA): the service worker at the site root caches pages so the app opens

@@ -250,6 +250,9 @@ img { max-width: 100%; display: block; }
 }
 .app-nav a:hover { background: var(--surface-muted); color: var(--text); }
 .app-nav a[aria-current="page"] { background: var(--brand-soft); color: var(--brand-strong); }
+.app-install { flex: none; margin-left: auto; padding: 6px 12px; font-size: 0.85rem; }
+.app-install[hidden] { display: none; }
+.app-install svg { width: 16px; height: 16px; }
 
 .app-main { padding: 28px 0 48px; }
 .app-main.wide .container { max-width: 1600px; }
@@ -306,6 +309,8 @@ img { max-width: 100%; display: block; }
 @media (max-width: 720px) {
     .app-header-inner { gap: 12px; padding: 0 12px; }
     .app-header .brand > span:last-child { display: none; }
+    .app-install span { display: none; } /* icon only on phones, the nav needs the room */
+    .app-install { padding: 6px 9px; }
     .app-main { padding-top: 20px; }
     h1 { font-size: 1.45rem; }
     .page-header { margin-bottom: 12px; }
