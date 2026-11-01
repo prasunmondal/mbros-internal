@@ -245,6 +245,14 @@
         renderLock();
     }
 
+    // Installable app (PWA): the service worker at the site root caches pages so the app opens
+    // offline; sheet data still needs the network. Needs https (or localhost).
+    if ('serviceWorker' in navigator && window.isSecureContext) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register(url('sw.js')).catch(error => console.warn('Service worker not registered', error));
+        });
+    }
+
     window.Mb = { TOOLS, ready, url, escapeHtml, toISTDate, todayIST, formatNumber, formatRate, formatINR, setStatus };
 
     // Loaded in <head>, so `Mb` exists before page scripts run; the shell goes in once the body is parsed.

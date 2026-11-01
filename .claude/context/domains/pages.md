@@ -1,7 +1,9 @@
 ---
 status: VERIFIED
-last_verified: 2026-10-30
+last_verified: 2026-11-01
 sources:
+  - manifest.webmanifest
+  - sw.js
   - index.html
   - pay/index.html
   - app/index.html
@@ -56,6 +58,9 @@ sources:
   always shows 3; rates show paise only when they have any (`Mb.formatRate`). Percentages and
   orders per week keep 1–2 decimals.
 - `pay/` and `index.html` use `assets/css/site.css` only, without `assets/js/common.js`.
+- Installable app (ADR-004): `manifest.webmanifest` and `sw.js` at the root; every app page `<head>`
+  links the manifest and has the Apple/theme meta tags, and `assets/js/common.js` registers the worker. Site
+  files are network first with an offline fallback; sheet data is never cached by the worker.
 
 ## Shared patterns
 - Data pages: load → `Mb.setStatus(…, "info")` → `callSheetsApi([...])` → transform `rows` →
@@ -77,7 +82,9 @@ sources:
 ## Adding a page
 1. New folder `app/<id>/index.html` copying an existing small page's `<head>`; `data-page="<id>"`.
 2. Add it to `Mb.TOOLS` in `assets/js/common.js` (nav + overview card).
-3. Add a row above, and to `domains/data-access.md` if it reads a new worksheet.
+3. Copy the manifest/meta tags into its `<head>` and add its files to `PRECACHE` in `sw.js`.
+4. Add a row above, and to `domains/data-access.md` if it reads a new worksheet.
 
 ## Decisions
 - ADR-003 folder-per-page site with a shared design system, no build step
+- ADR-004 installable PWA

@@ -18,7 +18,9 @@ app/                  internal overview; one folder per tool (app/<tool>/index.h
 assets/css/site.css   design system (tokens, components, layouts)
 assets/js/config.js   GridBase client: all Google Sheets reads go through callSheetsApi()
 assets/js/common.js   app header/nav and helpers (the `Mb` namespace)
-assets/img/           QR code, favicon
+assets/img/           QR code, favicon, app icons
+manifest.webmanifest  installable app (PWA) manifest
+sw.js                 service worker: offline cache for pages and assets
 ```
 
 ## Run locally
@@ -33,5 +35,11 @@ Then open http://localhost:3000. Data pages read live Google Sheets through the 
 
 1. Create `app/<id>/index.html` (copy the `<head>` of a small page such as `app/calculator/`).
 2. Set `<body data-page="<id>">` and add the tool to `TOOLS` in `assets/js/common.js`.
+3. Add its files to `PRECACHE` in `sw.js` so it opens offline.
+
+## Install as an app
+
+Open `/app/` over https on a phone: Android Chrome shows "Install app" (or menu → Install);
+iPhone Safari: Share → Add to Home Screen. Data still needs the internet.
 
 Architecture decisions are recorded in `.claude/context/decisions/`.

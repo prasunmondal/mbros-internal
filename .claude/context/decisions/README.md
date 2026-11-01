@@ -12,3 +12,4 @@ Format: Status, Date, Context, Decision, Alternatives, Consequences (≤ 150 lin
 | [ADR-001](ADR-001-gridbase-engine-for-data.md) | All sheet access goes through the GridBase engine | Accepted |
 | [ADR-002](ADR-002-text-plain-post.md) | POST bodies as text/plain JSON to avoid the CORS preflight | Accepted |
 | [ADR-003](ADR-003-site-structure-and-shared-assets.md) | Folder-per-page site with a shared design system, no build step | Accepted |
+| [ADR-004](ADR-004-installable-pwa.md) | The internal app is an installable PWA (root manifest + service worker) | Accepted |
