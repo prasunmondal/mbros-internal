@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>MBros Statement · Mondal Brothers</title>
+    <title>Statement · Mondal Brothers</title>
     <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
     <link rel="manifest" href="../../manifest.webmanifest">
     <link rel="apple-touch-icon" href="../../assets/img/apple-touch-icon.png">
@@ -44,22 +44,59 @@
             padding: 12px 16px; border-radius: var(--radius-sm); border-left: 4px solid var(--brand);
             background: var(--brand-soft); font-size: 1.05rem; font-weight: 600;
         }
-        /* Statement / Due per party switch: the thumb slides under the chosen tab. */
+        /* Due per party / Statement / Customer Statement switch: the thumb slides under the chosen tab. */
         .view-switch {
-            position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; margin-bottom: 16px;
+            position: relative; display: inline-grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 16px;
             padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-muted);
         }
         .view-switch::before {
-            content: ""; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px);
+            content: ""; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3);
             border-radius: 999px; background: var(--brand); box-shadow: var(--shadow-sm); transition: transform 0.2s ease;
         }
         body[data-view="statement"] .view-switch::before { transform: translateX(100%); }
+        body[data-view="customer"] .view-switch::before { transform: translateX(200%); }
         .view-switch button {
-            position: relative; padding: 8px 24px; border: 0; border-radius: 999px; background: none;
+            position: relative; padding: 8px 20px; border: 0; border-radius: 999px; background: none; white-space: nowrap;
             font: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: color 0.2s ease;
         }
         .view-switch button[aria-selected="true"] { color: #fff; }
-        body[data-view="statement"] .dues-only, body[data-view="dues"] .statement-only { display: none; }
+        /* Phones: the switch spans the width and long labels wrap. */
+        @media (max-width: 560px) {
+            .view-switch { display: grid; border-radius: 20px; }
+            .view-switch::before { border-radius: 16px; }
+            .view-switch button { padding: 6px 4px; font-size: 0.8rem; white-space: normal; border-radius: 16px; }
+        }
+        body:not([data-view="dues"]) .dues-only,
+        body:not([data-view="statement"]) .statement-only,
+        body:not([data-view="customer"]) .customer-only,
+        body[data-view="customer"] .mbros-only { display: none; }
+        /* Customer Statement tab. */
+        .customer-list {
+            margin-top: 12px; max-height: 260px; overflow-y: auto;
+            display: grid; gap: 2px 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;
+        }
+        .customer-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        .customer-option:hover { background: var(--surface-muted); }
+        .customer-option input { accent-color: var(--brand); width: 16px; height: 16px; flex: none; }
+        .customer-option .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .customer-option .subtle { font-variant-numeric: tabular-nums; }
+        .column-toggles { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 0.9rem; }
+        .column-toggles label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+        .column-toggles input { accent-color: var(--brand); width: 16px; height: 16px; }
+        /* Optional customer statement columns (1-based: name 2, rate 5, discount 9, adjustment 10, counter balance 11, notes 13). */
+        #custStatementTable.hide-name :is(th, td):nth-child(2),
+        #custStatementTable.hide-rate :is(th, td):nth-child(5),
+        #custStatementTable.hide-discount :is(th, td):nth-child(9),
+        #custStatementTable.hide-adjustment :is(th, td):nth-child(10),
+        #custStatementTable.hide-counter-balance :is(th, td):nth-child(11),
+        #custStatementTable.hide-notes :is(th, td):nth-child(13) { display: none; }
+        .totals-table { max-width: 460px; }
+        .totals-table td:last-child { font-weight: 700; }
+        .totals-table tr.total-row td { font-size: 1rem; }
+        #custStatementTable td:first-child { white-space: nowrap; }
+        #custStatementTable.hide-sums td.sum { color: transparent; }   /* keeps the row's background, unlike visibility */
+        #custStatementTitle.hide-names #custStatementNames { display: none; }
         .option-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
         .option-toggle input { accent-color: var(--brand); width: 16px; height: 16px; }
         .options { display: flex; flex-wrap: wrap; column-gap: 24px; }
@@ -96,15 +133,15 @@
         }
     </style>
 </head>
-<body data-page="mbros-statement" data-view="dues">
+<body data-page="statements" data-view="dues">
 
 <main class="app-main wide">
     <div class="container">
 
         <div class="page-header no-print">
             <div>
-                <h1>MBros Statement</h1>
-                <p>Loads and payments between MBros and each party, from the loads sheet.</p>
+                <h1>Statement</h1>
+                <p>Loads and payments between MBros and each party, and customer statements from deliveries.</p>
             </div>
             <div class="page-actions">
                 <button type="button" class="btn btn-secondary btn-icon" id="printBtn" onclick="window.print()" disabled title="Print" aria-label="Print"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg></button>
@@ -115,11 +152,54 @@
         </div>
 
         <div class="view-switch no-print" role="tablist" aria-label="View">
-            <button type="button" role="tab" data-view="dues" aria-selected="true">Due per party</button>
-            <button type="button" role="tab" data-view="statement" aria-selected="false">Statement</button>
+            <button type="button" role="tab" data-view="dues" aria-selected="true">Business Txn Overview</button>
+            <button type="button" role="tab" data-view="statement" aria-selected="false">Business</button>
+            <button type="button" role="tab" data-view="customer" aria-selected="false">Customer</button>
         </div>
 
-        <div class="card card-body no-print">
+        <div class="card card-body no-print customer-only">
+            <div class="toolbar">
+                <div class="field grow">
+                    <label for="customerSearch">Customers</label>
+                    <input type="search" id="customerSearch" class="input" placeholder="Search customers…" disabled>
+                </div>
+                <div class="field">
+                    <label for="custStartDate">From</label>
+                    <input type="date" id="custStartDate" class="input">
+                </div>
+                <div class="field">
+                    <label for="custEndDate">To</label>
+                    <input type="date" id="custEndDate" class="input">
+                </div>
+                <div class="picker-actions">
+                    <button type="button" class="btn btn-secondary" id="custSelectAll" disabled>Select shown</button>
+                    <button type="button" class="btn btn-secondary" id="custClearAll" disabled>Clear</button>
+                </div>
+            </div>
+            <div class="customer-list" id="customerList">
+                <span class="subtle">Loading customers…</span>
+            </div>
+            <div class="column-toggles" id="columnToggles">
+                <span class="label">Show columns</span>
+                <label><input type="checkbox" data-column="name" checked> Name</label>
+                <label><input type="checkbox" data-column="rate" checked> Rate</label>
+                <label><input type="checkbox" data-column="discount" checked> Discount</label>
+                <label><input type="checkbox" data-column="adjustment" checked> Adjustment</label>
+                <label><input type="checkbox" data-column="counter-balance"> Counter Balance</label>
+                <label><input type="checkbox" data-column="notes"> Notes</label>
+            </div>
+            <div class="column-toggles">
+                <span class="label">Show</span>
+                <label><input type="checkbox" id="showSummary" checked> Summary</label>
+                <label><input type="checkbox" id="showSums" checked> Totals in closing row</label>
+                <label><input type="checkbox" id="showTitleNames" checked> Name in title</label>
+            </div>
+            <p class="subtle" style="margin-top: 8px;">Records from 2023 load automatically when the range starts before 2026. Balance in the list is each customer's latest khata balance.</p>
+        </div>
+
+        <p id="custStatus" class="status customer-only" hidden style="margin-top: 16px;"></p>
+
+        <div class="card card-body no-print mbros-only">
             <div class="toolbar">
                 <div class="field statement-only">
                     <label for="startDate">From</label>
@@ -143,7 +223,7 @@
             </div>
         </div>
 
-        <p id="status" class="status" hidden style="margin-top: 16px;"></p>
+        <p id="status" class="status mbros-only" hidden style="margin-top: 16px;"></p>
 
         <table class="print-frame" id="printFrame">
             <thead><tr><td>
@@ -246,6 +326,78 @@
             </div>
         </div>
 
+        <div class="section customer-only" id="summarySection">
+            <h2 class="section-title">Summary</h2>
+            <table class="table totals-table" id="totalsTable">
+                <thead>
+                <tr><th>Item</th><th class="num">Amount</th></tr>
+                </thead>
+                <tbody>
+                <tr><td>Total delivered PC</td><td class="num" id="pcStat">–</td></tr>
+                <tr><td>Total delivered KG</td><td class="num" id="kgStat">–</td></tr>
+                <tr><td>Opening balance</td><td class="num" id="openingStat">–</td></tr>
+                <tr><td>Delivered</td><td class="num" id="deliveredStat">–</td></tr>
+                <tr><td>Paid</td><td class="num" id="paidStat">–</td></tr>
+                <tr><td>Discount + adjustments</td><td class="num" id="otherStat">–</td></tr>
+                <tr class="total-row"><td>Closing balance</td><td class="num" id="closingStat">–</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card section customer-only" id="custSummaryCard" hidden>
+            <div class="card-header"><h2>By customer</h2></div>
+            <div class="table-wrap">
+                <table class="table" id="custSummaryTable">
+                    <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th class="num">Opening</th>
+                        <th class="num">KG</th>
+                        <th class="num">Delivered</th>
+                        <th class="num">Paid</th>
+                        <th class="num">Discount</th>
+                        <th class="num">Adjustments</th>
+                        <th class="num">Closing</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card section customer-only">
+            <div class="card-header">
+                <div>
+                    <h2 id="custStatementTitle">Statement<span id="custStatementNames"></span></h2>
+                    <p class="statement-meta" id="custStatementMeta"></p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="table hide-counter-balance hide-notes" id="custStatementTable">
+                    <thead>
+                    <tr>
+                        <th class="nowrap">Date</th>
+                        <th>Name</th>
+                        <th class="num">PC</th>
+                        <th class="num">KG</th>
+                        <th class="num">Rate</th>
+                        <th class="num">Delivered</th>
+                        <th class="num">Paid cash</th>
+                        <th class="num">Paid online</th>
+                        <th class="num">Discount</th>
+                        <th class="num">Adjustment</th>
+                        <th class="num">Counter Balance</th>
+                        <th class="num">Running balance</th>
+                        <th>Notes</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="13" class="empty-state">Select one or more customers to see their statement.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
             </td></tr></tbody>
         </table>
 
@@ -256,6 +408,395 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="../../assets/js/statement-pdf.js"></script>
+<script>
+    // Customer Statement tab: statement for one or more customers from db2.deliveries (+ the 2023–2025 archive).
+    // Own scope, so its names never clash with the MBros tabs below. Data loads the first time the tab opens.
+    const CustomerStatement = (() => {
+        const $ = id => document.getElementById(id);
+        const num = value => Number(value) || 0;
+        // Timestamps arrive as YYYY-MM-DD; fall back to IST conversion if a full timestamp ever appears.
+        const dayOf = timestamp => (typeof timestamp === 'string' && timestamp.length === 10) ? timestamp : Mb.toISTDate(timestamp);
+
+        const ARCHIVE_SHEET_ID = "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw";  // 2023–2025 deliveries
+        const CURRENT_START = '2026-01-01';   // first day in db2.deliveries; earlier days live in the archive
+
+        let rowsByCustomer = new Map();   // name -> rows in date order
+        let currentRows = [], archiveRows = [];
+        let archiveLoad = null;           // promise, set once the archive has been requested
+        let archiveLoaded = false;
+        let dataReady = false;
+        let started = false;
+        const selected = new Set();
+
+        async function fetchRows(spreadsheetId, worksheet) {
+            const data = await callSheetsApi([{ type: "SELECT", spreadsheetId, worksheet, id: "mbros-github-site" }]);
+            return data[0].rows.filter(row => row.name);
+        }
+
+        // Group archive + current rows by customer, in date order. Each row's `change` is its khata balance minus
+        // the customer's previous khata balance, so the running balance always lands on the sheet's own balances.
+        // The part of that change the row's columns don't explain (2023 rows often lack payment amounts, and a few
+        // archive rows' prevAmount differs from the previous row's balance) counts as a cash payment when the
+        // balance fell, and as an adjustment when it rose.
+        function buildCustomers() {
+            rowsByCustomer = new Map();
+            [...archiveRows, ...currentRows].forEach((row, index) => {
+                row.day = dayOf(row.timestamp);
+                row.index = index;
+                if (!rowsByCustomer.has(row.name)) rowsByCustomer.set(row.name, []);
+                rowsByCustomer.get(row.name).push(row);
+            });
+            rowsByCustomer.forEach(rows => {
+                rows.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
+                rows.forEach((row, i) => {
+                    const previous = i ? num(rows[i - 1].khataBalance) : num(row.prevAmount);
+                    row.change = num(row.khataBalance) - previous;
+                    // khataBalance = prevAmount + deliverAmount − paidCash − paidOnline − discount + autoAdjust + adjustments
+                    const explained = num(row.deliverAmount) - num(row.paidCash) - num(row.paidOnline)
+                        - num(row.discount) + num(row.autoAdjust) + num(row.adjustments);
+                    const unrecorded = row.change - explained;
+                    row.unrecordedPayment = unrecorded < -0.5 ? -unrecorded : 0;
+                    row.unrecordedIncrease = unrecorded > 0.5 ? unrecorded : 0;
+                    row.cash = num(row.paidCash) + row.unrecordedPayment;
+                    row.adjustment = num(row.autoAdjust) + num(row.adjustments) + row.unrecordedIncrease;
+                });
+            });
+        }
+
+        async function loadDeliveries() {
+            currentRows = await fetchRows(MAIN_SHEET_ID, "db2.deliveries");
+            buildCustomers();
+        }
+
+        // The archive is large, so it loads only when a statement reaches back before 2026.
+        function loadArchive() {
+            archiveLoad ??= fetchRows(ARCHIVE_SHEET_ID, "deliveries.2023").then(rows => {
+                archiveRows = rows;
+                archiveLoaded = true;
+                buildCustomers();
+                renderCustomerList();
+            }).catch(error => {
+                archiveLoad = null;   // allow a retry on the next change
+                throw error;
+            });
+            return archiveLoad;
+        }
+
+        // Print and Share only work on a finished statement, and only while this tab is open.
+        function setReportReady(ready) {
+            if (document.body.dataset.view !== 'customer') return;
+            $('printBtn').disabled = !ready;
+            $('sharePdf').disabled = !ready;
+        }
+
+        function renderCustomerList() {
+            const list = $('customerList');
+            const query = $('customerSearch').value.trim().toLowerCase();
+            const names = [...rowsByCustomer.keys()]
+                .sort((a, b) => a.localeCompare(b))
+                .filter(name => !query || name.toLowerCase().includes(query));
+
+            list.replaceChildren();
+            if (!names.length) {
+                const empty = document.createElement('span');
+                empty.className = 'subtle';
+                empty.textContent = 'No customers match.';
+                list.appendChild(empty);
+                return;
+            }
+            names.forEach(name => {
+                const rows = rowsByCustomer.get(name);
+                const label = document.createElement('label');
+                label.className = 'customer-option';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = name;
+                checkbox.checked = selected.has(name);
+                checkbox.addEventListener('change', () => {
+                    checkbox.checked ? selected.add(name) : selected.delete(name);
+                    renderStatement();
+                });
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'name';
+                nameSpan.textContent = name;
+                const balance = document.createElement('span');
+                balance.className = 'subtle';
+                balance.textContent = Mb.formatINR(rows[rows.length - 1].khataBalance, 0);
+                label.append(checkbox, nameSpan, balance);
+                list.appendChild(label);
+            });
+        }
+
+        // Balance before the range: last khata balance before `from`, else the carried-in prevAmount of the first row.
+        function openingBalance(rows, from) {
+            if (!from) return num(rows[0].prevAmount);
+            let opening = num(rows[0].prevAmount);
+            for (const row of rows) {
+                if (row.day >= from) break;
+                opening = num(row.khataBalance);
+            }
+            return opening;
+        }
+
+        function addCells(tr, values, numericFrom) {
+            values.forEach((value, i) => {
+                const td = tr.insertCell();
+                td.textContent = value;
+                if (i >= numericFrom) td.className = 'num';
+            });
+            return tr;
+        }
+
+        const blankIfZero = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
+
+        function columnToggle(column) {
+            return document.querySelector(`#columnToggles input[data-column="${column}"]`);
+        }
+
+        function applyColumns() {
+            const table = $('custStatementTable');
+            document.querySelectorAll('#columnToggles input').forEach(box =>
+                table.classList.toggle(`hide-${box.dataset.column}`, !box.checked));
+        }
+
+        function setStat(id, value) {
+            $(id).textContent = value === null ? '–' : Mb.formatINR(value, 0);
+        }
+
+        function renderStatement() {
+            const from = $('custStartDate').value;
+            const to = $('custEndDate').value;
+            const body = $('custStatementTable').tBodies[0];
+            const summaryBody = $('custSummaryTable').tBodies[0];
+            const names = [...selected].sort((a, b) => a.localeCompare(b));
+            body.replaceChildren();
+            summaryBody.replaceChildren();
+
+            $('custStatementNames').textContent = names.length ? ` · ${names.join(', ')}` : '';
+            $('custStatementMeta').textContent = names.length
+                ? `Period: ${from || 'start'} to ${to || 'today'} · Generated ${Mb.todayIST()}` : '';
+            $('custSummaryCard').hidden = names.length < 2;
+
+            const status = $('custStatus');
+            const showEmpty = message => {
+                const td = body.insertRow().insertCell();
+                td.colSpan = 13;
+                td.className = 'empty-state';
+                td.textContent = message;
+                ['openingStat', 'deliveredStat', 'paidStat', 'otherStat', 'closingStat'].forEach(id => setStat(id, null));
+                ['pcStat', 'kgStat'].forEach(id => $(id).textContent = '–');
+            };
+
+            setReportReady(false);
+            if (!dataReady) return;
+            if (!names.length) {
+                showEmpty('Select one or more customers to see their statement.');
+                return;
+            }
+            if (from && to && from > to) {
+                Mb.setStatus(status, 'error', '"From" date is after "To" date.');
+                showEmpty('Fix the date range to see the statement.');
+                return;
+            }
+            if ((!from || from < CURRENT_START) && !archiveLoaded) {
+                Mb.setStatus(status, 'info', 'Loading 2023–2025 records…');
+                showEmpty('Loading older records…');
+                loadArchive().then(renderStatement, error => {
+                    console.error('Error fetching archive:', error);
+                    Mb.setStatus(status, 'error', 'Could not load 2023–2025 records. Change the dates to try again.');
+                });
+                return;
+            }
+            Mb.setStatus(status, null);
+
+            let opening = 0;
+            const entries = [];
+            const totals = { pc: 0, kg: 0, delivered: 0, cash: 0, online: 0, discount: 0, adjustment: 0 };
+
+            names.forEach(name => {
+                const rows = rowsByCustomer.get(name);
+                const customerOpening = openingBalance(rows, from);
+                const inRange = rows.filter(row => (!from || row.day >= from) && (!to || row.day <= to));
+                const sums = { kg: 0, delivered: 0, paid: 0, discount: 0, adjustment: 0, change: 0 };
+                inRange.forEach(row => {
+                    sums.kg += num(row.deliveredKg);
+                    sums.delivered += num(row.deliverAmount);
+                    sums.paid += row.cash + num(row.paidOnline);
+                    sums.discount += num(row.discount);
+                    sums.adjustment += row.adjustment;
+                    sums.change += row.change;
+                });
+                opening += customerOpening;
+                entries.push(...inRange);
+
+                addCells(summaryBody.insertRow(), [
+                    name,
+                    Mb.formatINR(customerOpening, 0),
+                    Mb.formatNumber(sums.kg, 3),
+                    Mb.formatINR(sums.delivered, 0),
+                    Mb.formatINR(sums.paid, 0),
+                    Mb.formatINR(sums.discount, 0),
+                    Mb.formatINR(sums.adjustment, 0),
+                    Mb.formatINR(customerOpening + sums.change, 0)
+                ], 1);
+            });
+
+            entries.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
+
+            // Each new selection or date range resets these toggles; the user can override until the next change.
+            columnToggle('name').checked = names.length > 1;
+            columnToggle('discount').checked = entries.some(row => num(row.discount));
+            columnToggle('adjustment').checked = entries.some(row => row.adjustment);
+            applyColumns();
+
+            // The label sits in the date column so it stays visible when the name column is hidden.
+            const openingRow = addCells(body.insertRow(), [
+                from ? `Opening · ${from}` : 'Opening balance', '', '', '', '', '', '', '', '', '', '', Mb.formatINR(opening, 0), ''
+            ], 2);
+            openingRow.className = 'opening-row';
+
+            let running = opening;
+            entries.forEach(row => {
+                const adjustment = row.adjustment;
+                running += row.change;
+                totals.pc += num(row.deliveredPc);
+                totals.kg += num(row.deliveredKg);
+                totals.delivered += num(row.deliverAmount);
+                totals.cash += row.cash;
+                totals.online += num(row.paidOnline);
+                totals.discount += num(row.discount);
+                totals.adjustment += adjustment;
+
+                const notes = [row.discountNote, row.autoAdjustNote, row.adjustmentNote, row.notes,
+                    row.unrecordedPayment && `Payment not entered in sheet ${Mb.formatNumber(row.unrecordedPayment, 0)}`,
+                    row.unrecordedIncrease && `Unrecorded balance change +${Mb.formatNumber(row.unrecordedIncrease, 0)}`]
+                    .filter(Boolean).join(' · ');
+                const tr = addCells(body.insertRow(), [
+                    row.day,
+                    row.name,
+                    blankIfZero(row.deliveredPc),
+                    blankIfZero(row.deliveredKg, 3),
+                    num(row.rate) ? Mb.formatRate(row.rate) : '',
+                    blankIfZero(row.deliverAmount),
+                    blankIfZero(row.cash),
+                    blankIfZero(row.paidOnline),
+                    blankIfZero(row.discount),
+                    blankIfZero(adjustment),
+                    Mb.formatNumber(row.khataBalance, 0),
+                    Mb.formatINR(running, 0),
+                    notes
+                ], 2);
+                tr.cells[12].className = 'note';
+                if (running < 0) tr.cells[11].classList.add('negative');
+            });
+
+            if (!entries.length) {
+                const td = body.insertRow().insertCell();
+                td.colSpan = 13;
+                td.className = 'empty-state';
+                td.textContent = 'No entries in this date range.';
+            }
+
+            const totalRow = addCells(body.insertRow(), [
+                to ? `Closing · ${to}` : 'Closing balance', '',
+                Mb.formatNumber(totals.pc, 0),
+                Mb.formatNumber(totals.kg, 3),
+                '',
+                Mb.formatNumber(totals.delivered, 0),
+                Mb.formatNumber(totals.cash, 0),
+                Mb.formatNumber(totals.online, 0),
+                Mb.formatNumber(totals.discount, 0),
+                Mb.formatNumber(totals.adjustment, 0),
+                '',
+                Mb.formatINR(running, 0),
+                ''
+            ], 2);
+            totalRow.className = 'total-row';
+            [...totalRow.cells].slice(2, 10).forEach(td => td.classList.add('sum'));
+
+            setStat('openingStat', opening);
+            $('pcStat').textContent = Mb.formatNumber(totals.pc, 0);
+            $('kgStat').textContent = Mb.formatNumber(totals.kg, 3);
+            setStat('deliveredStat', totals.delivered);
+            setStat('paidStat', totals.cash + totals.online);
+            setStat('otherStat', totals.adjustment - totals.discount);
+            setStat('closingStat', running);
+            setReportReady(true);
+        }
+
+        // Phones get the share sheet (WhatsApp etc.); elsewhere the PDF downloads.
+        function shareStatement() {
+            if (!selected.size) return;
+            const names = [...selected].sort((a, b) => a.localeCompare(b));
+            const from = $('custStartDate').value;
+            const to = $('custEndDate').value;
+            const title = $('custStatementTitle');
+            const titleText = title.classList.contains('hide-names') ? 'Statement' : title.textContent;
+            StatementPdf.share({
+                fileName: ['statement', names.length > 3 ? `${names.length}-customers` : names.join('-'), from, to].filter(Boolean).join('-'),
+                title: titleText,
+                status: $('custStatus'),
+                letterhead: true,
+                summary: $('summarySection').hidden ? null : $('totalsTable'),
+                cards: [
+                    ...($('custSummaryCard').hidden ? [] : [{ table: $('custSummaryTable'), title: 'By customer' }]),
+                    { table: $('custStatementTable'), title: titleText, meta: $('custStatementMeta').textContent }
+                ]
+            });
+        }
+
+        function setDefaultDates() {
+            const today = Mb.todayIST();
+            $('custStartDate').value = today.slice(0, 8) + '01';
+            $('custEndDate').value = today;
+        }
+
+        async function initialize() {
+            const status = $('custStatus');
+            Mb.setStatus(status, 'info', 'Loading deliveries…');
+            try {
+                await loadDeliveries();
+                dataReady = true;
+                Mb.setStatus(status, null);
+                ['customerSearch', 'custSelectAll', 'custClearAll'].forEach(id => $(id).disabled = false);
+                renderCustomerList();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                started = false;   // try again the next time the tab opens
+                Mb.setStatus(status, 'error', 'Could not load data. Please try again.');
+                $('customerList').textContent = '';
+            }
+        }
+
+        // Called whenever the tab is shown: the first time loads the data, later times redraw the statement.
+        function show() {
+            if (started) return renderStatement();
+            started = true;
+            renderStatement();   // keeps Print and Share off until data is in
+            initialize();
+        }
+
+        setDefaultDates();
+        $('customerSearch').addEventListener('input', renderCustomerList);
+        $('custSelectAll').addEventListener('click', () => {
+            document.querySelectorAll('#customerList input[type=checkbox]').forEach(box => selected.add(box.value));
+            renderCustomerList();
+            renderStatement();
+        });
+        $('custClearAll').addEventListener('click', () => {
+            selected.clear();
+            renderCustomerList();
+            renderStatement();
+        });
+        document.querySelectorAll('#columnToggles input').forEach(box => box.addEventListener('change', applyColumns));
+        $('showSummary').addEventListener('change', event => $('summarySection').hidden = !event.target.checked);
+        $('showSums').addEventListener('change', event => $('custStatementTable').classList.toggle('hide-sums', !event.target.checked));
+        $('showTitleNames').addEventListener('change', event => $('custStatementTitle').classList.toggle('hide-names', !event.target.checked));
+        ['custStartDate', 'custEndDate'].forEach(id => $(id).addEventListener('change', renderStatement));
+
+        return { show, share: shareStatement };
+    })();
+</script>
 <script>
     const num = value => Number(value) || 0;
     const MBROS = 'MBros';
@@ -593,7 +1134,7 @@
     }
 
     const currentView = () => document.body.dataset.view;
-    const renderView = () => currentView() === 'dues' ? renderDues() : renderStatement();
+    const renderView = () => ({ dues: renderDues, statement: renderStatement, customer: CustomerStatement.show })[currentView()]();
 
     function setView(view) {
         document.body.dataset.view = view;
@@ -604,12 +1145,13 @@
         renderView();
     }
 
-    // The letterhead is optional on the statement (checkbox) and always printed on Due per party.
-    const letterheadOn = () => currentView() === 'dues' || document.getElementById('showLetterhead').checked;
+    // The letterhead is optional on the statement (checkbox) and always printed on Due per party and Customer Statement.
+    const letterheadOn = () => currentView() !== 'statement' || document.getElementById('showLetterhead').checked;
     const syncLetterhead = () => document.getElementById('printFrame').classList.toggle('no-letterhead', !letterheadOn());
 
-    // Print and Share only work on a finished statement.
+    // Print and Share only work on a finished statement. The Customer Statement tab sets them itself.
     function setReportReady(ready) {
+        if (currentView() === 'customer') return;
         document.getElementById('printBtn').disabled = !ready;
         document.getElementById('sharePdf').disabled = !ready;
     }
@@ -617,6 +1159,7 @@
     // Same layout as the printed page, letterhead included unless switched off.
     function shareStatement() {
         if (currentView() === 'dues') return shareDues();
+        if (currentView() === 'customer') return CustomerStatement.share();
         if (!selected.size) return;
         const names = [...selected].sort((a, b) => a.localeCompare(b));
         const from = document.getElementById('startDate').value;

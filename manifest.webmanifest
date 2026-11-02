@@ -20,8 +20,7 @@
   ],
   "shortcuts": [
     { "name": "Business Dashboard", "url": "./app/profits/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] },
-    { "name": "MBros Statement", "url": "./app/mbros-statement/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Customer Statement", "url": "./app/statement/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Statement", "url": "./app/statements/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] },
     { "name": "Day Summary", "url": "./app/daily/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] }
   ]
 }

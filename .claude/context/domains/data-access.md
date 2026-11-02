@@ -4,8 +4,7 @@ last_verified: 2026-10-30
 sources:
   - assets/js/config.js
   - app/balance/index.html
-  - app/statement/index.html
-  - app/mbros-statement/index.html
+  - app/statements/index.html
   - app/daily/index.html
   - app/meters/index.html
   - app/deliveries/deliveries.js
@@ -36,11 +35,11 @@ the lint here does not check them.
 | Spreadsheet | Worksheet | Read by |
 |---|---|---|
 | main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
-| main | `db2.loads` | `app/mbros-statement/` |
-| staging (ID in `app/mbros-statement/`) | `temp.load`: staged transactions not yet in `db2.loads`, same columns plus `isHidden` | `app/mbros-statement/` |
-| main | `db2.deliveries` | `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statement/`, `app/daily/` |
+| main | `db2.loads` | `app/statements/` |
+| staging (ID in `app/statements/`) | `temp.load`: staged transactions not yet in `db2.loads`, same columns plus `isHidden` | `app/statements/` |
+| main | `db2.deliveries` | `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
-| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/deliveries/`, `app/customer-performance/`, `app/statement/`, `app/daily/` |
+| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/deliveries/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | meter sheet (ID in `app/meters/`) | `apiData` | `app/meters/` |
 
 `deliveries` no longer exists: on 2026-10-29 the engine answered "Worksheet not found: deliveries",

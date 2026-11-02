@@ -1,4 +1,4 @@
-// Share-as-PDF for statement pages (app/statement/, app/mbros-statement/). Needs the version-pinned jsPDF +
+// Share-as-PDF for the statement page (app/statements/, all three tabs). Needs the version-pinned jsPDF +
 // jspdf-autotable scripts on the page. The PDF reproduces the printed page: A4 with 10 mm margins, in the
 // orientation of the page's own @page rule, with the layout and colours of the print CSS. Sizes are the CSS pixel
 // sizes × 0.75 (1 CSS px = 0.75 pt when printing at 100%).

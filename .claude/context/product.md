@@ -3,13 +3,12 @@ status: VERIFIED
 last_verified: 2026-10-30
 sources:
   - app/balance/index.html
-  - app/statement/index.html
   - app/calculator/index.html
   - app/profits/profits.js
   - app/customer-profit/index.html
   - app/daily/index.html
   - app/meters/index.html
-  - app/mbros-statement/index.html
+  - app/statements/index.html
   - pay/index.html
   - index.html
 ---
@@ -40,14 +39,14 @@ earns, plus pages customers use to pay.
   The 2023–2025 archive does not hold to this: ~1,900 rows (mostly 2023) lack payment amounts and
   ~47 rows' `prevAmount` differs from the previous balance. Each customer's last 2025 balance does
   equal their first 2026 `prevAmount` (checked 2026-10-30).
-- **Statement** (`app/statement/`): opening = each selected customer's last `khataBalance` before
+- **Customer statement** (`app/statements/`, Customer Statement tab): opening = each selected customer's last `khataBalance` before
   the start date (else the `prevAmount` of their first row), summed; the running balance then adds
   each row's `khataBalance` − the customer's previous `khataBalance`, in date order across all
   selected customers, so it always lands on the sheet's balances. A fall the row's columns don't
   explain counts as a cash payment noted "Payment not entered in sheet" (owner, 2026-10-30); an
   unexplained rise is shown as an adjustment `[inferred]`. The archive loads only for ranges
   starting before 2026.
-- **MBros statement** (`app/mbros-statement/`, `db2.loads`): each row moves goods or money from
+- **MBros statement** (`app/statements/`, `db2.loads`): each row moves goods or money from
   `sender` (via `via`) to `receiver`. The balance with a party is what MBros owes it: value reaching
   MBros adds `senderAmount` (or `viaSellAmount` when it came through a via), value leaving subtracts it.
   When MBros is the via, it owes the sender `senderAmount` and the receiver owes it `viaSellAmount` (owner, 2026-10-30).
