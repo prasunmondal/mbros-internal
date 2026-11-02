@@ -71,16 +71,33 @@
         body:not([data-view="customer"]) .customer-only,
         body[data-view="customer"] .mbros-only { display: none; }
         /* Customer Statement tab. */
+        /* Customer picker: type to filter, pick from the dropdown; picked customers show as chips below. */
+        .customer-picker { position: relative; }
         .customer-list {
-            margin-top: 12px; max-height: 260px; overflow-y: auto;
-            display: grid; gap: 2px 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;
+            position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0;
+            max-height: 280px; overflow-y: auto; padding: 4px;
+            background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow);
         }
-        .customer-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
-        .customer-option:hover { background: var(--surface-muted); }
-        .customer-option input { accent-color: var(--brand); width: 16px; height: 16px; flex: none; }
+        .customer-option { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        .customer-option.active { background: var(--surface-muted); }
+        .customer-option .check { width: 16px; flex: none; color: var(--brand); font-weight: 700; visibility: hidden; }
+        .customer-option[aria-selected="true"] .check { visibility: visible; }
         .customer-option .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .customer-option .subtle { font-variant-numeric: tabular-nums; }
+        .customer-list .empty { display: block; padding: 7px 8px; }
+        .customer-chips { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .customer-chips:empty { display: none; }
+        .customer-chip {
+            display: inline-flex; align-items: center; gap: 2px; max-width: 100%;
+            padding: 3px 4px 3px 10px; border-radius: 999px; font-size: 0.85rem;
+            background: var(--brand-soft); color: var(--brand-strong); border: 1px solid var(--brand);
+        }
+        .customer-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .customer-chip button {
+            flex: none; width: 20px; height: 20px; border: 0; border-radius: 50%; padding: 0;
+            background: transparent; color: inherit; font: inherit; font-size: 1rem; line-height: 1; cursor: pointer;
+        }
+        .customer-chip button:hover { background: var(--surface); }
         .column-toggles { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 0.9rem; }
         .column-toggles label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
         .column-toggles input { accent-color: var(--brand); width: 16px; height: 16px; }
@@ -161,7 +178,11 @@
             <div class="toolbar">
                 <div class="field grow">
                     <label for="customerSearch">Customers</label>
-                    <input type="search" id="customerSearch" class="input" placeholder="Search customers…" disabled>
+                    <div class="customer-picker" id="customerPicker">
+                        <input type="search" id="customerSearch" class="input" placeholder="Type to find customers…" autocomplete="off"
+                               role="combobox" aria-expanded="false" aria-controls="customerList" aria-autocomplete="list" disabled>
+                        <div class="customer-list" id="customerList" role="listbox" aria-multiselectable="true" hidden></div>
+                    </div>
                 </div>
                 <div class="field">
                     <label for="custStartDate">From</label>
@@ -172,13 +193,10 @@
                     <input type="date" id="custEndDate" class="input">
                 </div>
                 <div class="picker-actions">
-                    <button type="button" class="btn btn-secondary" id="custSelectAll" disabled>Select shown</button>
                     <button type="button" class="btn btn-secondary" id="custClearAll" disabled>Clear</button>
                 </div>
             </div>
-            <div class="customer-list" id="customerList">
-                <span class="subtle">Loading customers…</span>
-            </div>
+            <div class="customer-chips" id="customerChips" aria-label="Selected customers"></div>
             <div class="column-toggles" id="columnToggles">
                 <span class="label">Show columns</span>
                 <label><input type="checkbox" data-column="name" checked> Name</label>
@@ -192,7 +210,7 @@
                 <span class="label">Show</span>
                 <label><input type="checkbox" id="showSummary" checked> Summary</label>
                 <label><input type="checkbox" id="showSums" checked> Totals in closing row</label>
-                <label><input type="checkbox" id="showTitleNames" checked> Name in title</label>
+                <label><input type="checkbox" id="showTitleNames"> Name in title</label>
             </div>
             <p class="subtle" style="margin-top: 8px;">Records from 2023 load automatically when the range starts before 2026. Balance in the list is each customer's latest khata balance.</p>
         </div>
@@ -368,7 +386,7 @@
         <div class="card section customer-only">
             <div class="card-header">
                 <div>
-                    <h2 id="custStatementTitle">Statement<span id="custStatementNames"></span></h2>
+                    <h2 id="custStatementTitle" class="hide-names">Statement<span id="custStatementNames"></span></h2>
                     <p class="statement-meta" id="custStatementMeta"></p>
                 </div>
             </div>
@@ -489,7 +507,58 @@
             $('sharePdf').disabled = !ready;
         }
 
+        // Customer picker: the dropdown lists customers matching the typed text (all when empty); picking one
+        // toggles it, and picked customers show as removable chips under the controls.
+        let activeIndex = -1;   // keyboard-highlighted option in the dropdown
+
+        function pickerOpen() { return !$('customerList').hidden; }
+
+        function openPicker() {
+            if (!dataReady) return;
+            $('customerList').hidden = false;
+            $('customerSearch').setAttribute('aria-expanded', 'true');
+            renderCustomerList();
+        }
+
+        function closePicker() {
+            $('customerList').hidden = true;
+            $('customerSearch').setAttribute('aria-expanded', 'false');
+            $('customerSearch').removeAttribute('aria-activedescendant');
+            activeIndex = -1;
+        }
+
+        function toggleCustomer(name) {
+            selected.has(name) ? selected.delete(name) : selected.add(name);
+            $('customerSearch').value = '';
+            activeIndex = -1;
+            renderChips();
+            if (pickerOpen()) renderCustomerList();
+            renderStatement();
+        }
+
+        function renderChips() {
+            const chips = $('customerChips');
+            chips.replaceChildren();
+            [...selected].sort((a, b) => a.localeCompare(b)).forEach(name => {
+                const chip = document.createElement('span');
+                chip.className = 'customer-chip';
+                const label = document.createElement('span');
+                label.textContent = name;
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.textContent = '×';
+                remove.title = `Remove ${name}`;
+                remove.setAttribute('aria-label', `Remove ${name}`);
+                remove.addEventListener('click', () => toggleCustomer(name));
+                chip.append(label, remove);
+                chips.appendChild(chip);
+            });
+            $('custClearAll').disabled = !dataReady || !selected.size;
+        }
+
         function renderCustomerList() {
+            renderChips();
+            if (!pickerOpen()) return;
             const list = $('customerList');
             const query = $('customerSearch').value.trim().toLowerCase();
             const names = [...rowsByCustomer.keys()]
@@ -499,32 +568,65 @@
             list.replaceChildren();
             if (!names.length) {
                 const empty = document.createElement('span');
-                empty.className = 'subtle';
+                empty.className = 'subtle empty';
                 empty.textContent = 'No customers match.';
                 list.appendChild(empty);
                 return;
             }
-            names.forEach(name => {
+            if (activeIndex >= names.length) activeIndex = names.length - 1;
+            names.forEach((name, i) => {
                 const rows = rowsByCustomer.get(name);
-                const label = document.createElement('label');
-                label.className = 'customer-option';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.value = name;
-                checkbox.checked = selected.has(name);
-                checkbox.addEventListener('change', () => {
-                    checkbox.checked ? selected.add(name) : selected.delete(name);
-                    renderStatement();
-                });
+                const option = document.createElement('div');
+                option.className = 'customer-option' + (i === activeIndex ? ' active' : '');
+                option.id = `customerOption${i}`;
+                option.setAttribute('role', 'option');
+                option.setAttribute('aria-selected', String(selected.has(name)));
+                option.dataset.name = name;
+                const check = document.createElement('span');
+                check.className = 'check';
+                check.textContent = '✓';
                 const nameSpan = document.createElement('span');
                 nameSpan.className = 'name';
                 nameSpan.textContent = name;
                 const balance = document.createElement('span');
                 balance.className = 'subtle';
                 balance.textContent = Mb.formatINR(rows[rows.length - 1].khataBalance, 0);
-                label.append(checkbox, nameSpan, balance);
-                list.appendChild(label);
+                option.append(check, nameSpan, balance);
+                option.addEventListener('mousedown', event => event.preventDefault());   // keep focus in the input
+                option.addEventListener('click', () => toggleCustomer(name));
+                list.appendChild(option);
             });
+            const active = list.querySelector('.customer-option.active');
+            if (active) {
+                $('customerSearch').setAttribute('aria-activedescendant', active.id);
+                active.scrollIntoView({ block: 'nearest' });
+            } else {
+                $('customerSearch').removeAttribute('aria-activedescendant');
+            }
+        }
+
+        function onPickerKey(event) {
+            const options = () => $('customerList').querySelectorAll('.customer-option');
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (!pickerOpen()) return openPicker();
+                const count = options().length;
+                if (!count) return;
+                activeIndex = event.key === 'ArrowDown'
+                    ? (activeIndex + 1) % count
+                    : (activeIndex <= 0 ? count - 1 : activeIndex - 1);
+                renderCustomerList();
+            } else if (event.key === 'Enter') {
+                if (!pickerOpen()) return;
+                event.preventDefault();
+                const list = options();
+                const option = list[activeIndex] ?? (list.length === 1 ? list[0] : null);
+                if (option) toggleCustomer(option.dataset.name);
+            } else if (event.key === 'Escape') {
+                if (pickerOpen()) { event.preventDefault(); closePicker(); }
+            } else if (event.key === 'Backspace' && !event.target.value && selected.size) {
+                toggleCustomer([...selected].sort((a, b) => a.localeCompare(b)).pop());
+            }
         }
 
         // Balance before the range: last khata balance before `from`, else the carried-in prevAmount of the first row.
@@ -758,13 +860,12 @@
                 await loadDeliveries();
                 dataReady = true;
                 Mb.setStatus(status, null);
-                ['customerSearch', 'custSelectAll', 'custClearAll'].forEach(id => $(id).disabled = false);
+                $('customerSearch').disabled = false;
                 renderCustomerList();
             } catch (error) {
                 console.error('Error fetching data:', error);
                 started = false;   // try again the next time the tab opens
                 Mb.setStatus(status, 'error', 'Could not load data. Please try again.');
-                $('customerList').textContent = '';
             }
         }
 
@@ -777,14 +878,14 @@
         }
 
         setDefaultDates();
-        $('customerSearch').addEventListener('input', renderCustomerList);
-        $('custSelectAll').addEventListener('click', () => {
-            document.querySelectorAll('#customerList input[type=checkbox]').forEach(box => selected.add(box.value));
-            renderCustomerList();
-            renderStatement();
-        });
+        $('customerSearch').addEventListener('input', () => { activeIndex = -1; pickerOpen() ? renderCustomerList() : openPicker(); });
+        $('customerSearch').addEventListener('focus', openPicker);
+        $('customerSearch').addEventListener('click', () => { if (!pickerOpen()) openPicker(); });
+        $('customerSearch').addEventListener('keydown', onPickerKey);
+        $('customerSearch').addEventListener('blur', closePicker);
         $('custClearAll').addEventListener('click', () => {
             selected.clear();
+            $('customerSearch').value = '';
             renderCustomerList();
             renderStatement();
         });
