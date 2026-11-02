@@ -39,6 +39,15 @@
             <aside class="card card-body controls">
 
                 <div class="control-section">
+                    <label class="label" for="occasionSelect">Occasion</label>
+                    <!-- Filled from cal.occasions by loadOccasions(); picking one builds the groups and fetches the report. -->
+                    <select id="occasionSelect" class="select" disabled>
+                        <option value="">Loading occasions…</option>
+                    </select>
+                    <div id="occasionStatus" class="status" hidden></div>
+                </div>
+
+                <div class="control-section">
                     <label class="label" for="reportTitle">Report title</label>
                     <input type="text" id="reportTitle" class="input" value="Durga Puja" placeholder="Enter report title">
                     <!-- Enabled by updatePublishActions() once a report is on screen. -->

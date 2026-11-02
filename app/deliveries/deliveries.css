@@ -26,7 +26,7 @@
 /* Print / Share PDF / Share link icons under the report title; disabled until a report is shown. */
 .publish-actions { display: flex; gap: 8px; margin-top: 10px; }
 .publish-actions .btn { margin-top: 0; }
-#shareStatus { margin-top: 10px; }
+#shareStatus, #occasionStatus { margin-top: 10px; }
 
 /* "Fetching data…" under the report banner, full width like it. */
 #loading { margin: -8px 0 20px; justify-content: center; }

@@ -2009,6 +2009,112 @@ function restoreFromShareLink() {
 
 
 /* ============================================================
+   OCCASIONS (cal.occasions)
+   ============================================================ */
+
+// cal.occasions: one row per occasion, `occassionName` (sic), `daysPrepend`, `daysAppend`, and one date
+// column per year (`y2023`, `y2024`, …; IST midnights sent as UTC timestamps, blank when not known).
+const OCCASIONS_OPERATION = {
+    type: "SELECT",
+    spreadsheetId: "1X6HriHjIE0XfAblDlE7Uf5a8JTHu00kW2SWvTFKL78w",
+    worksheet: "cal.occasions",
+    id: "mbros-github-site-occasions"
+};
+
+let occasions = [];
+
+// Each occasion with its dates per year, newest first. Years still to come stay in;
+// occasionGroups() drops the windows that have not started yet.
+function parseOccasion(row) {
+
+    const years = Object.keys(row)
+        .filter(key => /^y\d{4}$/.test(key) && row[key])
+        .map(key => Mb.toISTDate(row[key]))
+        .filter(date => SHARE_DATE.test(date))
+        .sort()
+        .reverse();
+
+    return {
+        name: String(row.occassionName).trim(),
+        before: Math.max(0, Number(row.daysPrepend) || 0),
+        after: Math.max(0, Number(row.daysAppend) || 0),
+        dates: years
+    };
+}
+
+async function loadOccasions() {
+
+    const select = document.getElementById("occasionSelect");
+    const status = document.getElementById("occasionStatus");
+
+    try {
+        const [result] = await callSheetsApi([OCCASIONS_OPERATION]);
+
+        occasions = (result?.rows || [])
+            .filter(row => String(row.occassionName || "").trim())
+            .map(parseOccasion)
+            .filter(occasion => occasion.dates.length);
+
+        select.replaceChildren(new Option("Choose an occasion…", ""));
+        occasions.forEach((occasion, index) =>
+            select.appendChild(new Option(occasion.name, String(index))));
+        select.disabled = false;
+        Mb.setStatus(status, null);
+
+    } catch (error) {
+        console.error("Occasions fetch failed:", error);
+        select.replaceChildren(new Option("Occasions unavailable", ""));
+        Mb.setStatus(status, "error", "Could not load occasions. Refresh to try again.");
+    }
+}
+
+// One group per year, newest first: daysPrepend days before the occasion through daysAppend days after.
+// A window that starts after today is left out, since it has no deliveries yet.
+function occasionGroups(occasion) {
+
+    const today = Mb.todayIST();
+
+    return occasion.dates
+        .filter(date => addDays(date, -occasion.before) <= today)
+        .map(date => {
+            const dates = [];
+            for (let offset = -occasion.before; offset <= occasion.after; offset++) {
+                dates.push(addDays(date, offset));
+            }
+            return { date, dates };
+        });
+}
+
+// Replaces the groups, highlights and title with the occasion's, then fetches the report.
+function applyOccasion(occasion) {
+
+    const groups = occasionGroups(occasion);
+    const status = document.getElementById("occasionStatus");
+
+    if (!groups.length) {
+        Mb.setStatus(status, "info", `No ${occasion.name} has started yet.`);
+        return;
+    }
+    Mb.setStatus(status, null);
+
+    dateGroups = groups.map(group => ({
+        id: nextGroupId++,
+        dates: group.dates
+    }));
+    highlightedDates = groups.map(group => group.date).sort();
+
+    const titleInput = document.getElementById("reportTitle");
+    if (titleInput) titleInput.value = occasion.name;
+    const banner = document.getElementById("reportBanner");
+    if (banner) banner.textContent = `${getReportTitle()} - Delivery Report`;
+
+    renderDateGroups();
+    renderHighlightedDates();
+    fetchData();
+}
+
+
+/* ============================================================
    INITIALIZATION
    ============================================================ */
 
@@ -2097,6 +2203,19 @@ document.addEventListener(
 
                 }
             );
+        }
+
+
+        const occasionSelect = document.getElementById("occasionSelect");
+
+        if (occasionSelect) {
+
+            occasionSelect.addEventListener("change", () => {
+                const occasion = occasions[Number(occasionSelect.value)];
+                if (occasionSelect.value !== "" && occasion) applyOccasion(occasion);
+            });
+
+            loadOccasions();
         }
 
 
