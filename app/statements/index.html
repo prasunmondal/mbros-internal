@@ -21,16 +21,6 @@
     <style>
         .picker-actions { display: flex; gap: 8px; }
         .picker-actions .btn { padding: 6px 12px; font-size: 0.8rem; }
-        .party-list {
-            margin-top: 12px; max-height: 260px; overflow-y: auto;
-            display: grid; gap: 2px 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;
-        }
-        .party-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
-        .party-option:hover { background: var(--surface-muted); }
-        .party-option input { accent-color: var(--brand); width: 16px; height: 16px; flex: none; }
-        .party-option .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .party-option .subtle { font-variant-numeric: tabular-nums; }
         .statement-meta { margin-top: 4px; color: var(--text-muted); font-size: 0.875rem; }
         .table td.negative { color: var(--danger); }
         .table tr.opening-row td { font-style: italic; color: var(--text-muted); }
@@ -71,33 +61,33 @@
         body:not([data-view="customer"]) .customer-only,
         body[data-view="customer"] .mbros-only { display: none; }
         /* Customer Statement tab. */
-        /* Customer picker: type to filter, pick from the dropdown; picked customers show as chips below. */
-        .customer-picker { position: relative; }
-        .customer-list {
+        /* Party and customer picker: type to filter, pick from the dropdown; picked names show as chips below. */
+        .picker { position: relative; }
+        .picker-list {
             position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0;
             max-height: 280px; overflow-y: auto; padding: 4px;
             background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow);
         }
-        .customer-option { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
-        .customer-option.active { background: var(--surface-muted); }
-        .customer-option .check { width: 16px; flex: none; color: var(--brand); font-weight: 700; visibility: hidden; }
-        .customer-option[aria-selected="true"] .check { visibility: visible; }
-        .customer-option .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .customer-option .subtle { font-variant-numeric: tabular-nums; }
-        .customer-list .empty { display: block; padding: 7px 8px; }
-        .customer-chips { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
-        .customer-chips:empty { display: none; }
-        .customer-chip {
+        .picker-option { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        .picker-option.active { background: var(--surface-muted); }
+        .picker-option .check { width: 16px; flex: none; color: var(--brand); font-weight: 700; visibility: hidden; }
+        .picker-option[aria-selected="true"] .check { visibility: visible; }
+        .picker-option .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .picker-option .subtle { font-variant-numeric: tabular-nums; }
+        .picker-list .empty { display: block; padding: 7px 8px; }
+        .picker-chips { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .picker-chips:empty { display: none; }
+        .picker-chip {
             display: inline-flex; align-items: center; gap: 2px; max-width: 100%;
             padding: 3px 4px 3px 10px; border-radius: 999px; font-size: 0.85rem;
             background: var(--brand-soft); color: var(--brand-strong); border: 1px solid var(--brand);
         }
-        .customer-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .customer-chip button {
+        .picker-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .picker-chip button {
             flex: none; width: 20px; height: 20px; border: 0; border-radius: 50%; padding: 0;
             background: transparent; color: inherit; font: inherit; font-size: 1rem; line-height: 1; cursor: pointer;
         }
-        .customer-chip button:hover { background: var(--surface); }
+        .picker-chip button:hover { background: var(--surface); }
         .column-toggles { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 0.9rem; }
         .column-toggles label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
         .column-toggles input { accent-color: var(--brand); width: 16px; height: 16px; }
@@ -178,10 +168,10 @@
             <div class="toolbar">
                 <div class="field grow">
                     <label for="customerSearch">Customers</label>
-                    <div class="customer-picker" id="customerPicker">
+                    <div class="picker">
                         <input type="search" id="customerSearch" class="input" placeholder="Type to find customers…" autocomplete="off"
                                role="combobox" aria-expanded="false" aria-controls="customerList" aria-autocomplete="list" disabled>
-                        <div class="customer-list" id="customerList" role="listbox" aria-multiselectable="true" hidden></div>
+                        <div class="picker-list" id="customerList" role="listbox" aria-multiselectable="true" hidden></div>
                     </div>
                 </div>
                 <div class="field">
@@ -196,7 +186,7 @@
                     <button type="button" class="btn btn-secondary" id="custClearAll" disabled>Clear</button>
                 </div>
             </div>
-            <div class="customer-chips" id="customerChips" aria-label="Selected customers"></div>
+            <div class="picker-chips" id="customerChips" aria-label="Selected customers"></div>
             <div class="column-toggles" id="columnToggles">
                 <span class="label">Show columns</span>
                 <label><input type="checkbox" data-column="name" checked> Name</label>
@@ -227,14 +217,20 @@
                     <label for="endDate"><span class="statement-only">To</span><span class="dues-only">As on</span></label>
                     <input type="date" id="endDate" class="input">
                 </div>
+                <div class="field grow statement-only">
+                    <label for="partySearch">Parties</label>
+                    <div class="picker">
+                        <input type="search" id="partySearch" class="input" placeholder="Type to find parties…" autocomplete="off"
+                               role="combobox" aria-expanded="false" aria-controls="partyList" aria-autocomplete="list" disabled>
+                        <div class="picker-list" id="partyList" role="listbox" aria-multiselectable="true" hidden></div>
+                    </div>
+                </div>
                 <div class="picker-actions statement-only">
                     <button type="button" class="btn btn-secondary" id="selectAll" disabled>Select all</button>
                     <button type="button" class="btn btn-secondary" id="clearAll" disabled>Clear</button>
                 </div>
             </div>
-            <div class="party-list statement-only" id="partyList">
-                <span class="subtle">Loading parties…</span>
-            </div>
+            <div class="picker-chips statement-only" id="partyChips" aria-label="Selected parties"></div>
             <div class="options statement-only">
                 <label class="option-toggle"><input type="checkbox" id="includeStaged" disabled> Include staged transactions (temp.load)</label>
                 <label class="option-toggle"><input type="checkbox" id="showLetterhead" checked> Letterhead on print and PDF</label>
@@ -427,6 +423,142 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="../../assets/js/statement-pdf.js"></script>
 <script>
+    // Multi-select picker used by the Business and Customer tabs. Typing filters a dropdown of names (all names when
+    // the box is empty); picking one toggles it in `selected`, and picked names show as removable chips.
+    // Keys: ↑/↓ move, Enter picks (or the only match), Esc closes, Backspace in an empty box drops the last chip.
+    // `names()` lists what can be picked, `detail(name)` is the text at the right of an option.
+    function createPicker({ input, list, chips, clear, selected, names, detail, onChange, emptyText }) {
+        let ready = false;
+        let activeIndex = -1;   // keyboard-highlighted option
+        const sortedSelected = () => [...selected].sort((a, b) => a.localeCompare(b));
+        const isOpen = () => !list.hidden;
+
+        function open() {
+            if (!ready) return;
+            list.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+            render();
+        }
+
+        function close() {
+            list.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
+            activeIndex = -1;
+        }
+
+        function toggle(name) {
+            selected.has(name) ? selected.delete(name) : selected.add(name);
+            input.value = '';
+            activeIndex = -1;
+            render();
+            onChange();
+        }
+
+        function renderChips() {
+            chips.replaceChildren();
+            sortedSelected().forEach(name => {
+                const chip = document.createElement('span');
+                chip.className = 'picker-chip';
+                const label = document.createElement('span');
+                label.textContent = name;
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.textContent = '×';
+                remove.title = `Remove ${name}`;
+                remove.setAttribute('aria-label', `Remove ${name}`);
+                remove.addEventListener('click', () => toggle(name));
+                chip.append(label, remove);
+                chips.appendChild(chip);
+            });
+            clear.disabled = !ready || !selected.size;
+        }
+
+        function render() {
+            renderChips();
+            if (!isOpen()) return;
+            const query = input.value.trim().toLowerCase();
+            const shown = names()
+                .sort((a, b) => a.localeCompare(b))
+                .filter(name => !query || name.toLowerCase().includes(query));
+
+            list.replaceChildren();
+            input.removeAttribute('aria-activedescendant');
+            if (!shown.length) {
+                const empty = document.createElement('span');
+                empty.className = 'subtle empty';
+                empty.textContent = emptyText;
+                list.appendChild(empty);
+                return;
+            }
+            if (activeIndex >= shown.length) activeIndex = shown.length - 1;
+            shown.forEach((name, i) => {
+                const option = document.createElement('div');
+                option.className = 'picker-option' + (i === activeIndex ? ' active' : '');
+                option.id = `${list.id}-option${i}`;
+                option.setAttribute('role', 'option');
+                option.setAttribute('aria-selected', String(selected.has(name)));
+                option.dataset.name = name;
+                const check = document.createElement('span');
+                check.className = 'check';
+                check.textContent = '✓';
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'name';
+                nameSpan.textContent = name;
+                const extra = document.createElement('span');
+                extra.className = 'subtle';
+                extra.textContent = detail(name);
+                option.append(check, nameSpan, extra);
+                option.addEventListener('mousedown', event => event.preventDefault());   // keep focus in the input
+                option.addEventListener('click', () => toggle(name));
+                list.appendChild(option);
+            });
+            const active = list.querySelector('.picker-option.active');
+            if (active) {
+                input.setAttribute('aria-activedescendant', active.id);
+                active.scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        input.addEventListener('keydown', event => {
+            const options = list.querySelectorAll('.picker-option');
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (!isOpen()) return open();
+                if (!options.length) return;
+                activeIndex = event.key === 'ArrowDown'
+                    ? (activeIndex + 1) % options.length
+                    : (activeIndex <= 0 ? options.length - 1 : activeIndex - 1);
+                render();
+            } else if (event.key === 'Enter') {
+                if (!isOpen()) return;
+                event.preventDefault();
+                const option = options[activeIndex] ?? (options.length === 1 ? options[0] : null);
+                if (option) toggle(option.dataset.name);
+            } else if (event.key === 'Escape') {
+                if (isOpen()) { event.preventDefault(); close(); }
+            } else if (event.key === 'Backspace' && !input.value && selected.size) {
+                toggle(sortedSelected().pop());
+            }
+        });
+        input.addEventListener('input', () => { activeIndex = -1; isOpen() ? render() : open(); });
+        input.addEventListener('focus', open);
+        input.addEventListener('click', () => { if (!isOpen()) open(); });
+        input.addEventListener('blur', close);
+        clear.addEventListener('click', () => {
+            selected.clear();
+            input.value = '';
+            render();
+            onChange();
+        });
+
+        return {
+            render,
+            enable() { ready = true; input.disabled = false; render(); }
+        };
+    }
+</script>
+<script>
     // Customer Statement tab: statement for one or more customers from db2.deliveries (+ the 2023–2025 archive).
     // Own scope, so its names never clash with the MBros tabs below. Data loads the first time the tab opens.
     const CustomerStatement = (() => {
@@ -507,127 +639,18 @@
             $('sharePdf').disabled = !ready;
         }
 
-        // Customer picker: the dropdown lists customers matching the typed text (all when empty); picking one
-        // toggles it, and picked customers show as removable chips under the controls.
-        let activeIndex = -1;   // keyboard-highlighted option in the dropdown
-
-        function pickerOpen() { return !$('customerList').hidden; }
-
-        function openPicker() {
-            if (!dataReady) return;
-            $('customerList').hidden = false;
-            $('customerSearch').setAttribute('aria-expanded', 'true');
-            renderCustomerList();
-        }
-
-        function closePicker() {
-            $('customerList').hidden = true;
-            $('customerSearch').setAttribute('aria-expanded', 'false');
-            $('customerSearch').removeAttribute('aria-activedescendant');
-            activeIndex = -1;
-        }
-
-        function toggleCustomer(name) {
-            selected.has(name) ? selected.delete(name) : selected.add(name);
-            $('customerSearch').value = '';
-            activeIndex = -1;
-            renderChips();
-            if (pickerOpen()) renderCustomerList();
-            renderStatement();
-        }
-
-        function renderChips() {
-            const chips = $('customerChips');
-            chips.replaceChildren();
-            [...selected].sort((a, b) => a.localeCompare(b)).forEach(name => {
-                const chip = document.createElement('span');
-                chip.className = 'customer-chip';
-                const label = document.createElement('span');
-                label.textContent = name;
-                const remove = document.createElement('button');
-                remove.type = 'button';
-                remove.textContent = '×';
-                remove.title = `Remove ${name}`;
-                remove.setAttribute('aria-label', `Remove ${name}`);
-                remove.addEventListener('click', () => toggleCustomer(name));
-                chip.append(label, remove);
-                chips.appendChild(chip);
-            });
-            $('custClearAll').disabled = !dataReady || !selected.size;
-        }
-
-        function renderCustomerList() {
-            renderChips();
-            if (!pickerOpen()) return;
-            const list = $('customerList');
-            const query = $('customerSearch').value.trim().toLowerCase();
-            const names = [...rowsByCustomer.keys()]
-                .sort((a, b) => a.localeCompare(b))
-                .filter(name => !query || name.toLowerCase().includes(query));
-
-            list.replaceChildren();
-            if (!names.length) {
-                const empty = document.createElement('span');
-                empty.className = 'subtle empty';
-                empty.textContent = 'No customers match.';
-                list.appendChild(empty);
-                return;
-            }
-            if (activeIndex >= names.length) activeIndex = names.length - 1;
-            names.forEach((name, i) => {
+        // Customer picker: type to filter, pick from the dropdown; picked customers show as chips.
+        const picker = createPicker({
+            input: $('customerSearch'), list: $('customerList'), chips: $('customerChips'), clear: $('custClearAll'),
+            selected, emptyText: 'No customers match.',
+            names: () => [...rowsByCustomer.keys()],
+            detail: name => {
                 const rows = rowsByCustomer.get(name);
-                const option = document.createElement('div');
-                option.className = 'customer-option' + (i === activeIndex ? ' active' : '');
-                option.id = `customerOption${i}`;
-                option.setAttribute('role', 'option');
-                option.setAttribute('aria-selected', String(selected.has(name)));
-                option.dataset.name = name;
-                const check = document.createElement('span');
-                check.className = 'check';
-                check.textContent = '✓';
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'name';
-                nameSpan.textContent = name;
-                const balance = document.createElement('span');
-                balance.className = 'subtle';
-                balance.textContent = Mb.formatINR(rows[rows.length - 1].khataBalance, 0);
-                option.append(check, nameSpan, balance);
-                option.addEventListener('mousedown', event => event.preventDefault());   // keep focus in the input
-                option.addEventListener('click', () => toggleCustomer(name));
-                list.appendChild(option);
-            });
-            const active = list.querySelector('.customer-option.active');
-            if (active) {
-                $('customerSearch').setAttribute('aria-activedescendant', active.id);
-                active.scrollIntoView({ block: 'nearest' });
-            } else {
-                $('customerSearch').removeAttribute('aria-activedescendant');
-            }
-        }
-
-        function onPickerKey(event) {
-            const options = () => $('customerList').querySelectorAll('.customer-option');
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                event.preventDefault();
-                if (!pickerOpen()) return openPicker();
-                const count = options().length;
-                if (!count) return;
-                activeIndex = event.key === 'ArrowDown'
-                    ? (activeIndex + 1) % count
-                    : (activeIndex <= 0 ? count - 1 : activeIndex - 1);
-                renderCustomerList();
-            } else if (event.key === 'Enter') {
-                if (!pickerOpen()) return;
-                event.preventDefault();
-                const list = options();
-                const option = list[activeIndex] ?? (list.length === 1 ? list[0] : null);
-                if (option) toggleCustomer(option.dataset.name);
-            } else if (event.key === 'Escape') {
-                if (pickerOpen()) { event.preventDefault(); closePicker(); }
-            } else if (event.key === 'Backspace' && !event.target.value && selected.size) {
-                toggleCustomer([...selected].sort((a, b) => a.localeCompare(b)).pop());
-            }
-        }
+                return Mb.formatINR(rows[rows.length - 1].khataBalance, 0);
+            },
+            onChange: renderStatement
+        });
+        const renderCustomerList = picker.render;
 
         // Balance before the range: last khata balance before `from`, else the carried-in prevAmount of the first row.
         function openingBalance(rows, from) {
@@ -860,8 +883,7 @@
                 await loadDeliveries();
                 dataReady = true;
                 Mb.setStatus(status, null);
-                $('customerSearch').disabled = false;
-                renderCustomerList();
+                picker.enable();
             } catch (error) {
                 console.error('Error fetching data:', error);
                 started = false;   // try again the next time the tab opens
@@ -878,17 +900,6 @@
         }
 
         setDefaultDates();
-        $('customerSearch').addEventListener('input', () => { activeIndex = -1; pickerOpen() ? renderCustomerList() : openPicker(); });
-        $('customerSearch').addEventListener('focus', openPicker);
-        $('customerSearch').addEventListener('click', () => { if (!pickerOpen()) openPicker(); });
-        $('customerSearch').addEventListener('keydown', onPickerKey);
-        $('customerSearch').addEventListener('blur', closePicker);
-        $('custClearAll').addEventListener('click', () => {
-            selected.clear();
-            $('customerSearch').value = '';
-            renderCustomerList();
-            renderStatement();
-        });
         document.querySelectorAll('#columnToggles input').forEach(box => box.addEventListener('change', applyColumns));
         $('showSummary').addEventListener('change', event => $('summarySection').hidden = !event.target.checked);
         $('showSums').addEventListener('change', event => $('custStatementTable').classList.toggle('hide-sums', !event.target.checked));
@@ -955,41 +966,21 @@
     const entriesFor = (name, withStaged = includeStaged()) =>
         (entriesByParty.get(name) || []).filter(entry => withStaged || !entry.staged);
 
-    function renderPartyList() {
-        const list = document.getElementById('partyList');
-        const names = [...entriesByParty.keys()]
-            .sort((a, b) => a.localeCompare(b))
-            .filter(name => entriesFor(name).length);
+    // Parties with entries (staged ones count only when staged transactions are included).
+    const partyNames = () => [...entriesByParty.keys()].filter(name => entriesFor(name).length);
 
-        list.replaceChildren();
-        if (!names.length) {
-            const empty = document.createElement('span');
-            empty.className = 'subtle';
-            empty.textContent = 'No parties.';
-            list.appendChild(empty);
-            return;
-        }
-        names.forEach(name => {
-            const label = document.createElement('label');
-            label.className = 'party-option';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = name;
-            checkbox.checked = selected.has(name);
-            checkbox.addEventListener('change', () => {
-                checkbox.checked ? selected.add(name) : selected.delete(name);
-                renderStatement();
-            });
-            const nameSpan = document.createElement('span');
-            nameSpan.className = 'name';
-            nameSpan.textContent = name;
-            const balance = document.createElement('span');
-            balance.className = 'subtle';
-            balance.textContent = Mb.formatINR(balanceOf(entriesFor(name)), 0);
-            label.append(checkbox, nameSpan, balance);
-            list.appendChild(label);
-        });
-    }
+    // Party picker: type to filter, pick from the dropdown; picked parties show as chips.
+    const partyPicker = createPicker({
+        input: document.getElementById('partySearch'),
+        list: document.getElementById('partyList'),
+        chips: document.getElementById('partyChips'),
+        clear: document.getElementById('clearAll'),
+        selected, emptyText: 'No parties match.',
+        names: partyNames,
+        detail: name => Mb.formatINR(balanceOf(entriesFor(name)), 0),
+        onChange: () => renderStatement()
+    });
+    const renderPartyList = partyPicker.render;
 
     function addCells(tr, values, numericColumns) {
         values.forEach((value, i) => {
@@ -1309,25 +1300,19 @@
             await loadEntries();
             dataReady = true;
             Mb.setStatus(status, null);
-            ['selectAll', 'clearAll', 'includeStaged'].forEach(id => document.getElementById(id).disabled = false);
-            renderPartyList();
+            ['selectAll', 'includeStaged'].forEach(id => document.getElementById(id).disabled = false);
+            partyPicker.enable();
             renderView();
         } catch (error) {
             console.error('Error fetching data:', error);
             Mb.setStatus(status, 'error', 'Could not load data. Please try again.');
-            document.getElementById('partyList').textContent = '';
         }
     }
 
     document.querySelectorAll('.view-switch button').forEach(button =>
         button.addEventListener('click', () => setView(button.dataset.view)));
     document.getElementById('selectAll').addEventListener('click', () => {
-        document.querySelectorAll('#partyList input[type=checkbox]').forEach(box => selected.add(box.value));
-        renderPartyList();
-        renderStatement();
-    });
-    document.getElementById('clearAll').addEventListener('click', () => {
-        selected.clear();
+        partyNames().forEach(name => selected.add(name));
         renderPartyList();
         renderStatement();
     });
