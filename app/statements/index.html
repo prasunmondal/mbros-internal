@@ -1362,7 +1362,7 @@
     async function initialize() {
         const status = document.getElementById('status');
         setDefaultDates();
-        Mb.setStatus(status, 'info', 'Loading loads…');
+        Mb.setStatus(status, 'info', 'Loading Transactions…');
         try {
             await loadEntries();
             dataReady = true;
