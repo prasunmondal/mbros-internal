@@ -46,9 +46,11 @@ async function fetchData() {
         }]);
 
         updateDashboard();
+        if (rawData?.[0]?.rows) MonthlyReport.setRows(rawData[0].rows);
 
     } catch (error) {
         console.error("Error fetching data:", error);
+        MonthlyReport.fail();
     }
 }
 

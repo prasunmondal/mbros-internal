@@ -108,3 +108,46 @@
     width: 100% !important;
     height: 300px !important;
 }
+
+/* ---------- Overview / Monthly report switch (same look as app/statements/) ---------- */
+
+.view-switch {
+    position: relative; display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 20px;
+    padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-muted);
+}
+.view-switch::before {
+    content: ""; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 2);
+    border-radius: 999px; background: var(--brand); box-shadow: var(--shadow-sm); transition: transform 0.2s ease;
+}
+body[data-view="monthly"] .view-switch::before { transform: translateX(100%); }
+.view-switch button {
+    position: relative; padding: 8px 20px; border: 0; border-radius: 999px; background: none; white-space: nowrap;
+    font: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: color 0.2s ease;
+}
+.view-switch button[aria-selected="true"] { color: #fff; }
+@media (max-width: 560px) {
+    .view-switch { display: grid; }
+    .view-switch button { padding: 6px 4px; font-size: 0.85rem; }
+}
+body:not([data-view="overview"]) .overview-only,
+body:not([data-view="monthly"]) .monthly-only { display: none; }
+
+/* ---------- Monthly report ---------- */
+
+.month-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.month-heading { margin: 24px 0 16px; }
+.month-heading h2 { margin: 0; }
+.month-heading p { margin: 4px 0 0; }
+
+.month-kpis { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.month-kpis .kpi-value { font-size: 1.5rem; }
+.kpi-card.accent-purple { border-left-color: #8b5cf6; }
+.kpi-card.accent-red { border-left-color: var(--danger); }
+.kpi-changes { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.kpi-change { font-size: 0.78rem; color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.kpi-change.good { color: var(--brand-strong); }
+.kpi-change.bad { color: var(--danger); }
+
+#monthDays td.negative { color: var(--danger); }
+#monthDays td a { color: inherit; text-decoration: none; }
+#monthDays td a:hover { color: var(--brand-strong); text-decoration: underline; }

@@ -23,8 +23,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
     <script src="../../assets/js/config.js" defer></script>
     <script src="profits.js" defer></script>
+    <script src="monthly.js" defer></script>
 </head>
-<body data-page="profits">
+<body data-page="profits" data-view="overview">
 
 <main class="app-main wide">
     <div class="container">
@@ -32,10 +33,82 @@
         <div class="page-header">
             <div>
                 <h1>Business dashboard</h1>
-                <p>Profit, expenses, due balance and year-over-year trends.</p>
+                <p>Profit, expenses, due balance and year-over-year trends, or one month in detail.</p>
             </div>
         </div>
 
+        <div class="view-switch" role="tablist" aria-label="View">
+            <button type="button" role="tab" data-view="overview" aria-selected="true">Overview</button>
+            <button type="button" role="tab" data-view="monthly" aria-selected="false">Monthly report</button>
+        </div>
+
+        <section class="monthly-only">
+            <div class="card card-body toolbar">
+                <div class="field">
+                    <label for="monthInput">Month</label>
+                    <input type="month" id="monthInput" class="input" disabled>
+                </div>
+                <div class="month-nav">
+                    <button type="button" class="btn btn-secondary" id="prevMonth" title="Previous month with data" disabled>‹ Previous</button>
+                    <button type="button" class="btn btn-secondary" id="nextMonth" title="Next month with data" disabled>Next ›</button>
+                    <button type="button" class="btn btn-secondary" id="latestMonth" disabled>Latest</button>
+                </div>
+            </div>
+
+            <p id="monthStatus" class="status" hidden style="margin-top: 16px;"></p>
+
+            <div id="monthReport" hidden>
+                <div class="month-heading">
+                    <h2 id="monthTitle"></h2>
+                    <p class="muted" id="monthNote"></p>
+                </div>
+
+                <div class="kpi-container month-kpis" id="monthKpis"></div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Day by day: profit and KG</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="monthDailyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <section class="card">
+                        <div class="card-header"><h3>Expenses</h3></div>
+                        <div class="table-wrap">
+                            <table class="table" id="monthExpenses">
+                                <thead>
+                                <tr><th>Expense</th><th class="num">This month</th><th class="num">Share</th><th class="num" id="monthExpensesPrev">Last month</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="card section">
+                    <div class="card-header"><h3>Days</h3></div>
+                    <div class="table-wrap">
+                        <table class="table" id="monthDays">
+                            <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th class="num">KG loaded</th>
+                                <th class="num">Sales</th>
+                                <th class="num">Paid</th>
+                                <th class="num">Expenses</th>
+                                <th class="num">Profit</th>
+                                <th class="num">Due after</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <div class="overview-only">
         <div class="kpi-container">
             <div class="kpi-card accent-blue">
                 <div class="kpi-label">Due Balance</div>
@@ -207,6 +280,7 @@
                 <canvas id="customLinearChart"></canvas>
             </div>
         </div>
+    </div>
     </div>
 
     </div>

@@ -17,7 +17,7 @@ const PRECACHE = [
     'manifest.webmanifest',
     'pay/',
     'app/',
-    'app/profits/', 'app/profits/profits.js', 'app/profits/profits.css',
+    'app/profits/', 'app/profits/profits.js', 'app/profits/monthly.js', 'app/profits/profits.css',
     'app/statements/',
     'app/deliveries/', 'app/deliveries/deliveries.js', 'app/deliveries/deliveries.css',
     'app/customer-performance/',
