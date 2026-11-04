@@ -61,7 +61,7 @@ earns, plus pages customers use to pay.
   start and the customer's first delivery `[inferred: chosen when the page was built, not owner-confirmed]`.
   History joins the 2023–2025 archive (`deliveries.2023`, ends 2025-12-31) to `db2.deliveries`
   (from 2026-01-01). Balances come from `db2.deliveries` only; archive-only customers show none.
-- **Networth** (`app/profits/` Monthly report, Balances): Balance = Cash + Bank + Direct Debt + Online; Networth = Balance + Market Due (owner's example, 2026-11-04). The page shows the `revenue` sheet's own `inhouseBalance`, `customerDue` and `networth`, working them out only when blank (Market Due then = every customer's last khata balance on that date) [inferred: fallback chosen when built].
+- **Networth** (`app/profits/` Revenue tab, Balances): Balance = Cash + Bank + Direct Debt + Online; Networth = Balance + Market Due (owner's example, 2026-11-04). The page shows the `revenue` sheet's own `inhouseBalance`, `customerDue` and `networth`, working them out only when blank (Market Due then = every customer's last khata balance on that date) [inferred: fallback chosen when built].
 - **Payments** (`pay/`): two UPI routes. The QR image `assets/img/upi-qr.jpeg` is a Google Pay
   business QR for `9679004046@okbizaxis` ("Mondal Brothers"); the `upi://pay` button pays
   `prsnmondal@ybl` ("Prasun Mondal"). Both were on the old payment page.

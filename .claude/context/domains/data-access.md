@@ -38,9 +38,9 @@ the lint here does not check them.
 | main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
 | main | `db2.loads` | `app/statements/` |
 | staging (ID in `app/statements/`, `app/deliveries/deliveries.js`) | `temp.load`: staged transactions not yet in `db2.loads`, same columns plus `isHidden`. `cal.occasions`: one row per occasion, `occassionName` (sic), `daysPrepend`, `daysAppend`, one date column per year (`y2023`…, IST midnight as UTC timestamp, blank when unknown) | `app/statements/` (`temp.load`), `app/deliveries/` (`cal.occasions`) |
-| main | `db2.deliveries` | `app/profits/` (Monthly report, Balances), `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
+| main | `db2.deliveries` | `app/profits/` (Revenue tab, Balances), `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
-| main | `revenue`: money snapshots by date. Read: `date`, `cashBalance`, `bankBalance`, `debt` (Direct Debt), `onlineBalance`, `customerDue` (Market Due), `inhouseBalance` (Balance), `networth` (owner, 2026-11-04). Not used yet: `categoryForApp`, `id`, `spends`, `spendsNote`, `realisedProfit` | `app/profits/` (Monthly report, Balances) |
+| main | `revenue`: money snapshots by date. Read: `date`, `cashBalance`, `bankBalance`, `debt` (Direct Debt), `onlineBalance`, `customerDue` (Market Due), `inhouseBalance` (Balance), `networth` (owner, 2026-11-04). Not used yet: `categoryForApp`, `id`, `spends`, `spendsNote`, `realisedProfit` | `app/profits/` (Revenue tab, Balances) |
 | 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/profits/` (Balances), `app/deliveries/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | meter sheet (ID in `app/meters/`) | `apiData` | `app/meters/` |
 

@@ -109,7 +109,7 @@
     height: 300px !important;
 }
 
-/* ---------- Overview / Monthly report switch (same look as app/statements/) ---------- */
+/* ---------- Overview / Revenue switch (same look as app/statements/) ---------- */
 
 .view-switch {
     position: relative; display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 20px;
@@ -132,7 +132,7 @@ body[data-view="monthly"] .main-switch::before { transform: translateX(100%); }
 body:not([data-view="overview"]) .overview-only,
 body:not([data-view="monthly"]) .monthly-only { display: none; }
 
-/* ---------- Monthly report ---------- */
+/* ---------- Revenue tab (view=monthly) ---------- */
 
 .month-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .month-heading { margin: 24px 0 16px; }
@@ -155,7 +155,7 @@ body:not([data-view="monthly"]) .monthly-only { display: none; }
 #monthDays tr.outside-month td { background: var(--surface-muted); }
 #monthDays tr.outside-month td:first-child { font-style: italic; }
 
-/* ---------- Monthly report: Sales / Balances switch ---------- */
+/* ---------- Revenue tab: Sales / Balances switch ---------- */
 
 .sub-switch { margin: 16px 0 0; }
 .sub-switch button { padding: 6px 18px; font-size: 0.85rem; }
@@ -190,10 +190,11 @@ body:not([data-sub="balances"]) .balances-only { display: none; }
 #balRevenue tr.total-row td:first-child { color: var(--text); }
 #balRevenue td.gain { color: var(--brand-strong); font-weight: 600; }
 #balRevenue td.loss { color: var(--danger); font-weight: 600; }
+#balRevenue td.rise { font-weight: 800; }
 #balRevenue tr.gap-row td { padding: 6px; border-bottom: none; background: none; }
 #balRevenue tbody tr.gap-row:hover td { background: none; }
 
-/* Monthly report: Month / Week period picker. */
+/* Revenue tab: Month / Week period picker. */
 .toolbar .field[hidden] { display: none; }
 
 /* From / To calendars (flatpickr), in the site's colours and both themes. Greyed days have no figures. */

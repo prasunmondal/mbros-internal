@@ -1,4 +1,4 @@
-// Business dashboard, Monthly report tab: one month of cumilativeCalculations rows, compared with the
+// Business dashboard, Revenue tab (`?view=monthly`, was "Monthly report"): one month of cumilativeCalculations rows, compared with the
 // month before and the same month last year. The month's From/To dates start at its 1st and last day
 // and can be moved, e.g. to close the month on the 1st or 2nd of the next one after a busy month end.
 // The Period picker switches to weeks: the days between two entries of the `revenue` worksheet (the
@@ -652,13 +652,16 @@ const MonthlyReport = (() => {
             const value = columns[1][key] - columns[0][key];
             return (value > 0 ? '+' : value < 0 ? '−' : '') + Mb.formatNumber(Math.abs(value), 0);
         };
-        const addRow = (label, key, withDiff, className) => {
+        // Difference colours: green is good. Market Due going down is good, so it is the other way round.
+        const addRow = (label, key, withDiff, className, goodWhenUp = true) => {
             const tr = body.insertRow();
             if (className) tr.className = className;
             tr.insertCell().textContent = label;
             columns.forEach(c => Object.assign(tr.insertCell(), { className: 'num', textContent: fmt(c[key]) }));
             const td = Object.assign(tr.insertCell(), { className: 'num', textContent: withDiff ? diff(key) : '' });
-            if (withDiff) td.classList.add(columns[1][key] >= columns[0][key] ? 'gain' : 'loss');
+            const delta = withDiff ? columns[columns.length - 1][key] - columns[0][key] : 0;
+            if (delta) td.classList.add((delta > 0) === goodWhenUp ? 'gain' : 'loss');
+            if (key === 'balance' && delta > 0) td.classList.add('rise');   // Balance going up stands out
         };
         addRow('Cash', 'cash');
         addRow('Bank', 'bank');
@@ -668,7 +671,7 @@ const MonthlyReport = (() => {
         const gap = body.insertRow();
         gap.className = 'gap-row';
         Object.assign(gap.insertCell(), { colSpan: 4 });
-        addRow('Market Due', 'marketDue', true);
+        addRow('Market Due', 'marketDue', true, '', false);
         addRow('Networth', 'networth', true, 'total-row');
 
         const notes = [];
