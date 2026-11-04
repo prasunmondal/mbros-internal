@@ -25,7 +25,7 @@
     <script src="profits.js" defer></script>
     <script src="monthly.js" defer></script>
 </head>
-<body data-page="profits" data-view="overview">
+<body data-page="profits" data-view="overview" data-sub="sales">
 
 <main class="app-main wide">
     <div class="container">
@@ -37,7 +37,7 @@
             </div>
         </div>
 
-        <div class="view-switch" role="tablist" aria-label="View">
+        <div class="view-switch main-switch" role="tablist" aria-label="View">
             <button type="button" role="tab" data-view="overview" aria-selected="true">Overview</button>
             <button type="button" role="tab" data-view="monthly" aria-selected="false">Monthly report</button>
         </div>
@@ -53,6 +53,22 @@
                     <button type="button" class="btn btn-secondary" id="nextMonth" title="Next month with data" disabled>Next ›</button>
                     <button type="button" class="btn btn-secondary" id="latestMonth" disabled>Latest</button>
                 </div>
+                <div class="field">
+                    <label for="rangeFrom">From</label>
+                    <input type="date" id="rangeFrom" class="input" disabled>
+                </div>
+                <div class="field">
+                    <label for="rangeTo">To (month closed on)</label>
+                    <input type="date" id="rangeTo" class="input" disabled>
+                </div>
+                <div class="month-nav">
+                    <button type="button" class="btn btn-secondary" id="resetRange" title="Back to the 1st and last day of the month" disabled>Whole month</button>
+                </div>
+            </div>
+
+            <div class="view-switch sub-switch" role="tablist" aria-label="Monthly report view">
+                <button type="button" role="tab" data-sub="sales" aria-selected="true">Sales</button>
+                <button type="button" role="tab" data-sub="balances" aria-selected="false">Balances</button>
             </div>
 
             <p id="monthStatus" class="status" hidden style="margin-top: 16px;"></p>
@@ -63,6 +79,48 @@
                     <p class="muted" id="monthNote"></p>
                 </div>
 
+                <div class="balances-only">
+                    <p id="balStatus" class="status" hidden></p>
+                    <div id="balReport" hidden>
+                        <section class="card">
+                            <div class="card-header"><h3>Revenue and dues</h3></div>
+                            <div class="table-wrap">
+                                <table class="table facts" id="balRevenue"><tbody></tbody></table>
+                            </div>
+                        </section>
+
+                        <section class="card section">
+                            <div class="card-header">
+                                <h3 id="balCustomersTitle">Customer balances</h3>
+                                <label class="toggle">
+                                    <input type="checkbox" id="showDecreased" role="switch">
+                                    <span class="toggle-track" aria-hidden="true"></span>
+                                    <span>Show decreased balances</span>
+                                </label>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="table" id="balCustomers">
+                                    <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th class="num">Opening</th>
+                                        <th class="num">Sales</th>
+                                        <th class="num">Collected</th>
+                                        <th class="num">Discount</th>
+                                        <th class="num" title="Adjustments and changes the row's columns don't explain (e.g. payments not entered)">Other</th>
+                                        <th class="num">Closing</th>
+                                        <th class="num">Change</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <p class="muted bal-summary" id="balSummary"></p>
+                        </section>
+                    </div>
+                </div>
+
+                <div class="sales-only">
                 <div class="kpi-container month-kpis" id="monthKpis"></div>
 
                 <div class="charts-grid">
@@ -105,6 +163,7 @@
                         </table>
                     </div>
                 </section>
+                </div>
             </div>
         </section>
 

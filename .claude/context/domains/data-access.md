@@ -9,6 +9,7 @@ sources:
   - app/meters/index.html
   - app/deliveries/deliveries.js
   - app/profits/profits.js
+  - app/profits/monthly.js
   - app/customer-profit/index.html
   - app/customer-performance/index.html
 ---
@@ -37,9 +38,9 @@ the lint here does not check them.
 | main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
 | main | `db2.loads` | `app/statements/` |
 | staging (ID in `app/statements/`, `app/deliveries/deliveries.js`) | `temp.load`: staged transactions not yet in `db2.loads`, same columns plus `isHidden`. `cal.occasions`: one row per occasion, `occassionName` (sic), `daysPrepend`, `daysAppend`, one date column per year (`y2023`…, IST midnight as UTC timestamp, blank when unknown) | `app/statements/` (`temp.load`), `app/deliveries/` (`cal.occasions`) |
-| main | `db2.deliveries` | `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
+| main | `db2.deliveries` | `app/profits/` (Monthly report, Balances), `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
-| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/deliveries/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
+| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/profits/` (Balances), `app/deliveries/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | meter sheet (ID in `app/meters/`) | `apiData` | `app/meters/` |
 
 `deliveries` no longer exists: on 2026-10-29 the engine answered "Worksheet not found: deliveries",
