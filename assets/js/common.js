@@ -7,7 +7,7 @@
 
     // Single source for the app navigation and the overview page's tool cards.
     const TOOLS = [
-        { id: 'profits', path: 'app/profits/', title: 'Business Dashboard', group: 'Analytics',
+        { id: 'profits', path: 'app/profits/', title: 'Dashboards', group: 'Analytics',
           description: 'Profit, expenses, due balance and year-over-year trends.' },
         { id: 'statements', path: 'app/statements/', title: 'Statements', group: 'Reports',
           description: 'MBros statement with each supplier or party, dues per party, and customer statements, each with a running balance.' },

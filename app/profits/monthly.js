@@ -1,4 +1,4 @@
-// Business dashboard, Revenue tab (`?view=monthly`, was "Monthly report"): one month of cumilativeCalculations rows, compared with the
+// Dashboards page, Revenue tab (`?view=monthly`, was "Monthly report"): one month of cumilativeCalculations rows, compared with the
 // month before and the same month last year. The month's From/To dates start at its 1st and last day
 // and can be moved, e.g. to close the month on the 1st or 2nd of the next one after a busy month end.
 // The Period picker switches to weeks: the days between two entries of the `revenue` worksheet (the

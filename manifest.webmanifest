@@ -19,7 +19,7 @@
     { "src": "assets/img/screenshot-narrow.png", "sizes": "824x1830", "type": "image/png", "form_factor": "narrow", "label": "Overview of the internal tools on a phone" }
   ],
   "shortcuts": [
-    { "name": "Business Dashboard", "url": "./app/profits/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Dashboards", "url": "./app/profits/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] },
     { "name": "Statement", "url": "./app/statements/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] },
     { "name": "Day Summary", "url": "./app/daily/", "icons": [{ "src": "assets/img/icon-192.png", "sizes": "192x192" }] }
   ]

@@ -21,7 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         .card-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-        /* Chart card, controls and buttons follow the business dashboard (app/profits/profits.css). */
+        /* Chart card, controls and buttons follow the Dashboards page (app/profits/profits.css). */
         .chart-card h2 { margin-bottom: 16px; }
         .chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
         .chart-controls .divider { width: 1px; align-self: stretch; margin: 0 4px; background: var(--border); }
@@ -443,7 +443,7 @@
 
     // ---------- chart ----------
 
-    // Look and colours follow the business dashboard (getChartConfig and the YoY charts in
+    // Look and colours follow the Dashboards page (getChartConfig and the YoY charts in
     // app/profits/profits.js): this year red, last year amber, older years dark to light gray.
     const KG_COLOR = "#2563eb";
     const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -662,7 +662,7 @@
     function yearsChart(daily) {
         const slots = { day: 366, week: 52, month: 12 }[groupBy];
         const thisYear = +dataEnd.slice(0, 4);
-        const years = [];  // newest first, as on the business dashboard
+        const years = [];  // newest first, as on the Dashboards page
         for (let y = thisYear; y >= +firstDate[ALL].slice(0, 4); y--) years.push(y);
         const labels = Array.from({ length: slots }, (_, i) =>
             groupBy === "month" ? MONTH_NAMES[i]

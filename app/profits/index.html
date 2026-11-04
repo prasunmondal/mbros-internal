@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Business dashboard · Mondal Brothers</title>
+    <title>Dashboards · Mondal Brothers</title>
     <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
     <link rel="manifest" href="../../manifest.webmanifest">
     <link rel="apple-touch-icon" href="../../assets/img/apple-touch-icon.png">
@@ -34,7 +34,7 @@
 
         <div class="page-header">
             <div>
-                <h1>Business dashboard</h1>
+                <h1>Dashboards</h1>
                 <p>Profit, expenses, due balance and year-over-year trends, or one month in detail.</p>
             </div>
             <div class="page-actions">
@@ -391,7 +391,7 @@
     observer.observe($('dueBalance'), { childList: true, characterData: true, subtree: true });   // Overview KPIs filled in
     update();
     const reportTitle = () => {
-        if (document.body.dataset.view !== 'monthly') return 'Business dashboard';
+        if (document.body.dataset.view !== 'monthly') return 'Dashboards';
         const heading = document.getElementById('monthTitle').textContent;
         const part = document.body.dataset.sub === 'balances' ? 'Balances' : 'Sales';
         return `Revenue ${part}${heading ? ': ' + heading : ''}`;
