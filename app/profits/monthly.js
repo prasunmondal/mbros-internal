@@ -1,6 +1,9 @@
 // Business dashboard, Monthly report tab: one month of cumilativeCalculations rows, compared with the
 // month before and the same month last year. The month's From/To dates start at its 1st and last day
 // and can be moved, e.g. to close the month on the 1st or 2nd of the next one after a busy month end.
+// The Period picker switches to weeks: the days between two entries of the `revenue` worksheet (the
+// day after one entry up to the next one, so not always 7 days), compared with the week before and the
+// same dates a year back. Days after the last entry form an open week.
 // profits.js fetches the rows and hands them over with MonthlyReport.setRows(); this file only reads
 // them. Chart helpers (chartTheme, getChartConfig) are the globals in profits.js.
 const MonthlyReport = (() => {
@@ -16,7 +19,12 @@ const MonthlyReport = (() => {
 
     let allRows = [];          // every row with a valid date, sorted by date
     let months = [];           // sorted months that have rows
-    let current = null;        // month on screen
+    let weeks = [];            // sorted weeks, each named by its first day
+    let weekSpan = new Map();  // week first day -> { first, last, open }
+    let mode = 'month';        // 'month' or 'week'
+    let current = null;        // period on screen: YYYY-MM for a month, its first day (YYYY-MM-DD) for a week.
+                               // Before the revenue sheet has loaded, a week is only a day to look for.
+    let rangeFromLink = false; // From/To came from the link, so keep them when the weeks arrive
     let from = null;           // range on screen, YYYY-MM-DD inclusive
     let to = null;
     let chart = null;
@@ -82,7 +90,30 @@ const MonthlyReport = (() => {
     const dayLabel = (day, options = { day: 'numeric', month: 'short' }) =>
         parseDay(day).toLocaleDateString('en-IN', { ...options, timeZone: 'UTC' });
     const rangeLabel = (a, b) => `${dayLabel(a)} – ${dayLabel(b, { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    const isWholeMonth = () => from === monthStart(current) && to === monthEnd(current);
+    const weekFirst = week => weekSpan.get(week)?.first ?? week;
+    const weekLast = week => weekSpan.get(week)?.last ?? addDays(week, 6);
+    const weekLabel = week => rangeLabel(weekFirst(week), weekLast(week));
+
+    const periods = () => mode === 'week' ? weeks : months;
+    const periodStart = period => mode === 'week' ? weekFirst(period) : monthStart(period);
+    const periodEnd = period => mode === 'week' ? weekLast(period) : monthEnd(period);
+    // Days inside the week or month on screen (others are shaded as outside it).
+    const inPeriod = day => mode === 'week' ? day >= weekFirst(current) && day <= weekLast(current) : day.slice(0, 7) === current;
+    // The week a day falls in, else the latest week.
+    const weekFor = day => weeks.filter(w => w <= day && weekLast(w) >= day).pop()
+        || (weeks.length ? (day < weeks[0] ? weeks[0] : weeks[weeks.length - 1]) : null);
+
+    // Weeks from the revenue entry dates: (one entry, the next entry], plus the days with figures after the last entry.
+    function buildWeeks() {
+        weekSpan = new Map();
+        const ends = [...new Set((revenueRows || []).map(row => row.day))];
+        ends.slice(1).forEach((end, i) => weekSpan.set(addDays(ends[i], 1), { first: addDays(ends[i], 1), last: end }));
+        const lastEnd = ends[ends.length - 1];
+        const lastDay = allRows.length ? allRows[allRows.length - 1]._day : null;
+        if (lastEnd && lastDay && lastDay > lastEnd) weekSpan.set(addDays(lastEnd, 1), { first: addDays(lastEnd, 1), last: lastDay, open: true });
+        weeks = [...weekSpan.keys()];
+    }
+    const isWholePeriod = () => from === periodStart(current) && to === periodEnd(current);
 
     const rowsIn = (a, b) => allRows.filter(row => row._day >= a && row._day <= b);
 
@@ -181,8 +212,9 @@ const MonthlyReport = (() => {
 
         const length = daysBetween(from, to) + 1;
         const days = Array.from({ length }, (_, i) => addDays(from, i));
-        // "1", "2", … for the month itself; days outside it carry their month ("1 Nov").
-        const labels = days.map(day => day.slice(0, 7) === current ? String(Number(day.slice(8, 10))) : dayLabel(day));
+        // "1", "2", … for the month itself ("Mon 27" for a week); days outside it carry their month ("1 Nov").
+        const labels = days.map(day => !inPeriod(day) ? dayLabel(day)
+            : mode === 'week' ? dayLabel(day, { weekday: 'short', day: 'numeric' }) : String(Number(day.slice(8, 10))));
         const perDay = (list, start, key) => {
             const values = Array(length).fill(null);
             (list || []).forEach(row => {
@@ -254,6 +286,7 @@ const MonthlyReport = (() => {
             partsTotal ? Mb.formatNumber(now.expenseParts[key] / partsTotal * 100, 1) + '%' : ''));
         addRow('Total expenses', now.expenses, prev ? prev.expenses : null, '', 'total-row');
         if (now.transportIncome || prev?.transportIncome) addRow('Transport income', now.transportIncome, prev ? prev.transportIncome : null, '');
+        $('monthExpensesNow').textContent = mode === 'week' ? 'This week' : 'This month';
         const head = $('monthExpensesPrev');
         head.textContent = compare.prev.short;
         head.title = compare.prev.title;
@@ -275,7 +308,7 @@ const MonthlyReport = (() => {
             Object.keys(totals).forEach(key => totals[key] += values[key]);
             const last = dayRows[dayRows.length - 1];
             const tr = body.insertRow();
-            if (day.slice(0, 7) !== current) tr.className = 'outside-month';
+            if (!inPeriod(day)) tr.className = 'outside-month';
             const dateCell = tr.insertCell();
             const link = document.createElement('a');
             link.href = `../daily/?date=${day}`;
@@ -302,22 +335,113 @@ const MonthlyReport = (() => {
         });
     }
 
+    // ---------- From / To calendars ----------
+    // Month mode: every date can be picked. Week mode: only days that have figures or a revenue entry
+    // (marked), plus the dates already in From/To; flatpickr (pinned on jsDelivr) greys out the rest.
+    // If the CDN fails, Week mode's plain date inputs are limited to the first and last day with figures.
+
+    let recordDays = new Set();
+    const pickers = {};
+    const localDay = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    // In Week mode, days with a `revenue` entry (the week boundaries) are marked in the calendars (and can be picked).
+    const isRevenueDay = day => mode === 'week' && !!revenueRows && revenueRows.some(row => row.day === day);
+    const redrawPickers = () => { if (allRows.length) setupPickers(); };   // also resets the fallback inputs' limits
+    const showDay = (id, day) => pickers[id] ? pickers[id].setDate(day, false) : ($(id).value = day);
+
+    function setRange(id, day) {
+        if (!DAY_RE.test(day) || day === (id === 'rangeFrom' ? from : to)) return;
+        if (id === 'rangeFrom') from = day; else to = day;
+        render();
+    }
+
+    function setupPickers() {
+        const days = allRows.map(row => row._day);
+        recordDays = new Set(days);
+        ['rangeFrom', 'rangeTo'].forEach(id => {
+            if (typeof flatpickr === 'undefined') {
+                const week = mode === 'week';
+                $(id).min = week ? days[0] : '';
+                $(id).max = week ? days[days.length - 1] : '';
+                return;
+            }
+            if (pickers[id]) { pickers[id].redraw(); return; }
+            pickers[id] = flatpickr($(id), {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'j M Y',
+                altInputClass: 'input range-picker',
+                disableMobile: true,   // the phone's own date picker cannot grey out days
+                enable: [date => { const day = localDay(date); return mode === 'month' || recordDays.has(day) || isRevenueDay(day) || day === from || day === to; }],
+                onChange: (dates, value) => setRange(id, value),
+                onDayCreate: (dates, value, picker, dayElem) => {
+                    if (!isRevenueDay(localDay(dayElem.dateObj))) return;
+                    dayElem.classList.add('revenue-day');
+                    dayElem.title = 'Revenue entry';
+                }
+            });
+        });
+    }
+
     function syncControls() {
-        $('monthInput').value = current;
-        $('rangeFrom').value = from;
-        $('rangeTo').value = to;
-        $('prevMonth').disabled = !months.some(m => m < current);
-        $('nextMonth').disabled = !months.some(m => m > current);
-        $('resetRange').disabled = isWholeMonth();
+        const week = mode === 'week';
+        const unit = week ? 'week' : 'month';
+        $('periodMode').value = mode;
+        $('monthField').hidden = week;
+        $('weekField').hidden = !week;
+        if (week) {
+            // Weeks, newest first.
+            const list = weeks;
+            const select = $('weekInput');
+            if (select.options.length !== list.length || select.dataset.list !== list.join()) {
+                select.replaceChildren(...[...list].reverse().map(w => new Option(weekLabel(w) + (weekSpan.get(w).open ? ' (open)' : ''), w)));
+                select.dataset.list = list.join();
+            }
+            select.value = current;
+        } else {
+            $('monthInput').value = current;
+        }
+        showDay('rangeFrom', from);
+        showDay('rangeTo', to);
+        $('rangeToLabel').textContent = `To (${unit} closed on)`;
+        $('prevMonth').title = week ? 'Previous week (revenue entries)' : 'Previous month with data';
+        $('nextMonth').title = week ? 'Next week (revenue entries)' : 'Next month with data';
+        $('prevMonth').disabled = !periods().some(p => p < current);
+        $('nextMonth').disabled = !periods().some(p => p > current);
+        $('resetRange').textContent = week ? 'Whole week' : 'Whole month';
+        $('resetRange').title = week ? 'Back to the day after one revenue entry up to the next' : 'Back to the 1st and last day of the month';
+        $('resetRange').disabled = isWholePeriod();
+    }
+
+    // Week mode needs the revenue sheet; load it, then put the week asked for (a day) on screen.
+    function loadWeeks() {
+        $('monthReport').hidden = true;
+        destroyChartInstance();
+        Mb.setStatus(status(), 'info', 'Loading revenue entry dates…');
+        loadRevenue().then(() => {
+            buildWeeks();
+            if (mode !== 'week') return;
+            if (!weeks.length) {
+                Mb.setStatus(status(), 'empty', 'The revenue sheet needs at least two dated entries to make weeks.');
+                return;
+            }
+            current = weekFor(current || to || Mb.todayIST());
+            if (!rangeFromLink) { from = periodStart(current); to = periodEnd(current); }
+            rangeFromLink = false;
+            if (isActive()) render();
+        }, error => {
+            console.error('Error fetching revenue:', error);
+            Mb.setStatus(status(), 'error', 'Could not load the revenue sheet for weeks. Pick Week again to retry.');
+        });
     }
 
     function render() {
         if (!months.length || !current) return;
+        if (mode === 'week' && !weekSpan.has(current)) { loadWeeks(); return; }
         syncControls();
         syncUrl();
 
         const report = $('monthReport');
-        $('monthTitle').textContent = monthName(current);
+        $('monthTitle').textContent = mode === 'week' ? `Week: ${weekLabel(current)}` : monthName(current);
         if (from > to) {
             destroyChartInstance();
             report.hidden = true;
@@ -335,10 +459,21 @@ const MonthlyReport = (() => {
         report.hidden = false;
 
         // Compare with the same range one month and one year back (1 Oct – 2 Nov vs 1 Sep – 2 Oct and 1 Oct – 2 Nov last year).
-        const prevFrom = shiftDay(from, -1), prevTo = shiftDay(to, -1);
+        // A week compares with the week before it (or, with moved dates, as many days just before From)
+        // and the same dates a year back.
+        const week = mode === 'week';
+        const whole = isWholePeriod();
+        let prevFrom = shiftDay(from, -1), prevTo = shiftDay(to, -1);
+        if (week) {
+            const before = weeks.filter(w => w < current).pop();
+            if (whole && before) { prevFrom = periodStart(before); prevTo = periodEnd(before); }
+            else { prevTo = addDays(from, -1); prevFrom = addDays(prevTo, -daysBetween(from, to)); }
+        }
         const yearFrom = shiftDay(from, -12), yearTo = shiftDay(to, -12);
-        const whole = isWholeMonth();
-        const compare = {
+        const compare = week ? {
+            prev: { short: 'previous week', title: rangeLabel(prevFrom, prevTo) },
+            year: { short: 'last year', title: rangeLabel(yearFrom, yearTo) }
+        } : {
             prev: { short: monthName(shiftMonth(current, -1), 'short'), title: rangeLabel(prevFrom, prevTo) },
             year: { short: monthName(shiftMonth(current, -12), 'short'), title: rangeLabel(yearFrom, yearTo) }
         };
@@ -351,7 +486,10 @@ const MonthlyReport = (() => {
         const lastYear = summarize(lastYearRows);
 
         const notes = [];
-        if (!whole) notes.push(`Closed over ${rangeLabel(from, to)}; comparisons use the same dates in ${compare.prev.short} and ${compare.year.short}.`);
+        if (!whole) notes.push(week
+            ? `Closed over ${rangeLabel(from, to)}; compared with ${compare.prev.title} and the same dates a year back.`
+            : `Closed over ${rangeLabel(from, to)}; comparisons use the same dates in ${compare.prev.short} and ${compare.year.short}.`);
+        else if (week) notes.push(`Compared with ${compare.prev.title} and ${compare.year.title}.`);
         if (to >= Mb.todayIST()) notes.push(`In progress: figures up to ${dayLabel(now.lastDay)}, so comparisons with full periods run low.`);
         else notes.push(`${now.days} trading days, ${Mb.formatNumber(now.km, 0)} km driven.`);
         $('monthNote').textContent = notes.join(' ');
@@ -401,14 +539,18 @@ const MonthlyReport = (() => {
         }).filter(Boolean).sort((a, b) => a.day.localeCompare(b.day));
     }
 
+    function loadRevenue() {
+        revenueLoad ??= callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "revenue", id: "mbros-github-site" }])
+            .then(data => { revenueRows = parseRevenue(data[0].rows); redrawPickers(); })
+            .catch(error => { revenueLoad = null; throw error; });
+        return revenueLoad;
+    }
+
     // Load what the range needs: `revenue` and db2.deliveries always, the archive only for dates before 2026.
     function loadDeliveries(needArchive) {
         currentLoad ??= fetchDeliveries(MAIN_SHEET_ID, "db2.deliveries").then(rows => { currentRows = rows; buildCustomers(); })
             .catch(error => { currentLoad = null; throw error; });
-        revenueLoad ??= callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "revenue", id: "mbros-github-site" }])
-            .then(data => { revenueRows = parseRevenue(data[0].rows); })
-            .catch(error => { revenueLoad = null; throw error; });
-        const loads = [currentLoad, revenueLoad];
+        const loads = [currentLoad, loadRevenue()];
         if (needArchive) {
             archiveLoad ??= fetchDeliveries(ARCHIVE_SHEET_ID, "deliveries.2023").then(rows => {
                 archiveRows = rows;
@@ -614,21 +756,39 @@ const MonthlyReport = (() => {
         if (view === 'balances') renderBalances();
     }
 
-    function selectMonth(month) {
-        current = month;
-        from = monthStart(month);
-        to = monthEnd(month);
+    function selectPeriod(period) {
+        rangeFromLink = false;
+        current = period;
+        from = periodStart(period);
+        to = periodEnd(period);
         render();
+    }
+
+    // Month -> week: the week holding the month's To date. Week -> month: the month of the week's From.
+    function setMode(next) {
+        if (next === mode || !current) return;
+        mode = next;
+        rangeFromLink = false;
+        redrawPickers();
+        if (next === 'week') {
+            current = weeks.length ? weekFor(to) : to;   // a day to look for until the weeks have loaded
+        } else {
+            const month = from.slice(0, 7);
+            current = months.includes(month) ? month : (months.filter(m => m <= month).pop() || months[months.length - 1]);
+        }
+        if (mode === 'month' || weekSpan.has(current)) selectPeriod(current);
+        else render();
     }
 
     function syncUrl() {
         const params = new URLSearchParams(location.search);
-        ['view', 'sub', 'month', 'from', 'to'].forEach(key => params.delete(key));
+        ['view', 'sub', 'month', 'week', 'from', 'to'].forEach(key => params.delete(key));
         if (isActive()) {
             params.set('view', 'monthly');
             if (sub() === 'balances') params.set('sub', 'balances');
-            if (current) params.set('month', current);
-            if (current && !isWholeMonth()) {
+            const ready = current && (mode === 'month' || weekSpan.has(current));
+            if (ready) params.set(mode, current);
+            if (ready && !isWholePeriod()) {
                 params.set('from', from);
                 params.set('to', to);
             }
@@ -638,8 +798,8 @@ const MonthlyReport = (() => {
     }
 
     function step(direction) {
-        const target = direction < 0 ? months.filter(m => m < current).pop() : months.find(m => m > current);
-        if (target) selectMonth(target);
+        const target = direction < 0 ? periods().filter(p => p < current).pop() : periods().find(p => p > current);
+        if (target) selectPeriod(target);
     }
 
     // ---------- Public ----------
@@ -655,20 +815,29 @@ const MonthlyReport = (() => {
         });
         allRows.sort((a, b) => a._day.localeCompare(b._day));
         months = [...new Set(allRows.map(row => row._day.slice(0, 7)))];
+        if (revenueRows) buildWeeks();
         if (!months.length) {
             Mb.setStatus(status(), 'empty', 'No daily figures found.');
             return;
         }
-        ['monthInput', 'latestMonth', 'rangeFrom', 'rangeTo'].forEach(id => $(id).disabled = false);
+        ['periodMode', 'monthInput', 'weekInput', 'latestMonth', 'rangeFrom', 'rangeTo'].forEach(id => $(id).disabled = false);
         $('monthInput').min = months[0];
         $('monthInput').max = months[months.length - 1];
+        setupPickers();
 
         const params = new URLSearchParams(location.search);
-        const month = params.get('month');
-        current = MONTH_RE.test(month || '') ? month : months[months.length - 1];
+        const month = params.get('month'), week = params.get('week');
+        if (DAY_RE.test(week || '')) {
+            mode = 'week';
+            current = week;   // a day to look for until the weeks have loaded
+        } else {
+            mode = 'month';
+            current = MONTH_RE.test(month || '') ? month : months[months.length - 1];
+        }
         const requestedFrom = params.get('from'), requestedTo = params.get('to');
-        from = DAY_RE.test(requestedFrom || '') ? requestedFrom : monthStart(current);
-        to = DAY_RE.test(requestedTo || '') ? requestedTo : monthEnd(current);
+        rangeFromLink = DAY_RE.test(requestedFrom || '') && DAY_RE.test(requestedTo || '');
+        from = rangeFromLink ? requestedFrom : periodStart(current);
+        to = rangeFromLink ? requestedTo : periodEnd(current);
         if (isActive()) render();
     }
 
@@ -701,19 +870,20 @@ const MonthlyReport = (() => {
     document.querySelectorAll('.sub-switch button').forEach(button =>
         button.addEventListener('click', () => setSub(button.dataset.sub)));
     $('showDecreased').addEventListener('change', renderBalances);
+    $('periodMode').addEventListener('change', event => setMode(event.target.value));
     $('monthInput').addEventListener('change', event => {
-        if (MONTH_RE.test(event.target.value)) selectMonth(event.target.value);
+        if (MONTH_RE.test(event.target.value)) selectPeriod(event.target.value);
     });
-    $('rangeFrom').addEventListener('change', event => {
-        if (DAY_RE.test(event.target.value)) { from = event.target.value; render(); }
+    $('weekInput').addEventListener('change', event => {
+        if (DAY_RE.test(event.target.value)) selectPeriod(event.target.value);
     });
-    $('rangeTo').addEventListener('change', event => {
-        if (DAY_RE.test(event.target.value)) { to = event.target.value; render(); }
-    });
-    $('resetRange').addEventListener('click', () => selectMonth(current));
+    // Plain date inputs when flatpickr did not load (setRange ignores the repeat when it did).
+    $('rangeFrom').addEventListener('change', event => setRange('rangeFrom', event.target.value));
+    $('rangeTo').addEventListener('change', event => setRange('rangeTo', event.target.value));
+    $('resetRange').addEventListener('click', () => selectPeriod(current));
     $('prevMonth').addEventListener('click', () => step(-1));
     $('nextMonth').addEventListener('click', () => step(1));
-    $('latestMonth').addEventListener('click', () => selectMonth(months[months.length - 1]));
+    $('latestMonth').addEventListener('click', () => selectPeriod(periods()[periods().length - 1]));
     document.addEventListener('mb:themechange', () => { if (isActive() && current) render(); });
 
     const startParams = new URLSearchParams(location.search);

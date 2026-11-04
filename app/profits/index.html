@@ -16,11 +16,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <link rel="stylesheet" href="../../assets/css/site.css">
     <link rel="stylesheet" href="profits.css">
     <script src="../../assets/js/common.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" defer></script>
     <script src="../../assets/js/config.js" defer></script>
     <script src="profits.js" defer></script>
     <script src="monthly.js" defer></script>
@@ -45,8 +47,19 @@
         <section class="monthly-only">
             <div class="card card-body toolbar">
                 <div class="field">
+                    <label for="periodMode">Period</label>
+                    <select id="periodMode" class="select" disabled>
+                        <option value="month">Month</option>
+                        <option value="week">Week</option>
+                    </select>
+                </div>
+                <div class="field" id="monthField">
                     <label for="monthInput">Month</label>
                     <input type="month" id="monthInput" class="input" disabled>
+                </div>
+                <div class="field" id="weekField" hidden>
+                    <label for="weekInput" title="From the day after one revenue entry up to the next">Week (revenue entries)</label>
+                    <select id="weekInput" class="select" disabled></select>
                 </div>
                 <div class="month-nav">
                     <button type="button" class="btn btn-secondary" id="prevMonth" title="Previous month with data" disabled>‹ Previous</button>
@@ -58,7 +71,7 @@
                     <input type="date" id="rangeFrom" class="input" disabled>
                 </div>
                 <div class="field">
-                    <label for="rangeTo">To (month closed on)</label>
+                    <label for="rangeTo" id="rangeToLabel">To (month closed on)</label>
                     <input type="date" id="rangeTo" class="input" disabled>
                 </div>
                 <div class="month-nav">
@@ -137,7 +150,7 @@
                         <div class="table-wrap">
                             <table class="table" id="monthExpenses">
                                 <thead>
-                                <tr><th>Expense</th><th class="num">This month</th><th class="num">Share</th><th class="num" id="monthExpensesPrev">Last month</th></tr>
+                                <tr><th>Expense</th><th class="num" id="monthExpensesNow">This month</th><th class="num">Share</th><th class="num" id="monthExpensesPrev">Last month</th></tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>

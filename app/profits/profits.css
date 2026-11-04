@@ -192,3 +192,34 @@ body:not([data-sub="balances"]) .balances-only { display: none; }
 #balRevenue td.loss { color: var(--danger); font-weight: 600; }
 #balRevenue tr.gap-row td { padding: 6px; border-bottom: none; background: none; }
 #balRevenue tbody tr.gap-row:hover td { background: none; }
+
+/* Monthly report: Month / Week period picker. */
+.toolbar .field[hidden] { display: none; }
+
+/* From / To calendars (flatpickr), in the site's colours and both themes. Greyed days have no figures. */
+.range-picker[readonly] { background: var(--surface); color: var(--text); cursor: pointer; }
+.flatpickr-calendar { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); font-family: inherit; }
+.flatpickr-calendar.arrowTop::after { border-bottom-color: var(--surface); }
+.flatpickr-calendar.arrowTop::before { border-bottom-color: var(--border); }
+.flatpickr-calendar.arrowBottom::after { border-top-color: var(--surface); }
+.flatpickr-calendar.arrowBottom::before { border-top-color: var(--border); }
+.flatpickr-months .flatpickr-month, .flatpickr-current-month, span.flatpickr-weekday,
+.flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month { color: var(--text); fill: var(--text); background: transparent; }
+.flatpickr-months .flatpickr-prev-month:hover svg, .flatpickr-months .flatpickr-next-month:hover svg { fill: var(--brand); }
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year { color: var(--text); background: var(--surface); }
+.flatpickr-day { color: var(--text); }
+.flatpickr-day:hover, .flatpickr-day:focus { background: var(--surface-muted); border-color: var(--surface-muted); }
+.flatpickr-day.today { border-color: var(--brand); }
+.flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
+.flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color: var(--text-subtle); }
+.flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover { color: var(--text-subtle); opacity: 0.35; background: none; border-color: transparent; }
+/* Week mode: days with a revenue entry get a brand tint and a dot. */
+.flatpickr-day.revenue-day { position: relative; background: color-mix(in srgb, var(--brand) 14%, transparent); border-color: transparent; font-weight: 600; }
+.flatpickr-day.revenue-day::after {
+    content: ""; position: absolute; left: 50%; bottom: 3px; width: 4px; height: 4px; margin-left: -2px;
+    border-radius: 50%; background: var(--brand);
+}
+.flatpickr-day.revenue-day.selected, .flatpickr-day.revenue-day.selected:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
+.flatpickr-day.revenue-day:hover { background: color-mix(in srgb, var(--brand) 24%, transparent); }
+.flatpickr-day.revenue-day.selected::after { background: #fff; }
