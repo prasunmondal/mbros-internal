@@ -21,7 +21,7 @@ const MonthlyReport = (() => {
     let to = null;
     let chart = null;
     let failed = false;
-    let lastSummary = null;    // cumilativeCalculations summary of the range on screen (for the Balances tab)
+
 
     // Balances tab: customer rows from db2.deliveries, plus the 2023–2025 archive for ranges before 2026.
     const ARCHIVE_SHEET_ID = "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw";  // 2023–2025 deliveries
@@ -29,6 +29,23 @@ const MonthlyReport = (() => {
     let currentRows = null, archiveRows = [];
     let currentLoad = null, archiveLoad = null, archiveLoaded = false;
     let rowsByCustomer = new Map();   // name -> delivery rows in date order
+    let revenueRows = null, revenueLoad = null, revenueColumns = null;   // `revenue` worksheet: money snapshots by date
+
+    // `revenue` columns by header name (compared ignoring case and punctuation). Sheet headers:
+    // date, cashBalance, bankBalance, debt, onlineBalance, customerDue, inhouseBalance, networth.
+    // Balance (inhouseBalance) and networth are worked out when a row leaves them blank;
+    // market due falls back to the customers' khata balances.
+    const REVENUE_FIELDS = {
+        date: ['date'],
+        cash: ['cashbalance'],
+        bank: ['bankbalance'],
+        directDebt: ['debt'],
+        online: ['onlinebalance'],
+        marketDue: ['customerdue'],
+        balance: ['inhousebalance'],
+        networth: ['networth']
+    };
+    const normKey = key => String(key).toLowerCase().replace(/[^a-z0-9]/g, '');
 
     const $ = id => document.getElementById(id);
     const status = () => $('monthStatus');
@@ -339,7 +356,7 @@ const MonthlyReport = (() => {
         else notes.push(`${now.days} trading days, ${Mb.formatNumber(now.km, 0)} km driven.`);
         $('monthNote').textContent = notes.join(' ');
 
-        lastSummary = now;
+
         renderKpis(now, prev, lastYear, compare);
         renderExpenses(now, prev, compare);
         renderDays(rows);
@@ -365,11 +382,33 @@ const MonthlyReport = (() => {
         rowsByCustomer.forEach(rows => rows.sort((a, b) => a._day.localeCompare(b._day) || a._index - b._index));
     }
 
-    // Load what the range needs: db2.deliveries always, the archive only for ranges starting before 2026.
+    function parseRevenue(rows) {
+        const keys = [...new Set(rows.flatMap(row => Object.keys(row)))];
+        revenueColumns = { found: keys };
+        Object.entries(REVENUE_FIELDS).forEach(([field, names]) => {
+            revenueColumns[field] = keys.find(key => names.includes(normKey(key))) || null;
+        });
+        const col = revenueColumns;
+        if (!col.date) return [];
+        return rows.map(row => {
+            if (!has(row[col.date])) return null;
+            const day = dayOf(row[col.date]);
+            if (!DAY_RE.test(day)) return null;
+            const value = field => col[field] && has(row[col[field]]) ? num(String(row[col[field]]).replace(/,/g, '')) : null;
+            const snapshot = { day, cash: value('cash'), bank: value('bank'), directDebt: value('directDebt'),
+                online: value('online'), marketDue: value('marketDue'), balance: value('balance'), networth: value('networth') };
+            return ['cash', 'bank', 'directDebt', 'online'].some(field => snapshot[field] !== null) ? snapshot : null;
+        }).filter(Boolean).sort((a, b) => a.day.localeCompare(b.day));
+    }
+
+    // Load what the range needs: `revenue` and db2.deliveries always, the archive only for dates before 2026.
     function loadDeliveries(needArchive) {
         currentLoad ??= fetchDeliveries(MAIN_SHEET_ID, "db2.deliveries").then(rows => { currentRows = rows; buildCustomers(); })
             .catch(error => { currentLoad = null; throw error; });
-        const loads = [currentLoad];
+        revenueLoad ??= callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "revenue", id: "mbros-github-site" }])
+            .then(data => { revenueRows = parseRevenue(data[0].rows); })
+            .catch(error => { revenueLoad = null; throw error; });
+        const loads = [currentLoad, revenueLoad];
         if (needArchive) {
             archiveLoad ??= fetchDeliveries(ARCHIVE_SHEET_ID, "deliveries.2023").then(rows => {
                 archiveRows = rows;
@@ -410,12 +449,104 @@ const MonthlyReport = (() => {
         return { customers, openingAll, closingAll };
     }
 
+    // Market due on a day: every customer's last khata balance on or before it.
+    function customerDuesOn(day) {
+        let total = 0;
+        rowsByCustomer.forEach(rows => {
+            let balance = null;
+            for (const row of rows) {
+                if (row._day > day) break;
+                balance = num(row.khataBalance);
+            }
+            if (balance !== null) total += balance;
+        });
+        return total;
+    }
+
+    // Snapshots for the range: start = last one before From (the previous close), else the first in the range;
+    // end = last one on or before To.
+    function revenueSnapshots() {
+        if (!revenueRows || !revenueRows.length) return null;
+        const before = revenueRows.filter(row => row.day < from);
+        const upTo = revenueRows.filter(row => row.day <= to);
+        const start = before.length ? before[before.length - 1] : upTo.find(row => row.day >= from);
+        const end = upTo[upTo.length - 1];
+        return start && end ? { start, end } : null;
+    }
+
+    function renderRevenue(snapshots) {
+        const table = $('balRevenue');
+        const head = table.tHead.rows[0];
+        const body = table.tBodies[0];
+        body.replaceChildren();
+        const note = $('balRevenueNote');
+        if (!revenueColumns?.date) {
+            head.replaceChildren();
+            note.textContent = `The revenue sheet has no Date column (columns found: ${revenueColumns?.found.join(', ') || 'none'}).`;
+            return;
+        }
+        if (!snapshots) {
+            head.replaceChildren();
+            note.textContent = `The revenue sheet has no entry on or before ${dayLabel(to, { day: 'numeric', month: 'short', year: 'numeric' })}.`;
+            return;
+        }
+        const missing = ['cash', 'bank', 'directDebt', 'online'].filter(field => !revenueColumns[field]);
+        const { start, end } = snapshots;
+        const columns = [start, end].map(snap => {
+            const balance = snap.balance !== null ? snap.balance : num(snap.cash) + num(snap.bank) + num(snap.directDebt) + num(snap.online);
+            const marketDue = snap.marketDue !== null ? snap.marketDue : customerDuesOn(snap.day);
+            return { ...snap, balance, marketDue, networth: snap.networth !== null ? snap.networth : balance + marketDue };
+        });
+
+        head.replaceChildren();
+        ['Date', ...columns.map(c => dayLabel(c.day, { day: 'numeric', month: 'short', year: 'numeric' })), 'Difference'].forEach((text, i) => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            if (i) th.className = 'num';
+            head.append(th);
+        });
+        const fmt = value => value === null ? '–' : Mb.formatNumber(value, 0);
+        const diff = key => {
+            const value = columns[1][key] - columns[0][key];
+            return (value > 0 ? '+' : value < 0 ? '−' : '') + Mb.formatNumber(Math.abs(value), 0);
+        };
+        const addRow = (label, key, withDiff, className) => {
+            const tr = body.insertRow();
+            if (className) tr.className = className;
+            tr.insertCell().textContent = label;
+            columns.forEach(c => Object.assign(tr.insertCell(), { className: 'num', textContent: fmt(c[key]) }));
+            const td = Object.assign(tr.insertCell(), { className: 'num', textContent: withDiff ? diff(key) : '' });
+            if (withDiff) td.classList.add(columns[1][key] >= columns[0][key] ? 'gain' : 'loss');
+        };
+        addRow('Cash', 'cash');
+        addRow('Bank', 'bank');
+        addRow('Direct Debt', 'directDebt');
+        addRow('Online', 'online');
+        addRow('Balance', 'balance', true, 'total-row');
+        const gap = body.insertRow();
+        gap.className = 'gap-row';
+        Object.assign(gap.insertCell(), { colSpan: 4 });
+        addRow('Market Due', 'marketDue', true);
+        addRow('Networth', 'networth', true, 'total-row');
+
+        const notes = [];
+        if (start.day >= from) notes.push(`No revenue entry before ${dayLabel(from)}, so the first one in the range is used.`);
+        if (start.day === end.day) notes.push('Only one revenue entry covers this range.');
+        if (missing.length) notes.push(`Not in the revenue sheet, counted as 0: ${missing.map(f => ({ cash: 'Cash', bank: 'Bank', directDebt: 'Direct Debt', online: 'Online' })[f]).join(', ')} (columns found: ${revenueColumns.found.join(', ')}).`);
+        if ([start, end].some(snap => snap.marketDue === null))
+            notes.push('Market Due is blank in the revenue sheet, so it is the total of customer khata balances on that date.');
+        note.textContent = notes.join(' ');
+    }
+
     function renderBalances() {
         if (!current || from > to) return;
         const balStatus = $('balStatus');
         const balReport = $('balReport');
-        const needArchive = from < CURRENT_START;
-        if (!currentRows || (needArchive && !archiveLoaded)) {
+        // The archive is needed for customer rows before 2026, including market due on a start snapshot before 2026.
+        const snapshotsNow = revenueRows ? revenueSnapshots() : null;
+        const needArchive = from < CURRENT_START
+            || (snapshotsNow && snapshotsNow.start.marketDue === null && snapshotsNow.start.day < CURRENT_START);
+        if (!currentRows || !revenueRows || (needArchive && !archiveLoaded)) {
             balReport.hidden = true;
             Mb.setStatus(balStatus, 'info', needArchive ? 'Loading customer deliveries, including 2023–2025…' : 'Loading customer deliveries…');
             const range = `${from}|${to}`;
@@ -430,37 +561,8 @@ const MonthlyReport = (() => {
         Mb.setStatus(balStatus, null);
         balReport.hidden = false;
 
-        const { customers, openingAll, closingAll } = customerBalances(from, to);
-        const total = key => customers.reduce((sum, c) => sum + c[key], 0);
-        const sales = total('sales'), cash = total('cash'), online = total('online'), discount = total('discount');
-        const collected = cash + online;
-        const otherAll = (closingAll - openingAll) - (sales - collected - discount);
-
-        // Revenue and dues: opening + sales − collected − discounts ± other = closing.
-        const signed = value => (value < 0 ? '− ' : '+ ') + inr(Math.abs(value));
-        const facts = [
-            ['Dues at start', inr(openingAll), '', 'total-row'],
-            ['Sales', '+ ' + inr(sales), `${Mb.formatNumber(total('kg'), 3)} kg delivered`],
-            ['Collected', '− ' + inr(collected), sales ? `${Mb.formatNumber(collected / sales * 100, 1)}% of sales` : ''],
-            ['Cash', inr(cash), '', 'sub-row'],
-            ['Online', inr(online), '', 'sub-row'],
-            ['Discounts', '− ' + inr(discount), ''],
-            ['Other (adjustments, payments not entered)', signed(otherAll), ''],
-            ['Dues at close', inr(closingAll), `${closingAll >= openingAll ? 'Up' : 'Down'} ${inr(Math.abs(closingAll - openingAll))}`, 'total-row']
-        ];
-        if (lastSummary) {
-            facts.push(['Profit', inr(lastSummary.profit), 'from the daily figures']);
-            facts.push(['Actual money received', inr(lastSummary.actualMoney), 'profit minus the rise in dues (daily figures)']);
-        }
-        const revenueBody = $('balRevenue').tBodies[0];
-        revenueBody.replaceChildren();
-        facts.forEach(([label, value, note, className]) => {
-            const tr = revenueBody.insertRow();
-            if (className) tr.className = className;
-            tr.insertCell().textContent = label;
-            Object.assign(tr.insertCell(), { className: 'num', textContent: value });
-            Object.assign(tr.insertCell(), { className: 'note', textContent: note });
-        });
+        renderRevenue(revenueSnapshots());
+        const { customers } = customerBalances(from, to);
 
         // Customers: biggest increase first; decreases only when the switch is on.
         const showDecreased = $('showDecreased').checked;

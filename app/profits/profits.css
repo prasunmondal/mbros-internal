@@ -163,11 +163,6 @@ body[data-sub="balances"] .sub-switch::before { transform: translateX(100%); }
 body:not([data-sub="sales"]) .sales-only,
 body:not([data-sub="balances"]) .balances-only { display: none; }
 
-#balRevenue td:first-child { color: var(--text-muted); }
-#balRevenue td.num { font-weight: 600; }
-#balRevenue tr.total-row td { color: var(--text); }
-#balRevenue tr.sub-row td:first-child { padding-left: 32px; }
-#balRevenue td.note { color: var(--text-subtle); font-size: 0.8rem; font-weight: 400; }
 #balCustomers td.up { color: var(--danger); font-weight: 600; }
 #balCustomers td.down { color: var(--brand-strong); font-weight: 600; }
 #balCustomers td:first-child { white-space: nowrap; }
@@ -188,3 +183,12 @@ body:not([data-sub="balances"]) .balances-only { display: none; }
 .toggle input:checked + .toggle-track { background: var(--brand); }
 .toggle input:checked + .toggle-track::after { transform: translateX(16px); }
 .toggle input:focus-visible + .toggle-track { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* Balances: revenue snapshots (cash, bank, direct debt, online -> balance; + market due -> networth). */
+#balRevenue { max-width: 640px; }
+#balRevenue td:first-child { color: var(--text-muted); }
+#balRevenue tr.total-row td:first-child { color: var(--text); }
+#balRevenue td.gain { color: var(--brand-strong); font-weight: 600; }
+#balRevenue td.loss { color: var(--danger); font-weight: 600; }
+#balRevenue tr.gap-row td { padding: 6px; border-bottom: none; background: none; }
+#balRevenue tbody tr.gap-row:hover td { background: none; }
