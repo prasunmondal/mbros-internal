@@ -37,15 +37,20 @@
                 <h1>Business dashboard</h1>
                 <p>Profit, expenses, due balance and year-over-year trends, or one month in detail.</p>
             </div>
+            <div class="page-actions">
+                <button type="button" class="btn btn-secondary btn-icon" id="printBtn" title="Print" aria-label="Print" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg></button>
+                <button type="button" class="btn btn-secondary btn-icon" id="shareBtn" title="Share a link to this view" aria-label="Share" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+            </div>
         </div>
+        <div class="no-print"><p id="shareStatus" class="status" hidden style="margin-bottom: 16px;"></p></div>
 
-        <div class="view-switch main-switch" role="tablist" aria-label="View">
+        <div class="view-switch main-switch no-print" role="tablist" aria-label="View">
             <button type="button" role="tab" data-view="overview" aria-selected="true">Overview</button>
             <button type="button" role="tab" data-view="monthly" aria-selected="false">Revenue</button>
         </div>
 
         <section class="monthly-only">
-            <div class="card card-body toolbar">
+            <div class="card card-body toolbar no-print">
                 <div class="field">
                     <label for="periodMode">Period</label>
                     <select id="periodMode" class="select" disabled>
@@ -79,7 +84,7 @@
                 </div>
             </div>
 
-            <div class="view-switch sub-switch" role="tablist" aria-label="Revenue view">
+            <div class="view-switch sub-switch no-print" role="tablist" aria-label="Revenue view">
                 <button type="button" role="tab" data-sub="sales" aria-selected="true">Sales</button>
                 <button type="button" role="tab" data-sub="balances" aria-selected="false">Balances</button>
             </div>
@@ -106,7 +111,7 @@
                         <section class="card section">
                             <div class="card-header">
                                 <h3 id="balCustomersTitle">Customer balances</h3>
-                                <label class="toggle">
+                                <label class="toggle no-print">
                                     <input type="checkbox" id="showDecreased" role="switch">
                                     <span class="toggle-track" aria-hidden="true"></span>
                                     <span>Show decreased balances</span>
@@ -358,6 +363,70 @@
 
     </div>
 </main>
+
+<script>
+// Print the tab on screen; share its link (the address already holds view, period and dates).
+(() => {
+    const $ = id => document.getElementById(id);
+    const status = $('shareStatus');
+
+    // Ready: Overview once the figures are in (rawData, profits.js); Revenue once its report is showing,
+    // and on Balances once the balances are too. Watched through the DOM, so loading, errors and
+    // "nothing recorded" all disable the buttons with no hooks in profits.js or monthly.js.
+    const isReady = () => {
+        const body = document.body;
+        if (body.dataset.view === 'monthly')
+            return !$('monthReport').hidden && (body.dataset.sub !== 'balances' || !$('balReport').hidden);
+        try { return !!rawData?.[0]?.rows; } catch { return false; }
+    };
+    const update = () => {
+        const ready = isReady();
+        $('printBtn').disabled = !ready;
+        $('shareBtn').disabled = !ready;
+        if (!ready) Mb.setStatus(status, null);
+    };
+    const observer = new MutationObserver(update);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-view', 'data-sub'] });
+    ['monthReport', 'balReport'].forEach(id => observer.observe($(id), { attributes: true, attributeFilter: ['hidden'] }));
+    observer.observe($('dueBalance'), { childList: true, characterData: true, subtree: true });   // Overview KPIs filled in
+    update();
+    const reportTitle = () => {
+        if (document.body.dataset.view !== 'monthly') return 'Business dashboard';
+        const heading = document.getElementById('monthTitle').textContent;
+        const part = document.body.dataset.sub === 'balances' ? 'Balances' : 'Sales';
+        return `Revenue ${part}${heading ? ': ' + heading : ''}`;
+    };
+
+    document.getElementById('printBtn').addEventListener('click', () => {
+        const title = document.title;
+        document.title = `${reportTitle()} · Mondal Brothers`;   // the default PDF file name
+        window.print();
+        document.title = title;
+    });
+
+    document.getElementById('shareBtn').addEventListener('click', async () => {
+        const link = location.href;
+        // Phones: the share sheet (WhatsApp etc.). Elsewhere: copy to the clipboard.
+        if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+            try {
+                await navigator.share({ title: `${reportTitle()} - Mondal Brothers`, url: link });
+                Mb.setStatus(status, null);
+                return;
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+            }
+        }
+        try {
+            await navigator.clipboard.writeText(link);
+            Mb.setStatus(status, 'success', 'Link copied. Anyone opening it sees this view after unlocking.');
+        } catch {
+            // Clipboard blocked (e.g. plain http): show the link so it can be copied by hand.
+            Mb.setStatus(status, 'info', link);
+            status.querySelector('.spinner')?.remove();
+        }
+    });
+})();
+</script>
 
 </body>
 </html>

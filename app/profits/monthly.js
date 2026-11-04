@@ -716,7 +716,12 @@ const MonthlyReport = (() => {
         const shown = (showDecreased ? customers : up).sort((x, y) => y.change - x.change || x.name.localeCompare(y.name));
         $('balCustomersTitle').textContent = showDecreased ? `Customer balances (${shown.length})` : `Customer balances: increased (${shown.length})`;
 
-        const body = $('balCustomers').tBodies[0];
+        // Discount and Other columns only when some shown customer has one (that rounds to non-zero).
+        const table = $('balCustomers');
+        table.classList.toggle('no-discount', !shown.some(c => Math.abs(c.discount) >= 0.5));
+        table.classList.toggle('no-other', !shown.some(c => Math.abs(c.other) >= 0.5));
+
+        const body = table.tBodies[0];
         body.replaceChildren();
         const cells = (tr, values) => values.forEach((value, i) => {
             const td = tr.insertCell();
@@ -730,9 +735,10 @@ const MonthlyReport = (() => {
             td.textContent = showDecreased ? 'No customer activity in this range.' : 'No customer balance went up in this range.';
         }
         const fmt = value => Mb.formatNumber(value, 0);
+        const fmtBlank = value => Math.abs(value) < 0.5 ? '' : fmt(value);   // Discount, Other: empty when 0
         shown.forEach(c => {
             const tr = body.insertRow();
-            cells(tr, [c.name, fmt(c.opening), fmt(c.sales), fmt(c.collected), fmt(c.discount), fmt(c.other), fmt(c.closing),
+            cells(tr, [c.name, fmt(c.opening), fmt(c.sales), fmt(c.collected), fmtBlank(c.discount), fmtBlank(c.other), fmt(c.closing),
                 (c.change > 0 ? '+' : c.change < 0 ? '−' : '') + fmt(Math.abs(c.change))]);
             if (c.change > 0.5) tr.cells[7].classList.add('up');
             if (c.change < -0.5) tr.cells[7].classList.add('down');
@@ -742,8 +748,8 @@ const MonthlyReport = (() => {
             const tr = body.insertRow();
             tr.className = 'total-row';
             const change = sumShown('change');
-            cells(tr, ['Total', fmt(sumShown('opening')), fmt(sumShown('sales')), fmt(sumShown('collected')), fmt(sumShown('discount')),
-                fmt(sumShown('other')), fmt(sumShown('closing')), (change > 0 ? '+' : change < 0 ? '−' : '') + fmt(Math.abs(change))]);
+            cells(tr, ['Total', fmt(sumShown('opening')), fmt(sumShown('sales')), fmt(sumShown('collected')), fmtBlank(sumShown('discount')),
+                fmtBlank(sumShown('other')), fmt(sumShown('closing')), (change > 0 ? '+' : change < 0 ? '−' : '') + fmt(Math.abs(change))]);
         }
         const unchanged = customers.length - up.length - down.length;
         $('balSummary').textContent = `${up.length} customers up by ${inr(up.reduce((s, c) => s + c.change, 0))}, `

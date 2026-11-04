@@ -224,3 +224,14 @@ body:not([data-sub="balances"]) .balances-only { display: none; }
 .flatpickr-day.revenue-day.selected, .flatpickr-day.revenue-day.selected:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
 .flatpickr-day.revenue-day:hover { background: color-mix(in srgb, var(--brand) 24%, transparent); }
 .flatpickr-day.revenue-day.selected::after { background: #fff; }
+
+/* ---------- Print: only the tab on screen, without its controls ---------- */
+@media print {
+    .chart-controls, .year-filters { display: none !important; }
+    .table-wrap { overflow: visible; }
+    .chart-card, .card, .kpi-card { break-inside: avoid; }
+}
+
+/* Balances: Discount (5th) and Other (6th) columns hide when every shown customer has 0 there. */
+#balCustomers.no-discount th:nth-child(5), #balCustomers.no-discount td:nth-child(5),
+#balCustomers.no-other th:nth-child(6), #balCustomers.no-other td:nth-child(6) { display: none; }
