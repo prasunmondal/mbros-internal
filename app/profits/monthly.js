@@ -21,7 +21,7 @@ const MonthlyReport = (() => {
     let months = [];           // sorted months that have rows
     let weeks = [];            // sorted weeks, each named by its first day
     let weekSpan = new Map();  // week first day -> { first, last, open }
-    let mode = 'month';        // 'month' or 'week'
+    let mode = 'week';         // 'week' (the default) or 'month'
     let current = null;        // period on screen: YYYY-MM for a month, its first day (YYYY-MM-DD) for a week.
                                // Before the revenue sheet has loaded, a week is only a day to look for.
     let rangeFromLink = false; // From/To came from the link, so keep them when the weeks arrive
@@ -412,10 +412,16 @@ const MonthlyReport = (() => {
         $('resetRange').disabled = isWholePeriod();
     }
 
+    // The Balances status sits above the toolbar, outside the report, so it is cleared with it.
+    function hideReport() {
+        destroyChartInstance();
+        $('monthReport').hidden = true;
+        Mb.setStatus($('balStatus'), null);
+    }
+
     // Week mode needs the revenue sheet; load it, then put the week asked for (a day) on screen.
     function loadWeeks() {
-        $('monthReport').hidden = true;
-        destroyChartInstance();
+        hideReport();
         Mb.setStatus(status(), 'info', 'Loading revenue entry dates…');
         loadRevenue().then(() => {
             buildWeeks();
@@ -443,15 +449,13 @@ const MonthlyReport = (() => {
         const report = $('monthReport');
         $('monthTitle').textContent = mode === 'week' ? `Week: ${weekLabel(current)}` : monthName(current);
         if (from > to) {
-            destroyChartInstance();
-            report.hidden = true;
+            hideReport();
             Mb.setStatus(status(), 'error', '"From" is after "To". Pick the dates again.');
             return;
         }
         const rows = rowsIn(from, to);
         if (!rows.length) {
-            destroyChartInstance();
-            report.hidden = true;
+            hideReport();
             Mb.setStatus(status(), 'empty', `Nothing recorded from ${rangeLabel(from, to)}.`);
             return;
         }
@@ -836,12 +840,13 @@ const MonthlyReport = (() => {
 
         const params = new URLSearchParams(location.search);
         const month = params.get('month'), week = params.get('week');
-        if (DAY_RE.test(week || '')) {
-            mode = 'week';
-            current = week;   // a day to look for until the weeks have loaded
-        } else {
+        // Weekly by default; a link with ?month= opens that month.
+        if (MONTH_RE.test(month || '') && !DAY_RE.test(week || '')) {
             mode = 'month';
-            current = MONTH_RE.test(month || '') ? month : months[months.length - 1];
+            current = month;
+        } else {
+            mode = 'week';
+            current = DAY_RE.test(week || '') ? week : Mb.todayIST();   // a day to look for until the weeks have loaded
         }
         const requestedFrom = params.get('from'), requestedTo = params.get('to');
         rangeFromLink = DAY_RE.test(requestedFrom || '') && DAY_RE.test(requestedTo || '');

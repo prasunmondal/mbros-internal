@@ -26,6 +26,7 @@
     <script src="../../assets/js/config.js" defer></script>
     <script src="profits.js" defer></script>
     <script src="monthly.js" defer></script>
+    <script src="share.js" defer></script>
 </head>
 <body data-page="profits" data-view="overview" data-sub="sales">
 
@@ -39,7 +40,8 @@
             </div>
             <div class="page-actions">
                 <button type="button" class="btn btn-secondary btn-icon" id="printBtn" title="Print" aria-label="Print" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg></button>
-                <button type="button" class="btn btn-secondary btn-icon" id="shareBtn" title="Share a link to this view" aria-label="Share" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+                <button type="button" class="btn btn-secondary btn-icon" id="shareBtn" title="Share a link to this view" aria-label="Share link" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                <button type="button" class="btn btn-secondary btn-icon" id="pdfBtn" title="Share as PDF" aria-label="Share as PDF" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
             </div>
         </div>
         <div class="no-print"><p id="shareStatus" class="status" hidden style="margin-bottom: 16px;"></p></div>
@@ -50,19 +52,23 @@
         </div>
 
         <section class="monthly-only">
+            <!-- Loading and errors first, above the period controls, so they show without scrolling. -->
+            <p id="monthStatus" class="status" hidden style="margin-bottom: 16px;"></p>
+            <div class="balances-only"><p id="balStatus" class="status" hidden style="margin-bottom: 16px;"></p></div>
+
             <div class="card card-body toolbar no-print">
                 <div class="field">
                     <label for="periodMode">Period</label>
                     <select id="periodMode" class="select" disabled>
                         <option value="month">Month</option>
-                        <option value="week">Week</option>
+                        <option value="week" selected>Week</option>
                     </select>
                 </div>
-                <div class="field" id="monthField">
+                <div class="field" id="monthField" hidden>
                     <label for="monthInput">Month</label>
                     <input type="month" id="monthInput" class="input" disabled>
                 </div>
-                <div class="field" id="weekField" hidden>
+                <div class="field" id="weekField">
                     <label for="weekInput" title="From the day after one revenue entry up to the next">Week (revenue entries)</label>
                     <select id="weekInput" class="select" disabled></select>
                 </div>
@@ -89,7 +95,6 @@
                 <button type="button" role="tab" data-sub="balances" aria-selected="false">Balances</button>
             </div>
 
-            <p id="monthStatus" class="status" hidden style="margin-top: 16px;"></p>
 
             <div id="monthReport" hidden>
                 <div class="month-heading">
@@ -98,7 +103,6 @@
                 </div>
 
                 <div class="balances-only">
-                    <p id="balStatus" class="status" hidden></p>
                     <div id="balReport" hidden>
                         <section class="card">
                             <div class="card-header"><h3>Revenue</h3></div>
@@ -364,69 +368,6 @@
     </div>
 </main>
 
-<script>
-// Print the tab on screen; share its link (the address already holds view, period and dates).
-(() => {
-    const $ = id => document.getElementById(id);
-    const status = $('shareStatus');
-
-    // Ready: Overview once the figures are in (rawData, profits.js); Revenue once its report is showing,
-    // and on Balances once the balances are too. Watched through the DOM, so loading, errors and
-    // "nothing recorded" all disable the buttons with no hooks in profits.js or monthly.js.
-    const isReady = () => {
-        const body = document.body;
-        if (body.dataset.view === 'monthly')
-            return !$('monthReport').hidden && (body.dataset.sub !== 'balances' || !$('balReport').hidden);
-        try { return !!rawData?.[0]?.rows; } catch { return false; }
-    };
-    const update = () => {
-        const ready = isReady();
-        $('printBtn').disabled = !ready;
-        $('shareBtn').disabled = !ready;
-        if (!ready) Mb.setStatus(status, null);
-    };
-    const observer = new MutationObserver(update);
-    observer.observe(document.body, { attributes: true, attributeFilter: ['data-view', 'data-sub'] });
-    ['monthReport', 'balReport'].forEach(id => observer.observe($(id), { attributes: true, attributeFilter: ['hidden'] }));
-    observer.observe($('dueBalance'), { childList: true, characterData: true, subtree: true });   // Overview KPIs filled in
-    update();
-    const reportTitle = () => {
-        if (document.body.dataset.view !== 'monthly') return 'Dashboards';
-        const heading = document.getElementById('monthTitle').textContent;
-        const part = document.body.dataset.sub === 'balances' ? 'Balances' : 'Sales';
-        return `Revenue ${part}${heading ? ': ' + heading : ''}`;
-    };
-
-    document.getElementById('printBtn').addEventListener('click', () => {
-        const title = document.title;
-        document.title = `${reportTitle()} · Mondal Brothers`;   // the default PDF file name
-        window.print();
-        document.title = title;
-    });
-
-    document.getElementById('shareBtn').addEventListener('click', async () => {
-        const link = location.href;
-        // Phones: the share sheet (WhatsApp etc.). Elsewhere: copy to the clipboard.
-        if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-            try {
-                await navigator.share({ title: `${reportTitle()} - Mondal Brothers`, url: link });
-                Mb.setStatus(status, null);
-                return;
-            } catch (error) {
-                if (error.name === 'AbortError') return;
-            }
-        }
-        try {
-            await navigator.clipboard.writeText(link);
-            Mb.setStatus(status, 'success', 'Link copied. Anyone opening it sees this view after unlocking.');
-        } catch {
-            // Clipboard blocked (e.g. plain http): show the link so it can be copied by hand.
-            Mb.setStatus(status, 'info', link);
-            status.querySelector('.spinner')?.remove();
-        }
-    });
-})();
-</script>
 
 </body>
 </html>
