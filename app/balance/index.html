@@ -100,7 +100,7 @@
             data.forEach(entry => {
                 const date = Mb.toISTDate(entry.timestamp);
                 const name = entry.name || "Unknown";
-                const balance = parseFloat(entry.khataBalance || 0);
+                const balance = parseFloat(entry.totalBalance || 0);
 
                 if (!customerBalance[name] || date <= selectedDate) {
                     customerBalance[name] = balance;

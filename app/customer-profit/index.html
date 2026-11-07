@@ -116,7 +116,7 @@
             worksheet: "cumilativeCalculations",
             id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
         }]);
-        window.profitData = data[0].rows;
+        window.profitData = await useTotalBalanceDues(data[0].rows);
     }
 
     function populateCustomers(customers) {
@@ -178,7 +178,7 @@
                 if (selectedCustomer === "ALL") {
                     startingBalance = profitEntry.prev_due_balance
                 } else {
-                    startingBalance = c.prevAmount
+                    startingBalance = Number(c.prevAmount) + Number(c.totalBalance) - Number(c.khataBalance)
                 }
             }
 

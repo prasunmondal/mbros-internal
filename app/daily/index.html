@@ -307,18 +307,19 @@
             totals.cash += num(row.paidCash);
             totals.online += num(row.paidOnline);
             totals.discount += num(row.discount);
-            totals.prev += num(row.prevAmount);
-            totals.balance += num(row.khataBalance);
+            const previous = num(row.prevAmount) + num(row.totalBalance) - num(row.khataBalance);
+            totals.prev += previous;
+            totals.balance += num(row.totalBalance);
             const tr = body.insertRow();
             [row.name, blank(row.deliveredPc), blank(row.deliveredKg, 3), num(row.rate) ? Mb.formatRate(row.rate) : '', blank(row.deliverAmount),
                 blank(row.paidCash), blank(row.paidOnline), blank(row.discount),
-                Mb.formatNumber(row.prevAmount, 0), Mb.formatNumber(row.khataBalance, 0)
+                Mb.formatNumber(previous, 0), Mb.formatNumber(row.totalBalance, 0)
             ].forEach((value, i) => {
                 const td = tr.insertCell();
                 td.textContent = value;
                 if (i) td.className = 'num';
             });
-            if (num(row.khataBalance) < 0) tr.cells[9].classList.add('negative');
+            if (num(row.totalBalance) < 0) tr.cells[9].classList.add('negative');
         });
         const totalRow = body.insertRow();
         totalRow.className = 'total-row';
@@ -353,7 +354,7 @@
         Mb.setStatus(status, 'info', 'Loading daily figures…');
         try {
             const [days, deliveries] = await Promise.all([
-                fetchRows(MAIN_SHEET_ID, "cumilativeCalculations"),
+                fetchRows(MAIN_SHEET_ID, "cumilativeCalculations").then(useTotalBalanceDues),
                 fetchRows(MAIN_SHEET_ID, "db2.deliveries")
             ]);
             days.forEach(row => {

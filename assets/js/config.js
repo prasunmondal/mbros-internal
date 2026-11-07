@@ -78,3 +78,46 @@ async function callSheetsApi(operations) {
     let next = 0;
     return operations.map((op, i) => cached[i] ? { ...cached[i], operationId: op.id } : fetched[next++]);
 }
+
+// Dues always mean totalBalance. cumilativeCalculations' prev_due_balance and new_due_balance add up every
+// customer's khataBalance, so this adds each customer's totalBalance − khataBalance (their latest on that date).
+// Otherwise money moved between otherBalances and khataBalance looks like dues rising or falling.
+// Changes the rows and returns them; rejects if the deliveries can't be read, rather than show khata dues.
+async function useTotalBalanceDues(dayRows) {
+    const select = (spreadsheetId, worksheet) =>
+        callSheetsApi([{ type: "SELECT", spreadsheetId, worksheet, id: "mbros-github-site" }]).then(data => data[0].rows);
+    const [archive, current] = await Promise.all([
+        select("1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw", "deliveries.2023"),   // 2023–2025
+        select(MAIN_SHEET_ID, "db2.deliveries")                                      // from 2026
+    ]);
+    const number = value => Number(String(value ?? '').replace(/,/g, '')) || 0;
+    // Newer rows hold YYYY-MM-DD; older ones a UTC timestamp of IST midnight.
+    const dayOf = value => (typeof value === 'string' && value.length === 10) ? value : Mb.toISTDate(value);
+
+    // The total difference across customers, as { day, extra } each time it changes.
+    const rows = [...archive, ...current].filter(row => row.name && row.timestamp)
+        .map((row, index) => ({ row, index, day: dayOf(row.timestamp) }))
+        .sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
+    const byCustomer = new Map();
+    const changes = [];
+    let extra = 0;
+    rows.forEach(({ row, day }) => {
+        const now = number(row.totalBalance) - number(row.khataBalance);
+        extra += now - (byCustomer.get(row.name) || 0);
+        byCustomer.set(row.name, now);
+        const last = changes[changes.length - 1];
+        if (last?.day === day) last.extra = extra;
+        else if (!last || last.extra !== extra) changes.push({ day, extra });
+    });
+    const extraBefore = day => changes.filter(change => change.day < day).pop()?.extra || 0;
+    const extraOn = day => changes.filter(change => change.day <= day).pop()?.extra || 0;
+    const isDue = value => value !== '' && value !== null && value !== undefined && value !== '#N/A';
+
+    dayRows.forEach(row => {
+        if (!row.date) return;
+        const day = dayOf(row.date);
+        if (isDue(row.prev_due_balance)) row.prev_due_balance = number(row.prev_due_balance) + extraBefore(day);
+        if (isDue(row.new_due_balance)) row.new_due_balance = number(row.new_due_balance) + extraOn(day);
+    });
+    return dayRows;
+}

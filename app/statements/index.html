@@ -657,16 +657,19 @@
             rowsByCustomer.forEach(rows => {
                 rows.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
                 rows.forEach((row, i) => {
-                    const previous = i ? num(rows[i - 1].khataBalance) : num(row.prevAmount);
-                    row.change = num(row.khataBalance) - previous;
+                    // totalBalance = khataBalance + other balances. A move in other balances is an adjustment, not a payment.
+                    const other = entry => num(entry.totalBalance) - num(entry.khataBalance);
+                    const otherChange = i ? other(row) - other(rows[i - 1]) : 0;
+                    const previous = i ? num(rows[i - 1].totalBalance) : num(row.prevAmount) + other(row);
+                    row.change = num(row.totalBalance) - previous;
                     // khataBalance = prevAmount + deliverAmount − paidCash − paidOnline − discount + autoAdjust + adjustments
                     const explained = num(row.deliverAmount) - num(row.paidCash) - num(row.paidOnline)
-                        - num(row.discount) + num(row.autoAdjust) + num(row.adjustments);
+                        - num(row.discount) + num(row.autoAdjust) + num(row.adjustments) + otherChange;
                     const unrecorded = row.change - explained;
                     row.unrecordedPayment = unrecorded < -0.5 ? -unrecorded : 0;
                     row.unrecordedIncrease = unrecorded > 0.5 ? unrecorded : 0;
                     row.cash = num(row.paidCash) + row.unrecordedPayment;
-                    row.adjustment = num(row.autoAdjust) + num(row.adjustments) + row.unrecordedIncrease;
+                    row.adjustment = num(row.autoAdjust) + num(row.adjustments) + otherChange + row.unrecordedIncrease;
                 });
             });
         }
@@ -704,7 +707,7 @@
             names: () => [...rowsByCustomer.keys()],
             detail: name => {
                 const rows = rowsByCustomer.get(name);
-                return Mb.formatINR(rows[rows.length - 1].khataBalance, 0);
+                return Mb.formatINR(rows[rows.length - 1].totalBalance, 0);
             },
             onChange: renderStatement
         });
@@ -716,13 +719,14 @@
             renderStatement();
         });
 
-        // Balance before the range: last khata balance before `from`, else the carried-in prevAmount of the first row.
+        // Balance before the range: last total balance before `from`, else the first row's balance before it.
         function openingBalance(rows, from) {
-            if (!from) return num(rows[0].prevAmount);
-            let opening = num(rows[0].prevAmount);
+            const carriedIn = num(rows[0].prevAmount) + num(rows[0].totalBalance) - num(rows[0].khataBalance);
+            if (!from) return carriedIn;
+            let opening = carriedIn;
             for (const row of rows) {
                 if (row.day >= from) break;
-                opening = num(row.khataBalance);
+                opening = num(row.totalBalance);
             }
             return opening;
         }
@@ -871,7 +875,7 @@
                     blankIfZero(row.paidOnline),
                     blankIfZero(row.discount),
                     blankIfZero(adjustment),
-                    Mb.formatNumber(row.khataBalance, 0),
+                    Mb.formatNumber(row.totalBalance, 0),
                     Mb.formatINR(running, 0),
                     notes
                 ], 2);

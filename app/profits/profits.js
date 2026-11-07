@@ -44,6 +44,7 @@ async function fetchData() {
             worksheet: "cumilativeCalculations",
             id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
         }]);
+        await useTotalBalanceDues(rawData[0].rows);
 
         updateDashboard();
         if (rawData?.[0]?.rows) MonthlyReport.setRows(rawData[0].rows);

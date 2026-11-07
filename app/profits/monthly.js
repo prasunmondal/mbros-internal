@@ -39,10 +39,12 @@ const MonthlyReport = (() => {
     let rowsByCustomer = new Map();   // name -> delivery rows in date order
     let revenueRows = null, revenueLoad = null, revenueColumns = null;   // `revenue` worksheet: money snapshots by date
 
+    let salaryRows = null, salaryLoad = null;   // db2.loads rows labelled EmployeeSalary: { day, amount }
+
     // `revenue` columns by header name (compared ignoring case and punctuation). Sheet headers:
     // date, cashBalance, bankBalance, debt, onlineBalance, customerDue, inhouseBalance, networth.
     // Balance (inhouseBalance) and networth are worked out when a row leaves them blank;
-    // market due falls back to the customers' khata balances.
+    // market due falls back to the customers' total balances.
     const REVENUE_FIELDS = {
         date: ['date'],
         cash: ['cashbalance'],
@@ -550,6 +552,17 @@ const MonthlyReport = (() => {
         return revenueLoad;
     }
 
+    function loadSalaries() {
+        salaryLoad ??= callSheetsApi([{ type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.loads", id: "mbros-github-site" }])
+            .then(data => {
+                salaryRows = data[0].rows
+                    .filter(row => String(row.labels ?? '').split(',').some(label => label.trim() === 'EmployeeSalary'))
+                    .map(row => ({ day: has(row.deliverySession) ? dayOf(row.deliverySession) : '', amount: num(String(row.senderAmount).replace(/,/g, '')) }));
+            })
+            .catch(error => { salaryLoad = null; throw error; });
+        return salaryLoad;
+    }
+
     // Load what the range needs: `revenue` and db2.deliveries always, the archive only for dates before 2026.
     function loadDeliveries(needArchive) {
         currentLoad ??= fetchDeliveries(MAIN_SHEET_ID, "db2.deliveries").then(rows => { currentRows = rows; buildCustomers(); })
@@ -566,8 +579,8 @@ const MonthlyReport = (() => {
         return Promise.all(loads);
     }
 
-    // Per customer over [a, b]: opening = last khata balance before a (else the first row's prevAmount),
-    // closing = last khata balance on or before b. "Other" is the part of the change the rows' sales,
+    // Per customer over [a, b]: opening = last total balance before a (else the first row's balance before it),
+    // closing = last total balance on or before b. "Other" is the part of the change the rows' sales,
     // collections and discounts don't explain (adjustments, payments not entered). Same rule as the
     // Customer Statement in app/statements/.
     function customerBalances(a, b) {
@@ -575,12 +588,12 @@ const MonthlyReport = (() => {
         let openingAll = 0, closingAll = 0;
         rowsByCustomer.forEach((rows, name) => {
             if (rows[0]._day > b) return;
-            let opening = num(rows[0].prevAmount);
+            let opening = num(rows[0].prevAmount) + num(rows[0].totalBalance) - num(rows[0].khataBalance);
             let closing = opening;
             const inRange = [];
             for (const row of rows) {
-                if (row._day < a) { opening = num(row.khataBalance); closing = opening; }
-                else if (row._day <= b) { inRange.push(row); closing = num(row.khataBalance); }
+                if (row._day < a) { opening = num(row.totalBalance); closing = opening; }
+                else if (row._day <= b) { inRange.push(row); closing = num(row.totalBalance); }
                 else break;
             }
             openingAll += opening;
@@ -595,14 +608,14 @@ const MonthlyReport = (() => {
         return { customers, openingAll, closingAll };
     }
 
-    // Market due on a day: every customer's last khata balance on or before it.
+    // Market due on a day: every customer's last total balance on or before it.
     function customerDuesOn(day) {
         let total = 0;
         rowsByCustomer.forEach(rows => {
             let balance = null;
             for (const row of rows) {
                 if (row._day > day) break;
-                balance = num(row.khataBalance);
+                balance = num(row.totalBalance);
             }
             if (balance !== null) total += balance;
         });
@@ -683,7 +696,84 @@ const MonthlyReport = (() => {
         if (start.day === end.day) notes.push('Only one revenue entry covers this range.');
         if (missing.length) notes.push(`Not in the revenue sheet, counted as 0: ${missing.map(f => ({ cash: 'Cash', bank: 'Bank', directDebt: 'Direct Debt', online: 'Online' })[f]).join(', ')} (columns found: ${revenueColumns.found.join(', ')}).`);
         if ([start, end].some(snap => snap.marketDue === null))
-            notes.push('Market Due is blank in the revenue sheet, so it is the total of customer khata balances on that date.');
+            notes.push('Market Due is blank in the revenue sheet, so it is the sum of customer total balances on that date.');
+        note.textContent = notes.join(' ');
+    }
+
+    // ---------- Monthly average of actual money received, less salaries ----------
+
+    // The month a salary paid on `day` is for. A month's salary is paid from 5 days before its end up to
+    // the 20th of the next month (June: 25 June to 20 July). Null for the days in between.
+    function salaryMonthOf(day) {
+        if (!DAY_RE.test(day)) return null;
+        const month = day.slice(0, 7);
+        const date = Number(day.slice(8, 10));
+        if (date <= 20) return shiftMonth(month, -1);
+        return date >= daysIn(month) - 5 ? month : null;
+    }
+
+    // The last 12 finished months. A month whose salary isn't recorded yet waits until its payment window closes,
+    // so an unpaid salary doesn't inflate the average.
+    function moneyAverage(today) {
+        const salaries = new Map();
+        const unplaced = [];
+        salaryRows.forEach(row => {
+            const month = salaryMonthOf(row.day);
+            if (month) salaries.set(month, (salaries.get(month) || 0) + row.amount);
+            else unplaced.push(row);
+        });
+        const lastFinished = shiftMonth(today.slice(0, 7), -1);
+        const windowClosed = month => `${shiftMonth(month, 1)}-20` < today;
+        const waiting = months.filter(month => month <= lastFinished && !salaries.has(month) && !windowClosed(month));
+        const rows = months.filter(month => month <= lastFinished && !waiting.includes(month)).slice(-12).map(month => {
+            const monthRows = rowsIn(monthStart(month), monthEnd(month));
+            const actual = summarize(monthRows).actualMoney;
+            const salary = salaries.get(month) || 0;
+            // Until December 2025 Raju's salary is a daily column in cumilativeCalculations instead. The profit
+            // column doesn't subtract it and only db2.loads salaries are deducted here, so the note points it out.
+            const dailySalary = monthRows.reduce((total, row) => total + num(row.RajuSalary), 0);
+            return { month, actual, salary, after: actual - salary, dailySalary };
+        });
+        const average = key => rows.length ? rows.reduce((total, row) => total + row[key], 0) / rows.length : null;
+        return { rows, waiting, unplaced, average: { actual: average('actual'), salary: average('salary'), after: average('after') } };
+    }
+
+    function renderMoneyAverage() {
+        const body = $('balMoneyAvg').tBodies[0];
+        const note = $('balMoneyAvgNote');
+        const value = $('balMoneyAvgValue');
+        if (!salaryRows) {
+            body.replaceChildren();
+            value.textContent = '';
+            note.textContent = 'Loading salaries…';
+            loadSalaries().then(() => {
+                if (isActive() && sub() === 'balances') renderMoneyAverage();
+            }, error => {
+                console.error('Error fetching salaries:', error);
+                note.textContent = 'Could not load salaries. Open the tab again to retry.';
+            });
+            return;
+        }
+        const { rows, waiting, unplaced, average } = moneyAverage(Mb.todayIST());
+        const money = amount => amount ? inr(amount) : '–';
+        const addRow = (label, cols, className) => {
+            const tr = body.insertRow();
+            if (className) tr.className = className;
+            tr.insertCell().textContent = label;
+            cols.forEach(text => Object.assign(tr.insertCell(), { className: 'num', textContent: text }));
+        };
+        body.replaceChildren();
+        rows.forEach(row => addRow(monthName(row.month, 'short'), [inr(row.actual), money(row.salary), inr(row.after)]));
+        if (rows.length) addRow('Monthly average', [inr(average.actual), money(average.salary), inr(average.after)], 'total-row');
+        value.textContent = rows.length ? `${inr(average.after)} / month` : '';
+
+        const notes = ['Salaries go to the month they are for: paid from 5 days before its end up to the 20th of the next month.'];
+        const noSalary = rows.filter(row => !row.salary && !row.dailySalary).map(row => monthName(row.month, 'short'));
+        if (noSalary.length) notes.push(`No salary recorded for ${noSalary.join(', ')}.`);
+        const daily = rows.filter(row => !row.salary && row.dailySalary);
+        if (daily.length) notes.push(`Not deducted: ${inr(daily.reduce((total, row) => total + row.dailySalary, 0))} of salary in the daily RajuSalary column for ${daily.map(row => monthName(row.month, 'short')).join(', ')}.`);
+        if (waiting.length) notes.push(`Not counted yet, salary not recorded and its window still open: ${waiting.map(month => monthName(month, 'short')).join(', ')}.`);
+        if (unplaced.length) notes.push(`Not deducted, paid outside any salary window: ${unplaced.map(row => `${inr(row.amount)} on ${row.day || 'no date'}`).join(', ')}.`);
         note.textContent = notes.join(' ');
     }
 
@@ -711,6 +801,7 @@ const MonthlyReport = (() => {
         balReport.hidden = false;
 
         renderRevenue(revenueSnapshots());
+        renderMoneyAverage();
         const { customers } = customerBalances(from, to);
 
         // Customers: biggest increase first; decreases only when the switch is on.

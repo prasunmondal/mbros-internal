@@ -27,6 +27,7 @@ the lint here does not check them.
   `{ operationId, rowCount, rows }` per operation. It throws when the reply has `success: false`.
 - `fetchWithRetry`: 3 retries, exponential back-off from 1 s. It exists because engine failures
   (timeouts, quota, concurrency) come back as HTML without CORS headers.
+- `useTotalBalanceDues(dayRows)` turns `cumilativeCalculations` due columns into `totalBalance` dues (rule in `product.md`). It reads both delivery worksheets, so every page reading those columns loads them.
 - Every page uses `type: "SELECT"` only. There are no writes from this repo.
 - `DataCache` keeps each SELECT result in IndexedDB, keyed by the operation without its `id`, so
   all app pages and browser tabs reuse a worksheet already fetched. A page reload (F5) or a fresh
@@ -36,7 +37,7 @@ the lint here does not check them.
 | Spreadsheet | Worksheet | Read by |
 |---|---|---|
 | main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
-| main | `db2.loads` | `app/statements/` |
+| main | `db2.loads` | `app/statements/`, `app/profits/` (Revenue tab, Balances: `EmployeeSalary` rows) |
 | staging (ID in `app/statements/`, `app/deliveries/deliveries.js`) | `temp.load`: staged transactions not yet in `db2.loads`, same columns plus `isHidden`. `cal.occasions`: one row per occasion, `occassionName` (sic), `daysPrepend`, `daysAppend`, one date column per year (`y2023`…, IST midnight as UTC timestamp, blank when unknown) | `app/statements/` (`temp.load`), `app/deliveries/` (`cal.occasions`) |
 | main | `db2.deliveries` | `app/profits/` (Revenue tab, Balances), `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
