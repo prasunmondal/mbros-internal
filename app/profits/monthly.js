@@ -712,8 +712,7 @@ const MonthlyReport = (() => {
         return date >= daysIn(month) - 5 ? month : null;
     }
 
-    // The last 12 finished months. A month whose salary isn't recorded yet waits until its payment window closes,
-    // so an unpaid salary doesn't inflate the average.
+    // The last 12 finished months, whether or not their salary is recorded yet.
     function moneyAverage(today) {
         const salaries = new Map();
         const unplaced = [];
@@ -723,19 +722,18 @@ const MonthlyReport = (() => {
             else unplaced.push(row);
         });
         const lastFinished = shiftMonth(today.slice(0, 7), -1);
-        const windowClosed = month => `${shiftMonth(month, 1)}-20` < today;
-        const waiting = months.filter(month => month <= lastFinished && !salaries.has(month) && !windowClosed(month));
-        const rows = months.filter(month => month <= lastFinished && !waiting.includes(month)).slice(-12).map(month => {
+        const windowEnd = month => `${shiftMonth(month, 1)}-20`;
+        const rows = months.filter(month => month <= lastFinished).slice(-12).map(month => {
             const monthRows = rowsIn(monthStart(month), monthEnd(month));
             const actual = summarize(monthRows).actualMoney;
             const salary = salaries.get(month) || 0;
             // Until December 2025 Raju's salary is a daily column in cumilativeCalculations instead. The profit
             // column doesn't subtract it and only db2.loads salaries are deducted here, so the note points it out.
             const dailySalary = monthRows.reduce((total, row) => total + num(row.RajuSalary), 0);
-            return { month, actual, salary, after: actual - salary, dailySalary };
+            return { month, actual, salary, after: actual - salary, dailySalary, windowOpen: windowEnd(month) >= today };
         });
         const average = key => rows.length ? rows.reduce((total, row) => total + row[key], 0) / rows.length : null;
-        return { rows, waiting, unplaced, average: { actual: average('actual'), salary: average('salary'), after: average('after') } };
+        return { rows, unplaced, average: { actual: average('actual'), salary: average('salary'), after: average('after') } };
     }
 
     function renderMoneyAverage() {
@@ -754,7 +752,7 @@ const MonthlyReport = (() => {
             });
             return;
         }
-        const { rows, waiting, unplaced, average } = moneyAverage(Mb.todayIST());
+        const { rows, unplaced, average } = moneyAverage(Mb.todayIST());
         const money = amount => amount ? inr(amount) : '–';
         const addRow = (label, cols, className) => {
             const tr = body.insertRow();
@@ -763,16 +761,19 @@ const MonthlyReport = (() => {
             cols.forEach(text => Object.assign(tr.insertCell(), { className: 'num', textContent: text }));
         };
         body.replaceChildren();
-        rows.forEach(row => addRow(monthName(row.month, 'short'), [inr(row.actual), money(row.salary), inr(row.after)]));
+        if ($('showMoneyMonths').checked) {
+            [...rows].reverse().forEach(row => addRow(monthName(row.month, 'short'), [inr(row.actual), money(row.salary), inr(row.after)]));
+        }
         if (rows.length) addRow('Monthly average', [inr(average.actual), money(average.salary), inr(average.after)], 'total-row');
         value.textContent = rows.length ? `${inr(average.after)} / month` : '';
 
         const notes = ['Salaries go to the month they are for: paid from 5 days before its end up to the 20th of the next month.'];
-        const noSalary = rows.filter(row => !row.salary && !row.dailySalary).map(row => monthName(row.month, 'short'));
+        const pending = rows.filter(row => !row.salary && row.windowOpen);
+        if (pending.length) notes.push(`Salary not recorded yet, can still be paid until the 20th: ${pending.map(row => monthName(row.month, 'short')).join(', ')}.`);
+        const noSalary = rows.filter(row => !row.salary && !row.dailySalary && !row.windowOpen).map(row => monthName(row.month, 'short'));
         if (noSalary.length) notes.push(`No salary recorded for ${noSalary.join(', ')}.`);
         const daily = rows.filter(row => !row.salary && row.dailySalary);
         if (daily.length) notes.push(`Not deducted: ${inr(daily.reduce((total, row) => total + row.dailySalary, 0))} of salary in the daily RajuSalary column for ${daily.map(row => monthName(row.month, 'short')).join(', ')}.`);
-        if (waiting.length) notes.push(`Not counted yet, salary not recorded and its window still open: ${waiting.map(month => monthName(month, 'short')).join(', ')}.`);
         if (unplaced.length) notes.push(`Not deducted, paid outside any salary window: ${unplaced.map(row => `${inr(row.amount)} on ${row.day || 'no date'}`).join(', ')}.`);
         note.textContent = notes.join(' ');
     }
@@ -975,6 +976,7 @@ const MonthlyReport = (() => {
     document.querySelectorAll('.sub-switch button').forEach(button =>
         button.addEventListener('click', () => setSub(button.dataset.sub)));
     $('showDecreased').addEventListener('change', renderBalances);
+    $('showMoneyMonths').addEventListener('change', renderMoneyAverage);
     $('periodMode').addEventListener('change', event => setMode(event.target.value));
     $('monthInput').addEventListener('change', event => {
         if (MONTH_RE.test(event.target.value)) selectPeriod(event.target.value);

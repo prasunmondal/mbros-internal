@@ -190,7 +190,7 @@
     // The last PDF made, kept for the view it shows. Browsers allow sharing only for a few seconds after a
     // tap; a PDF that took longer is kept, and the next tap shares it straight away.
     let made = null;   // { key, file, title }
-    const viewKey = () => `${location.href}|${document.body.dataset.view}|${document.body.dataset.sub}|${document.documentElement.dataset.theme || ''}|${$('showDecreased').checked}`;
+    const viewKey = () => `${location.href}|${document.body.dataset.view}|${document.body.dataset.sub}|${document.documentElement.dataset.theme || ''}|${$('showDecreased').checked}|${$('showMoneyMonths').checked}`;
 
     async function shareFile({ file, title }) {
         // The share sheet with the file wherever the browser can share files (phones, Windows, macOS);
