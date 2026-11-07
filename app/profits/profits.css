@@ -167,6 +167,12 @@ body:not([data-sub="balances"]) .balances-only { display: none; }
 #balCustomers td.down { color: var(--brand-strong); font-weight: 600; }
 #balCustomers td:first-child { white-space: nowrap; }
 .bal-summary { margin: 0; padding: 12px 20px 16px; font-size: 0.85rem; }
+
+/* Monthly average table: Month and the average row open and close the months. */
+.month-toggle { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.month-toggle-icon { display: inline-block; transition: transform 0.15s; }
+.month-toggle[aria-expanded="true"] .month-toggle-icon { transform: rotate(90deg); }
+.month-toggle-row { cursor: pointer; }
 .card-header { flex-wrap: wrap; }
 
 /* On/off switch built from a checkbox. */

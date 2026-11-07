@@ -116,17 +116,12 @@
                             <div class="card-header">
                                 <h3>Actual money received: monthly average, last 12 months</h3>
                                 <strong id="balMoneyAvgValue"></strong>
-                                <label class="toggle no-print">
-                                    <input type="checkbox" id="showMoneyMonths" role="switch">
-                                    <span class="toggle-track" aria-hidden="true"></span>
-                                    <span>Show months</span>
-                                </label>
                             </div>
                             <div class="table-wrap">
                                 <table class="table" id="balMoneyAvg">
                                     <thead>
                                     <tr>
-                                        <th>Month</th>
+                                        <th><button type="button" class="month-toggle" id="moneyMonthsToggle" aria-expanded="false" aria-controls="balMoneyAvg" title="Show or hide the months">Month <span class="month-toggle-icon no-print" aria-hidden="true">▸</span></button></th>
                                         <th class="num">Actual money received</th>
                                         <th class="num">Salary</th>
                                         <th class="num">After salary</th>

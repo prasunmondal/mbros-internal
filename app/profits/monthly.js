@@ -736,6 +736,12 @@ const MonthlyReport = (() => {
         return { rows, unplaced, average: { actual: average('actual'), salary: average('salary'), after: average('after') } };
     }
 
+    const monthsExpanded = () => $('moneyMonthsToggle').getAttribute('aria-expanded') === 'true';
+    function toggleMonths() {
+        $('moneyMonthsToggle').setAttribute('aria-expanded', String(!monthsExpanded()));
+        renderMoneyAverage();
+    }
+
     function renderMoneyAverage() {
         const body = $('balMoneyAvg').tBodies[0];
         const note = $('balMoneyAvgNote');
@@ -761,10 +767,13 @@ const MonthlyReport = (() => {
             cols.forEach(text => Object.assign(tr.insertCell(), { className: 'num', textContent: text }));
         };
         body.replaceChildren();
-        if ($('showMoneyMonths').checked) {
+        if (monthsExpanded()) {
             [...rows].reverse().forEach(row => addRow(monthName(row.month, 'short'), [inr(row.actual), money(row.salary), inr(row.after)]));
         }
-        if (rows.length) addRow('Monthly average', [inr(average.actual), money(average.salary), inr(average.after)], 'total-row');
+        if (rows.length) {
+            addRow('Monthly average', [inr(average.actual), money(average.salary), inr(average.after)], 'total-row month-toggle-row');
+            body.rows[body.rows.length - 1].addEventListener('click', toggleMonths);
+        }
         value.textContent = rows.length ? `${inr(average.after)} / month` : '';
 
         const notes = ['Salaries go to the month they are for: paid from 5 days before its end up to the 20th of the next month.'];
@@ -976,7 +985,7 @@ const MonthlyReport = (() => {
     document.querySelectorAll('.sub-switch button').forEach(button =>
         button.addEventListener('click', () => setSub(button.dataset.sub)));
     $('showDecreased').addEventListener('change', renderBalances);
-    $('showMoneyMonths').addEventListener('change', renderMoneyAverage);
+    $('moneyMonthsToggle').addEventListener('click', toggleMonths);
     $('periodMode').addEventListener('change', event => setMode(event.target.value));
     $('monthInput').addEventListener('change', event => {
         if (MONTH_RE.test(event.target.value)) selectPeriod(event.target.value);
