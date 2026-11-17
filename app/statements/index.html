@@ -56,6 +56,22 @@
             .view-switch::before { border-radius: 16px; }
             .view-switch button { padding: 6px 4px; font-size: 0.8rem; white-space: normal; border-radius: 16px; }
         }
+        /* Business statement side: whose books it is written for. Received and Paid swap, and the balance flips sign. */
+        .side-switch {
+            position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; padding: 3px;
+            border: 1px solid var(--border); border-radius: 999px; background: var(--surface-muted);
+        }
+        .side-switch::before {
+            content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 2);
+            border-radius: 999px; background: var(--brand); transition: transform 0.2s ease;
+        }
+        .side-switch[data-side="mbros"]::before { transform: translateX(100%); }
+        .side-switch button {
+            position: relative; padding: 4px 14px; border: 0; border-radius: 999px; background: none; white-space: nowrap;
+            font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: color 0.2s ease;
+        }
+        .side-switch button[aria-checked="true"] { color: #fff; }
+        .side-field { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.9rem; }
         body:not([data-view="dues"]) .dues-only,
         body:not([data-view="statement"]) .statement-only,
         body:not([data-view="customer"]) .customer-only,
@@ -242,6 +258,13 @@
             </div>
             <div class="date-presets statement-only" id="datePresets" role="group" aria-label="Date range"></div>
             <div class="picker-chips statement-only" id="partyChips" aria-label="Selected parties"></div>
+            <div class="side-field statement-only">
+                <span>Statement for</span>
+                <div class="side-switch" id="sideSwitch" data-side="company" role="radiogroup" aria-label="Statement for">
+                    <button type="button" role="radio" data-side="company" aria-checked="true">Company</button>
+                    <button type="button" role="radio" data-side="mbros" aria-checked="false">MBros</button>
+                </div>
+            </div>
             <div class="options statement-only">
                 <label class="option-toggle"><input type="checkbox" id="includeStaged" disabled> Include staged transactions (temp.load)</label>
                 <label class="option-toggle"><input type="checkbox" id="showLetterhead" checked> Letterhead on print and PDF</label>
@@ -1088,7 +1111,14 @@
         }));
     }
 
+    // Statement for the company (default) or for MBros. Entry amounts are from MBros's side (+ MBros owes the party);
+    // the company's side negates them, so what MBros received the company paid, and the reverse.
+    const companySide = () => document.getElementById('sideSwitch').dataset.side === 'company';
+
     function renderStatement() {
+        const sign = companySide() ? -1 : 1;
+        // Red when the party owes MBros: a positive balance on the Company side, negative on the MBros side.
+        const markOwed = (td, balance) => td.classList.toggle('negative', sign * balance < 0);
         const from = document.getElementById('startDate').value;
         const to = document.getElementById('endDate').value;
         const body = document.getElementById('statementTable').tBodies[0];
@@ -1100,7 +1130,8 @@
         summaryBody.replaceChildren();
         hideEmptyColumns(document.getElementById('statementTable'));
 
-        document.getElementById('statementTitle').textContent = names.length ? `MBros Statement · ${names.join(', ')}` : 'MBros Statement';
+        const titleBase = sign < 0 ? 'Statement' : 'MBros Statement';
+        document.getElementById('statementTitle').textContent = names.length ? `${titleBase} · ${names.join(', ')}` : titleBase;
         document.getElementById('statementMeta').textContent = names.length
             ? [`Period: ${from || 'start'} to ${to || 'today'}`, includeStaged() && 'Includes staged transactions', `Generated ${Mb.todayIST()}`]
                 .filter(Boolean).join(' · ') : '';
@@ -1134,18 +1165,19 @@
 
         names.forEach(name => {
             const entries = entriesFor(name);
-            const partyOpening = balanceOf(entries.filter(entry => from && entry.day < from));
+            const partyOpening = sign * balanceOf(entries.filter(entry => from && entry.day < from));
             const inRange = entries.filter(entry => (!from || entry.day >= from) && (!to || entry.day <= to));
             const sums = { kg: 0, received: 0, paid: 0 };
             inRange.forEach(entry => {
+                const amount = sign * entry.amount;
                 sums.kg += num(entry.kg);
-                if (entry.amount > 0) sums.received += entry.amount;
-                else sums.paid -= entry.amount;
+                if (amount > 0) sums.received += amount;
+                else sums.paid -= amount;
             });
             opening += partyOpening;
             shown.push(...inRange);
-            settlement.push(settlementLine(name, partyOpening + sums.received - sums.paid));
-            addCells(summaryBody.insertRow(), [
+            settlement.push(settlementLine(name, sign * (partyOpening + sums.received - sums.paid)));
+            const summaryRow = addCells(summaryBody.insertRow(), [
                 name,
                 Mb.formatINR(partyOpening, 0),
                 Mb.formatNumber(sums.kg, 3),
@@ -1153,6 +1185,8 @@
                 Mb.formatINR(sums.paid, 0),
                 Mb.formatINR(partyOpening + sums.received - sums.paid, 0)
             ], [1, 2, 3, 4, 5]);
+            markOwed(summaryRow.cells[1], partyOpening);
+            markOwed(summaryRow.cells[5], partyOpening + sums.received - sums.paid);
         });
 
         shown.sort((a, b) => a.day.localeCompare(b.day) || a.index - b.index);
@@ -1165,11 +1199,12 @@
         let running = opening;
         const rowValues = [];
         shown.forEach(entry => {
-            running += entry.amount;
+            const amount = sign * entry.amount;
+            running += amount;
             totals.pc += num(entry.pc);
             totals.kg += num(entry.kg);
-            if (entry.amount > 0) totals.received += entry.amount;
-            else totals.paid -= entry.amount;
+            if (amount > 0) totals.received += amount;
+            else totals.paid -= amount;
 
             const values = [
                 entry.day,
@@ -1179,8 +1214,8 @@
                 blankIfZero(entry.pc),
                 blankIfZero(entry.kg, 3),
                 num(entry.rate) ? Mb.formatRate(entry.rate) : '',
-                entry.amount > 0 ? Mb.formatNumber(entry.amount, 0) : '',
-                entry.amount < 0 ? Mb.formatNumber(-entry.amount, 0) : '',
+                amount > 0 ? Mb.formatNumber(amount, 0) : '',
+                amount < 0 ? Mb.formatNumber(-amount, 0) : '',
                 entry.method,
                 Mb.formatINR(running, 0),
                 entry.notes
@@ -1189,7 +1224,7 @@
             const tr = addCells(body.insertRow(), values, NUMERIC);
             tr.cells[3].classList.add('route');
             tr.cells[11].className = 'note';
-            if (running < 0) tr.cells[10].classList.add('negative');
+            markOwed(tr.cells[10], running);
         });
 
         if (!shown.length) {
@@ -1211,6 +1246,7 @@
             ''
         ], NUMERIC);
         totalRow.className = 'total-row';
+        markOwed(totalRow.cells[10], running);
 
         // Only entry rows decide: the opening and closing rows always carry a label, balance and totals.
         if (rowValues.length) {
@@ -1328,7 +1364,7 @@
         const to = document.getElementById('endDate').value;
         const title = document.getElementById('statementTitle').textContent;
         StatementPdf.share({
-            fileName: ['mbros-statement', names.length > 3 ? `${names.length}-parties` : names.join('-'), from, to].filter(Boolean).join('-'),
+            fileName: [companySide() ? 'statement' : 'mbros-statement', names.length > 3 ? `${names.length}-parties` : names.join('-'), from, to].filter(Boolean).join('-'),
             title,
             status: document.getElementById('status'),
             letterhead: letterheadOn(),
@@ -1415,6 +1451,14 @@
             td.textContent = shown;
             td.classList.remove('copied');
         }, 1000);
+    });
+    document.getElementById('sideSwitch').addEventListener('click', event => {
+        const button = event.target.closest('button[data-side]');
+        if (!button) return;
+        const sideSwitch = document.getElementById('sideSwitch');
+        sideSwitch.dataset.side = button.dataset.side;
+        sideSwitch.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b === button)));
+        renderStatement();
     });
     document.getElementById('showLetterhead').addEventListener('change', syncLetterhead);
     document.getElementById('includeStaged').addEventListener('change', () => {
