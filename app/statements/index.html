@@ -29,6 +29,10 @@
         #statementTable td:first-child { white-space: nowrap; }
         /* Statement columns with no value in any entry row; the Share PDF drops them too (hidden th). */
         #statementTable .col-empty { display: none; }
+        /* Company side: Date, Description (type), PC, KG, Rate, Received, Paid, Balance, Notes. Route 4 and Method 10 go;
+           Party 2 goes too unless more than one party is picked (multi-party). */
+        #statementTable.company-side :is(th, td):is(:nth-child(4), :nth-child(10)),
+        #statementTable.company-side:not(.multi-party) :is(th, td):nth-child(2) { display: none; }
         .settlement { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
         /* Who pays whom: payer → amount → payee, green when MBros pays, red when the party pays MBros (as in Due per party). */
         .settlement li {
@@ -327,8 +331,8 @@
                         <th>Party</th>
                         <th class="num">Opening</th>
                         <th class="num">KG</th>
-                        <th class="num">Received</th>
-                        <th class="num">Paid</th>
+                        <th class="num" data-flow="first">Received</th>
+                        <th class="num" data-flow="second">Paid</th>
                         <th class="num">Closing</th>
                     </tr>
                     </thead>
@@ -349,14 +353,14 @@
                     <thead>
                     <tr>
                         <th class="nowrap">Date</th>
-                        <th>Party</th>
-                        <th>Type</th>
+                        <th id="partyHeader">Party</th>
+                        <th id="typeHeader">Type</th>
                         <th class="nowrap">Route</th>
                         <th class="num">PC</th>
                         <th class="num">KG</th>
                         <th class="num">Rate</th>
-                        <th class="num">Received</th>
-                        <th class="num">Paid</th>
+                        <th class="num" data-flow="first">Received</th>
+                        <th class="num" data-flow="second">Paid</th>
                         <th>Method</th>
                         <th class="num">Balance</th>
                         <th>Notes</th>
@@ -1174,6 +1178,15 @@
         body.replaceChildren();
         summaryBody.replaceChildren();
         hideEmptyColumns(document.getElementById('statementTable'));
+        document.getElementById('statementTable').classList.toggle('company-side', sign < 0);
+        document.getElementById('statementTable').classList.toggle('multi-party', names.length > 1);
+        document.getElementById('typeHeader').textContent = sign < 0 ? 'Description' : 'Type';
+        document.getElementById('partyHeader').textContent = sign < 0 ? 'Name' : 'Party';
+        // Company side puts Paid before Received (statement and By party tables); the columns keep their positions.
+        const inOrder = (received, paid) => sign < 0 ? [paid, received] : [received, paid];
+        const [firstHeader, secondHeader] = inOrder('Received', 'Paid');
+        document.querySelectorAll('#statementTable th[data-flow="first"], #summaryTable th[data-flow="first"]').forEach(th => th.textContent = firstHeader);
+        document.querySelectorAll('#statementTable th[data-flow="second"], #summaryTable th[data-flow="second"]').forEach(th => th.textContent = secondHeader);
 
         const titleBase = sign < 0 ? 'Statement' : 'MBros Statement';
         document.getElementById('statementTitle').textContent = names.length ? `${titleBase} · ${names.join(', ')}` : titleBase;
@@ -1226,8 +1239,7 @@
                 name,
                 Mb.formatINR(partyOpening, 0),
                 Mb.formatNumber(sums.kg, 3),
-                Mb.formatINR(sums.received, 0),
-                Mb.formatINR(sums.paid, 0),
+                ...inOrder(Mb.formatINR(sums.received, 0), Mb.formatINR(sums.paid, 0)),
                 Mb.formatINR(partyOpening + sums.received - sums.paid, 0)
             ], [1, 2, 3, 4, 5]);
             markOwed(summaryRow.cells[1], partyOpening);
@@ -1259,8 +1271,7 @@
                 blankIfZero(entry.pc),
                 blankIfZero(entry.kg, 3),
                 num(entry.rate) ? Mb.formatRate(entry.rate) : '',
-                amount > 0 ? Mb.formatNumber(amount, 0) : '',
-                amount < 0 ? Mb.formatNumber(-amount, 0) : '',
+                ...inOrder(amount > 0 ? Mb.formatNumber(amount, 0) : '', amount < 0 ? Mb.formatNumber(-amount, 0) : ''),
                 entry.method,
                 Mb.formatINR(running, 0),
                 entry.notes
@@ -1284,8 +1295,7 @@
             Mb.formatNumber(totals.pc, 0),
             Mb.formatNumber(totals.kg, 3),
             '',
-            Mb.formatNumber(totals.received, 0),
-            Mb.formatNumber(totals.paid, 0),
+            ...inOrder(Mb.formatNumber(totals.received, 0), Mb.formatNumber(totals.paid, 0)),
             '',
             Mb.formatINR(running, 0),
             ''
