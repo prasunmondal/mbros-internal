@@ -30,9 +30,31 @@
         /* Statement columns with no value in any entry row; the Share PDF drops them too (hidden th). */
         #statementTable .col-empty { display: none; }
         .settlement { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+        /* Who pays whom: payer → amount → payee, green when MBros pays, red when the party pays MBros (as in Due per party). */
         .settlement li {
-            padding: 12px 16px; border-radius: var(--radius-sm); border-left: 4px solid var(--brand);
-            background: var(--brand-soft); font-size: 1.05rem; font-weight: 600;
+            --pay: var(--text-muted); --pay-soft: var(--surface-muted);
+            padding: 12px 16px; border-radius: var(--radius-sm); border-left: 4px solid var(--pay); background: var(--pay-soft);
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        .settlement li.mbros-pays { --pay: var(--brand); --pay-soft: var(--brand-soft); }
+        .settlement li.pays-mbros { --pay: var(--danger); --pay-soft: var(--danger-soft); }
+        .pay-flow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, auto) minmax(0, 1fr); align-items: center; gap: 20px; }
+        .pay-party { font-size: 1.05rem; font-weight: 700; overflow-wrap: anywhere; }
+        .pay-party:first-child { text-align: right; }
+        .pay-party small { display: block; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+        .pay-arrow { display: grid; justify-items: center; gap: 2px; color: var(--pay); }
+        .pay-amount { font-size: 1.25rem; font-weight: 800; white-space: nowrap; }
+        .pay-line { position: relative; width: 100%; height: 3px; border-radius: 2px; background: var(--pay); }
+        .pay-line::after {
+            content: ""; position: absolute; right: -2px; top: 50%; transform: translateY(-50%);
+            border-left: 10px solid var(--pay); border-top: 6px solid transparent; border-bottom: 6px solid transparent;
+        }
+        .pay-text { margin-top: 6px; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+        .pay-settled { font-size: 1.05rem; font-weight: 700; }
+        @media (max-width: 560px) {
+            .pay-flow { gap: 10px; grid-template-columns: minmax(0, 1fr) minmax(120px, auto) minmax(0, 1fr); }
+            .pay-party { font-size: 0.95rem; }
+            .pay-amount { font-size: 1.05rem; }
         }
         /* Due per party / Statement / Customer Statement switch: the thumb slides under the chosen tab. */
         .view-switch {
@@ -1093,20 +1115,43 @@
     }
     const blankIfZero = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
 
-    // One plain sentence per party from its closing balance (positive: MBros owes the party).
+    // Who pays whom for one party from its closing balance (positive: MBros owes the party), with a plain sentence.
     function settlementLine(name, balance) {
-        const amount = Mb.formatINR(Math.abs(Math.round(balance)), 0);
-        if (Math.round(balance) > 0) return `MBros has to pay ${name} ${amount}.`;
-        if (Math.round(balance) < 0) return `${name} has to pay MBros ${amount}.`;
-        return `MBros and ${name} are settled. Nobody has to pay anything.`;
+        const rounded = Math.round(balance);
+        const amount = Mb.formatINR(Math.abs(rounded), 0);
+        if (rounded > 0) return { payer: MBROS, payee: name, amount, text: `MBros has to pay ${name} ${amount}.` };
+        if (rounded < 0) return { payer: name, payee: MBROS, amount, text: `${name} has to pay MBros ${amount}.` };
+        return { text: `MBros and ${name} are settled. Nobody has to pay anything.` };
     }
 
+    // Each line as payer → amount → payee with the sentence under it; the Share PDF uses the sentence (data-text).
     function renderSettlement(lines, asOf) {
         document.getElementById('settlementSection').hidden = !lines;
         if (lines) document.getElementById('settlementTitle').textContent = `Who pays whom · as on ${asOf}`;
-        document.getElementById('settlementList').replaceChildren(...(lines || []).map(line => {
+        const el = (tag, className, text) => {
+            const node = document.createElement(tag);
+            node.className = className;
+            if (text != null) node.textContent = text;
+            return node;
+        };
+        const party = (role, name) => {
+            const div = el('div', 'pay-party');
+            div.append(el('small', '', role), name);
+            return div;
+        };
+        document.getElementById('settlementList').replaceChildren(...(lines || []).map(({ payer, payee, amount, text }) => {
             const li = document.createElement('li');
-            li.textContent = line;
+            li.dataset.text = text;
+            if (!payer) {
+                li.append(el('div', 'pay-settled', `✓ ${text}`));
+                return li;
+            }
+            li.className = payer === MBROS ? 'mbros-pays' : 'pays-mbros';
+            const arrow = el('div', 'pay-arrow');
+            arrow.append(el('div', 'pay-amount', amount), el('div', 'pay-line'));
+            const flow = el('div', 'pay-flow');
+            flow.append(party('Pays', payer), arrow, party('Gets', payee));
+            li.append(flow, el('div', 'pay-text', text));
             return li;
         }));
     }
@@ -1371,7 +1416,7 @@
             orientation: 'portrait',
             messages: {
                 title: document.getElementById('settlementTitle').textContent,
-                lines: [...document.querySelectorAll('#settlementList li')].map(li => li.textContent)
+                lines: [...document.querySelectorAll('#settlementList li')].map(li => li.dataset.text)
             },
             cards: [
                 ...(document.getElementById('summaryCard').hidden ? [] : [{ table: document.getElementById('summaryTable'), title: 'By party' }]),
