@@ -37,7 +37,7 @@ the lint here does not check them.
 | Spreadsheet | Worksheet | Read by |
 |---|---|---|
 | main (`MAIN_SHEET_ID`) | `deliveries` | `app/balance/` |
-| main | `db2.loads` | `app/statements/`, `app/profits/` (Revenue tab, Balances: `EmployeeSalary` rows) |
+| main | `db2.loads` (notes per side: `senderNote`, `viaNote`, `receiverNote`, and MBros-only `internalNote`) | `app/statements/`, `app/profits/` (Revenue tab, Balances: `EmployeeSalary` rows) |
 | staging (ID in `app/statements/`, `app/deliveries/deliveries.js`) | `temp.load`: staged transactions not yet in `db2.loads`, same columns plus `isHidden`. `cal.occasions`: one row per occasion, `occassionName` (sic), `daysPrepend`, `daysAppend`, one date column per year (`y2023`…, IST midnight as UTC timestamp, blank when unknown) | `app/statements/` (`temp.load`), `app/deliveries/` (`cal.occasions`) |
 | main | `db2.deliveries` | `app/profits/` (Revenue tab, Balances), `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |

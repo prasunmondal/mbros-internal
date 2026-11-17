@@ -1055,6 +1055,12 @@
     // Parties left off this page entirely (party list, statement, Due per party). Exact names as in the sheet.
     const HIDDEN_PARTIES = ['MBros Canara'];
 
+    // The party's place in a loads row, naming its note column (senderNote, viaNote, receiverNote).
+    // via first: when a row has a via, flows() books the party there.
+    const roleOf = (row, party) => party === row.via ? 'via' : party === row.sender ? 'sender' : 'receiver';
+
+    const oldNotes = row => [row.description, row.notes].filter(Boolean).join(' · ');
+
     async function loadEntries() {
         const [loads, staged] = await callSheetsApi([
             { type: "SELECT", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.loads", id: "mbros-github-site" },
@@ -1072,7 +1078,10 @@
                     type: row.transactionType,
                     route: [row.sender, row.via, row.receiver].filter(Boolean).join(' → '),
                     pc: row.loadPc, kg: row.loadKg, method: row.paymentMethod,
-                    notes: [row.description, row.notes].filter(Boolean).join(' · ')
+                    // MBros side shows internalNote; the company side shows the note for this party's place in the row.
+                    // Either falls back to the old description · notes when empty (rows from before these columns).
+                    internalNote: row.internalNote || oldNotes(row),
+                    partyNote: row[`${roleOf(row, party)}Note`] || oldNotes(row)
                 });
             });
         });
@@ -1274,7 +1283,7 @@
                 ...inOrder(amount > 0 ? Mb.formatNumber(amount, 0) : '', amount < 0 ? Mb.formatNumber(-amount, 0) : ''),
                 entry.method,
                 Mb.formatINR(running, 0),
-                entry.notes
+                sign < 0 ? entry.partyNote : entry.internalNote
             ];
             rowValues.push(values);
             const tr = addCells(body.insertRow(), values, NUMERIC);
