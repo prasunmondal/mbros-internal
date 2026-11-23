@@ -52,6 +52,7 @@ earns, plus pages customers use to pay.
   `sender` (via `via`) to `receiver`. The balance with a party is what MBros owes it: value reaching
   MBros adds `senderAmount` (or `viaSellAmount` when it came through a via), value leaving subtracts it.
   When MBros is the via, it owes the sender `senderAmount` and the receiver owes it `viaSellAmount` (owner, 2026-10-30).
+  A `viaSellAmount` of 0 counts as 0 (owner, 2026-11-23); only a blank one falls back to `senderAmount` `[inferred]`.
   The 2025-10-31 "Migrate to newer balance sheet" Adjustment rows reset the supplier balances.
 - **Commission** (`app/calculator/`): commission % = total discount % − discount passed on %.
   Payable = paying amount − discount passed on. Defaults: 5% total, 3% passed on.
