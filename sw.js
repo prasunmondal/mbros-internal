@@ -7,7 +7,7 @@
 //   straight through, and sheet data is never stored here (assets/js/config.js has its own cache).
 //
 // Bump VERSION only to drop old caches (e.g. after removing a page); normal deploys don't need it.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL = `mb-shell-${VERSION}`;
 const CDN = `mb-cdn-${VERSION}`;
 
@@ -23,9 +23,9 @@ const PRECACHE = [
     'app/customer-performance/',
     'app/daily/',
     'app/customer-profit/', 'app/customer-profit/tracker.js', 'app/customer-profit/tracker.css',
-    'app/balance/',
     'app/meters/',
     'app/calculator/',
+    'app/checks/', 'app/checks/checks.js',
     'assets/css/site.css',
     'assets/js/common.js',
     'assets/js/config.js',

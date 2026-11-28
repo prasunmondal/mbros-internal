@@ -79,44 +79,47 @@ const EXPECTED_COLUMNS = {
     // `revenue` is not listed: app/profits/monthly.js matches its headers loosely and reports a missing one itself.
 };
 const SEEN_COLUMNS_KEY = 'mb-columns';
-const checkedWorksheets = new Set();
+// What the check found for each worksheet loaded on this page, keyed "spreadsheetId/worksheet":
+// { worksheet, columns, expected, missing, added, removed, firstSeen }. Read by app/checks/.
+const columnReports = {};
 
 function checkColumns(operation, rows) {
     if (operation.type !== 'SELECT' || !rows?.length) return;
     const key = `${operation.spreadsheetId}/${operation.worksheet}`;
-    if (checkedWorksheets.has(key)) return;
-    checkedWorksheets.add(key);
+    if (columnReports[key]) return;
 
-    const columns = new Set();
-    rows.forEach(row => Object.keys(row).forEach(column => columns.add(column)));
     const name = operation.worksheet;
+    const present = new Set();
+    rows.forEach(row => Object.keys(row).forEach(column => present.add(column)));
+    const columns = [...present].sort();
+    const expected = EXPECTED_COLUMNS[name] || null;
+    const missing = (expected || []).filter(column => !present.has(column));
+
+    let before = null;
+    try {
+        const seen = JSON.parse(localStorage.getItem(SEEN_COLUMNS_KEY) || '{}');
+        before = seen[key] || null;
+        seen[key] = columns;
+        localStorage.setItem(SEEN_COLUMNS_KEY, JSON.stringify(seen));
+    } catch { /* storage unavailable: only the expected-column check runs */ }
+    const added = before ? columns.filter(column => !before.includes(column)) : [];
+    const removed = before ? before.filter(column => !present.has(column) && !missing.includes(column)) : [];
+    columnReports[key] = { worksheet: name, columns, expected, missing, added, removed, firstSeen: !before };
+
+    // app/checks/ shows these itself, so it turns the page notices off.
     const notify = (type, message) => {
         (type === 'error' ? console.error : console.warn)(message);
-        if (window.Mb?.notice) Mb.notice(type, message, `${type}:${key}`);
+        if (window.Mb?.notice && document.body?.dataset.columnNotices !== 'off') Mb.notice(type, message, `${type}:${key}`);
     };
-
-    const missing = (EXPECTED_COLUMNS[name] || []).filter(column => !columns.has(column));
     if (missing.length) {
         notify('error', `The "${name}" worksheet no longer has the column${missing.length > 1 ? 's' : ''} ` +
             `${missing.join(', ')}. Figures that use ${missing.length > 1 ? 'them' : 'it'} may be wrong until the page is updated.`);
     }
-
-    try {
-        const seen = JSON.parse(localStorage.getItem(SEEN_COLUMNS_KEY) || '{}');
-        const before = seen[key];
-        const now = [...columns].sort();
-        if (before) {
-            const added = now.filter(column => !before.includes(column));
-            const removed = before.filter(column => !columns.has(column) && !missing.includes(column));
-            if (added.length || removed.length) {
-                notify('info', `The "${name}" worksheet's columns changed since this browser last loaded it.` +
-                    (added.length ? ` Added: ${added.join(', ')}.` : '') +
-                    (removed.length ? ` Removed: ${removed.join(', ')}.` : ''));
-            }
-        }
-        seen[key] = now;
-        localStorage.setItem(SEEN_COLUMNS_KEY, JSON.stringify(seen));
-    } catch { /* storage unavailable: only the expected-column check runs */ }
+    if (added.length || removed.length) {
+        notify('info', `The "${name}" worksheet's columns changed since this browser last loaded it.` +
+            (added.length ? ` Added: ${added.join(', ')}.` : '') +
+            (removed.length ? ` Removed: ${removed.join(', ')}.` : ''));
+    }
 }
 
 // Send a batch of operations to the GridBase engine; resolves to one { operationId, rowCount, rows }

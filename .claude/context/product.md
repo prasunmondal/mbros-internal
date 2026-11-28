@@ -2,7 +2,6 @@
 status: VERIFIED
 last_verified: 2026-10-30
 sources:
-  - app/balance/index.html
   - app/calculator/index.html
   - app/profits/profits.js
   - app/profits/monthly.js
@@ -31,9 +30,6 @@ earns, plus pages customers use to pay.
 
 ## Business rules
 - **Dues** always mean `totalBalance`, never `khataBalance` (owner, 2026-11-07). The due columns of `cumilativeCalculations` add up `khataBalance` (written by the Android app), so `useTotalBalanceDues` in `assets/js/config.js` corrects them on every page that reads them. If the app starts writing `totalBalance` dues, that correction must go. Rows before the correction counted a move between `otherBalances` and `khataBalance` as dues changing, e.g. ₹135,000 on 2026-04-03.
-- **Balance on a date** (`app/balance/`): for each customer, the `totalBalance` of the latest
-  delivery on or before the selected date. Customers with no delivery by then show the balance
-  of their first row `[inferred: assumes rows arrive in date order]`.
 - **Khata row arithmetic** (`db2.deliveries`): `khataBalance` = `prevAmount` + `deliverAmount` − `paidCash`
   − `paidOnline` − `discount` + `autoAdjust` + `adjustments`, and each row's `prevAmount` is the
   customer's previous `khataBalance`. Held for every row on 2026-10-30 `[inferred: from data, not owner-stated]`.
@@ -78,5 +74,3 @@ See `domains/pages.md`.
 - [?] What is sold, and in what unit? `app/profits/profits.js` reads a `kg` column. The site calls the business a
   "Live Stock Chicken Distributor" [inferred: unit is presumably kg of live chicken].
 - [?] Which UPI ID should customers use: the QR one, `prsnmondal@ybl`, or both?
-- [?] Is "balance on a date" meant to fall back to the earliest balance for customers with no
-  delivery by that date, or should they be hidden?

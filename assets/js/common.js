@@ -18,7 +18,9 @@
         { id: 'daily', path: 'app/daily/', title: 'Day Summary', group: 'Reports',
           description: 'One day: loading, sales, dues, expenses, profit, staff and customer deliveries.' },
         { id: 'customer-profit', path: 'app/customer-profit/', title: 'Customer Profit', group: 'Reports',
-          description: 'Profit and debt movement for a customer over a date range.' }
+          description: 'Profit and debt movement for a customer over a date range.' },
+        { id: 'checks', path: 'app/checks/', title: 'Data Checks', group: 'Admin',
+          description: 'Runs sanity checks on every worksheet the site reads and shows what passes or fails.' }
     ];
 
     // Password gate for every app page. A deterrent only: this is a static site, so the hash is
