@@ -46,7 +46,7 @@ the lint here does not check them.
 
 `deliveries` no longer exists (engine: "Worksheet not found", 2026-10-29); `db2.deliveries` is the live worksheet.
 The Balance page (app/balance) that still read it was removed on 2026-11-28 (owner); balances on a date are
-on the Statements Customer tab and the Customer Profit Balance Tracker.
+on the Statements Customer tab and the Customer Profile Balance Tracker.
 The meter sheet now has a `name` column; the page used to read the unnamed `""` column.
 
 ## Operation `id`

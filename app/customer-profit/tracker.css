@@ -1,9 +1,9 @@
 /* app/customer-profit/: Overview / Balance Tracker switch and the tracker's charts and stats. */
 
 /* Series colours: keep in step with PALETTE in tracker.js. */
-:root { --s-balance: #15803d; --s-ma7: #8b5cf6; --s-ma30: #d97706; --s-billed: #2563eb; --s-received: #db2777; }
+:root { --s-rise: #dc2626; --s-fall: #15803d; --s-ma7: #8b5cf6; --s-ma30: #d97706; --s-billed: #2563eb; --s-received: #db2777; }
 @media screen {
-    :root[data-theme="dark"] { --s-balance: #22a05a; --s-ma7: #9a7cf0; --s-ma30: #d48a0a; --s-billed: #4a8ef0; --s-received: #e9559a; }
+    :root[data-theme="dark"] { --s-rise: #f43f5e; --s-fall: #15803d; --s-ma7: #9a7cf0; --s-ma30: #d48a0a; --s-billed: #4a8ef0; --s-received: #e9559a; }
 }
 
 /* The thumb slides under the chosen tab (same look as app/statements/). */
@@ -42,7 +42,8 @@ body:not([data-view="tracker"]) .tracker-only { display: none; }
 .tracker-options .opt { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .tracker-csv { margin-left: auto; padding: 6px 12px; font-size: 0.8rem; }
 .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; }
-.swatch.balance { background: var(--s-balance); }
+.swatch.balance { background: linear-gradient(90deg, var(--s-rise) 50%, var(--s-fall) 50%); }
+.opt-hint { color: var(--text-subtle); }
 .swatch.ma7 { background: var(--s-ma7); }
 .swatch.ma30 { background: var(--s-ma30); }
 .swatch.trend { background: repeating-linear-gradient(90deg, var(--text-muted) 0 4px, transparent 4px 7px); }

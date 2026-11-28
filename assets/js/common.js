@@ -17,8 +17,8 @@
           description: 'Order frequency, average order size and KG trends per customer.' },
         { id: 'daily', path: 'app/daily/', title: 'Day Summary', group: 'Reports',
           description: 'One day: loading, sales, dues, expenses, profit, staff and customer deliveries.' },
-        { id: 'customer-profit', path: 'app/customer-profit/', title: 'Customer Profit', group: 'Reports',
-          description: 'Profit and debt movement for a customer over a date range.' },
+        { id: 'customer-profit', path: 'app/customer-profit/', title: 'Customer Profile', group: 'Reports',
+          description: 'Profit, debt movement and balance history for a customer over a date range.' },
         { id: 'checks', path: 'app/checks/', title: 'Data Checks', group: 'Admin',
           description: 'Runs sanity checks on every worksheet the site reads and shows what passes or fails.' }
     ];

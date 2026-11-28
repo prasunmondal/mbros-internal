@@ -13,7 +13,7 @@
     const SOURCES = [
         { key: "deliveries", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.deliveries", usedBy: "most pages" },
         { key: "archive", spreadsheetId: ARCHIVE_SHEET_ID, worksheet: "deliveries.2023", usedBy: "history before 2026" },
-        { key: "days", spreadsheetId: MAIN_SHEET_ID, worksheet: "cumilativeCalculations", usedBy: "Dashboards, Day Summary, Customer Profit" },
+        { key: "days", spreadsheetId: MAIN_SHEET_ID, worksheet: "cumilativeCalculations", usedBy: "Dashboards, Day Summary, Customer Profile" },
         { key: "loads", spreadsheetId: MAIN_SHEET_ID, worksheet: "db2.loads", usedBy: "Statements, Dashboards" },
         { key: "staged", spreadsheetId: STAGING_SHEET_ID, worksheet: "temp.load", usedBy: "Statements (staged rows)" },
         { key: "occasions", spreadsheetId: STAGING_SHEET_ID, worksheet: "cal.occasions", usedBy: "Past Deliveries" },

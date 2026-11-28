@@ -17,8 +17,8 @@
     const isDue = value => value !== "" && value !== null && value !== undefined && value !== "#N/A";
     // totalBalance; an archive row without one falls back to khataBalance. db2.deliveries rows never do, so a
     // missing totalBalance there shows (and assets/js/config.js reports the missing column) instead of hiding.
-    let archiveRows = new WeakSet();
-    const rowBalance = row => archiveRows.has(row) && !isDue(row.totalBalance) ? number(row.khataBalance) : number(row.totalBalance);
+    let archiveSet = new WeakSet();   // archive rows, which may lack totalBalance
+    const rowBalance = row => archiveSet.has(row) && !isDue(row.totalBalance) ? number(row.khataBalance) : number(row.totalBalance);
     // Newer rows hold YYYY-MM-DD; older ones a UTC timestamp of IST midnight.
     const dayOf = value => (typeof value === "string" && value.length === 10) ? value : Mb.toISTDate(value);
     const addDays = (day, n) => new Date(Date.parse(day + "T00:00:00Z") + n * DAY_MS).toISOString().slice(0, 10);
@@ -42,12 +42,26 @@
 
     // Validated with the dataviz palette checker (CVD and contrast) against the light and black themes.
     const PALETTE = {
-        light: { balance: "#15803d", ma7: "#8b5cf6", ma30: "#d97706", billed: "#2563eb", received: "#db2777" },
-        dark: { balance: "#22a05a", ma7: "#9a7cf0", ma30: "#d48a0a", billed: "#4a8ef0", received: "#e9559a" }
+        // The balance line is red where it rises (more owed to us: losing) and green where it falls (being paid).
+        light: { rise: "#dc2626", fall: "#15803d", ma7: "#8b5cf6", ma30: "#d97706", billed: "#2563eb", received: "#db2777" },
+        dark: { rise: "#f43f5e", fall: "#15803d", ma7: "#9a7cf0", ma30: "#d48a0a", billed: "#4a8ef0", received: "#e9559a" }
     };
     const themeColor = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     const palette = () => PALETTE[document.documentElement.dataset.theme === "dark" ? "dark" : "light"];
     const withAlpha = (hex, alpha) => hex + Math.round(alpha * 255).toString(16).padStart(2, "0");
+
+    // Colour per day: rising or falling against the day before; a flat day keeps the last move's colour, so a
+    // stretch with no entries stays the colour of how it got there. Chart.js colours a segment by its end point.
+    function directionColors(values, opening, c, alpha = 1) {
+        let last = c.rise;
+        return values.map((v, i) => {
+            const prev = i ? values[i - 1] : opening;
+            if (v > prev) last = c.rise;
+            else if (v < prev) last = c.fall;
+            return alpha === 1 ? last : withAlpha(last, alpha);
+        });
+    }
+    const bySegment = (line, fill) => ({ borderColor: ctx => line[ctx.p1DataIndex], backgroundColor: ctx => fill[ctx.p1DataIndex] });
 
     let options = { onRangeCommit: () => {} };
     let deliveries = [], dayRows = [], customer = "";
@@ -300,6 +314,7 @@
         Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
         const days = series.days, labels = days.map(d => d.day), balances = days.map(d => d.balance);
         const c = palette();
+        const lineColors = directionColors(balances, series.opening, c), fillColors = directionColors(balances, series.opening, c, 0.1);
         const show = id => $(id).checked;
 
         charts.main = new Chart($("balanceChart"), {
@@ -308,9 +323,10 @@
                 labels,
                 datasets: [
                     {
-                        label: "Balance", data: balances, borderColor: c.balance, backgroundColor: withAlpha(c.balance, 0.12),
+                        label: "Balance", data: balances, borderColor: c.rise, backgroundColor: withAlpha(c.rise, 0.1),
+                        segment: bySegment(lineColors, fillColors),
                         fill: "origin", borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: 0, hidden: !show("optBalance"),
-                        pointHoverBackgroundColor: c.balance, pointHoverBorderColor: themeColor("--surface"), pointHoverBorderWidth: 2
+                        pointHoverBackgroundColor: ctx => lineColors[ctx.dataIndex], pointHoverBorderColor: themeColor("--surface"), pointHoverBorderWidth: 2
                     },
                     { label: "7-day average", data: movingAverage(balances, 7), borderColor: c.ma7, borderWidth: 2, pointRadius: 0, pointHoverRadius: 0, hidden: !show("optMa7") },
                     { label: "30-day average", data: movingAverage(balances, 30), borderColor: c.ma30, borderWidth: 2, pointRadius: 0, pointHoverRadius: 0, hidden: !show("optMa30") },
@@ -386,7 +402,9 @@
 
         charts.nav = new Chart($("navChart"), {
             type: "line",
-            data: { labels, datasets: [{ data: balances, borderColor: withAlpha(c.balance, 0.8), backgroundColor: withAlpha(c.balance, 0.1), fill: "start", borderWidth: 1.5, pointRadius: 0, tension: 0 }] },
+            data: { labels, datasets: [{ data: balances, borderColor: c.rise, backgroundColor: withAlpha(c.rise, 0.1),
+                segment: bySegment(directionColors(balances, series.opening, c, 0.85), directionColors(balances, series.opening, c, 0.1)),
+                fill: "start", borderWidth: 1.5, pointRadius: 0, tension: 0 }] },
             options: {
                 responsive: true, maintainAspectRatio: false, animation: false, events: [],
                 layout: { padding: { left: 0, right: 0 } },
@@ -667,7 +685,7 @@
             const current = (deliveryRows || []).filter(r => r.timestamp);
             const currentStart = current.reduce((min, r) => { const d = dayOf(r.timestamp); return d < min ? d : min; }, "9999-12-31");
             const archive = (archiveRows || []).filter(r => r.timestamp && dayOf(r.timestamp) < currentStart);
-            archiveRows = new WeakSet(archive);
+            archiveSet = new WeakSet(archive);
             deliveries = [...archive, ...current];
             dayRows = cumulativeRows || [];
             series = customer ? buildSeries(customer) : null;
