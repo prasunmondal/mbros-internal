@@ -107,6 +107,10 @@ body:not([data-view="tracker"]) .tracker-only { display: none; }
 .records-levels[hidden] { display: none; }
 .records-levels label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 .records-btn { padding: 6px 12px; font-size: 0.8rem; }
+.records-levels .rec-count { width: 58px; padding: 4px 6px; font-size: 0.85rem; text-align: right; }
+.records-levels .rec-count:disabled { opacity: 0.5; }
+.rec-weekend { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }
+.rec-weekend .select { width: auto; padding: 4px 28px 4px 8px; font-size: 0.85rem; }
 .records-table td.rec-label { white-space: nowrap; }
 .records-table tr.rec-year td { font-weight: 700; background: var(--surface-muted); }
 .records-table tr.rec-month td { font-weight: 600; }

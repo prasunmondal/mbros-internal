@@ -153,13 +153,31 @@
                         <div class="records-controls no-print">
                             <div class="tracker-presets" id="recordsMode" role="group" aria-label="Grouping">
                                 <button type="button" data-mode="smart" aria-pressed="true" title="Latest 4 weeks by week, the 6 months before by month, older by year">Smart</button>
-                                <button type="button" data-mode="custom" aria-pressed="false" title="Pick any mix of year, month and week">Custom</button>
+                                <button type="button" data-mode="custom" aria-pressed="false" title="Choose how many weeks and months, and which levels">Custom</button>
                             </div>
                             <div class="records-levels" id="recordsCustom" role="group" aria-label="Group by" hidden>
-                                <label><input type="checkbox" id="recLevel-year" checked> Year</label>
-                                <label><input type="checkbox" id="recLevel-month" checked> Month</label>
-                                <label><input type="checkbox" id="recLevel-week" checked> Week</label>
+                                <label title="The latest weeks, one row per week">
+                                    <input type="checkbox" id="recLevel-week" checked> Weeks
+                                    <input type="number" id="recWeeks" class="input rec-count" min="1" max="104" value="4" aria-label="Number of weeks">
+                                </label>
+                                <label title="Months before those weeks, one row per month">
+                                    <input type="checkbox" id="recLevel-month" checked> Months
+                                    <input type="number" id="recMonths" class="input rec-count" min="1" max="60" value="6" aria-label="Number of months">
+                                </label>
+                                <label title="Everything older, one row per year"><input type="checkbox" id="recLevel-year" checked> Years</label>
                             </div>
+                            <label class="rec-weekend" title="Thursday = weeks run Friday to Thursday">
+                                Week ends on
+                                <select id="recWeekEnd" class="select">
+                                    <option value="1">Monday</option>
+                                    <option value="2">Tuesday</option>
+                                    <option value="3">Wednesday</option>
+                                    <option value="4">Thursday</option>
+                                    <option value="5">Friday</option>
+                                    <option value="6">Saturday</option>
+                                    <option value="0" selected>Sunday</option>
+                                </select>
+                            </label>
                             <button type="button" class="btn btn-secondary records-btn" id="recordsExpand">Expand all</button>
                             <button type="button" class="btn btn-secondary records-btn" id="recordsCollapse">Collapse all</button>
                         </div>

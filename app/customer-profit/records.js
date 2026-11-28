@@ -1,9 +1,11 @@
 // Records table on the Balance Tracker tab of app/customer-profit/: KG, billed, paid and due per day,
-// grouped by time. Two modes:
+// grouped by time, counting back from the range end (To, else today):
 //   Smart (default): the latest 4 weeks by week, the 6 months before them by month, anything older by year.
-//                    Each group opens down to its days (years through their months).
-//   Custom:          any mix of Year, Month and Week, nested in that order down to days; none ticked = days.
-// Weeks run Monday to Sunday; a week inside a month shows only that month's days. Newest first everywhere.
+//   Custom:          the same, with the number of weeks and months chosen, and any level switched off. The
+//                    last level switched on takes everything older; none on = plain days.
+// Weeks end on the chosen weekday (Sunday by default; Thursday = Friday to Thursday), in both modes. Weeks
+// and months open to their days, years to their months. Newest first everywhere. The choices are remembered
+// in this browser.
 // Due = billed − paid (cash + online); discounts are not in it. Rows: the 2023–2025 archive, then db2.deliveries.
 //
 // The page calls BalanceRecords.init() once, setData() when rows arrive and update() when the customer or
@@ -11,13 +13,11 @@
 (function () {
     const DAY_MS = 86400000;
     const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const LEVELS = ["year", "month", "week"];
     const LEVEL_LABEL = { year: "Year", month: "Month", week: "Week", day: "Day" };
 
     const $ = id => document.getElementById(id);
     const number = value => Number(String(value ?? "").replace(/,/g, "")) || 0;
     const addDays = (day, n) => new Date(Date.parse(day + "T00:00:00Z") + n * DAY_MS).toISOString().slice(0, 10);
-    const mondayOf = day => { const dow = (new Date(day + "T00:00:00Z").getUTCDay() + 6) % 7; return addDays(day, -dow); };
     const monthEnd = month => addDays(addDays(month + "-28", 4).slice(0, 7) + "-01", -1);   // "2026-02" → "2026-02-28"
     const shiftMonth = (month, n) => { const [y, m] = month.split("-").map(Number); const t = y * 12 + (m - 1) + n; return `${Math.floor(t / 12)}-${String(t % 12 + 1).padStart(2, "0")}`; };
     const dayLabel = (day, withYear = true) => { const [y, m, d] = day.split("-"); return `${Number(d)} ${MONTHS[m - 1]}${withYear ? " " + y : ""}`; };
@@ -30,6 +30,15 @@
     let current = [], archive = [];
     let customer = "", fromDay = "", toDay = "";
     let mode = "smart";
+    // Weekday a week ends on, as getUTCDay numbers it (0 = Sunday … 6 = Saturday).
+    let weekEnd = 0;
+    const SMART = { week: true, weeks: 4, month: true, months: 6, year: true };
+    const SETTINGS_KEY = "mb-records";
+    // First day of the week holding `day`: the day after the chosen end weekday.
+    const weekStartOf = day => {
+        const startDow = (weekEnd + 1) % 7, dow = new Date(day + "T00:00:00Z").getUTCDay();
+        return addDays(day, -((dow - startDow + 7) % 7));
+    };
     const expanded = new Set();   // ids of open groups, kept across re-renders
 
     // ---------- data ----------
@@ -67,7 +76,7 @@
             : [key, addDays(key, 6)];
         return clip(a, b, lo, hi);
     }
-    const keyOf = (level, day) => level === "year" ? day.slice(0, 4) : level === "month" ? day.slice(0, 7) : mondayOf(day);
+    const keyOf = (level, day) => level === "year" ? day.slice(0, 4) : level === "month" ? day.slice(0, 7) : weekStartOf(day);
 
     function labelFor(level, key, a, b) {
         if (level === "week") return rangeLabel(a, b);
@@ -93,25 +102,38 @@
         });
     }
 
-    // Smart: weeks for the 4 weeks up to the anchor, months for the 6 months before, then years.
-    function smartTree(days) {
+    // Rolling groups back from the anchor: weeks, then months, then years, each only when switched on.
+    // The month window is the partial month left before the weeks (if any) plus `months` full months.
+    function rollingTree(days, o) {
         const anchor = toDay || Mb.todayIST();
-        const weekStart = addDays(mondayOf(anchor), -21);
-        const monthStart = shiftMonth(weekStart.slice(0, 7), -6) + "-01";
-        const recent = days.filter(d => d.day >= weekStart);
-        const middle = days.filter(d => d.day < weekStart && d.day >= monthStart);
-        const old = days.filter(d => d.day < monthStart);
-        return [
-            ...nest(recent, ["week"], "smart", fromDay > weekStart ? fromDay : weekStart, anchor),
-            ...nest(middle, ["month"], "smart", fromDay > monthStart ? fromDay : monthStart, addDays(weekStart, -1)),
-            ...nest(old, ["year", "month"], "smart", fromDay || "0000-01-01", addDays(monthStart, -1))
-        ];
+        const lo = fromDay || "0000-01-01";
+        const on = ["week", "month", "year"].filter(level => o[level]);
+        const id = `roll:${weekEnd}:${on.map(l => l + (o[l + "s"] || "")).join("+")}`;
+        if (!on.length) return dayNodes(days, id);
+        const last = on[on.length - 1];
+        const out = [];
+        let remaining = days, boundary = addDays(anchor, 1);   // days before `boundary` are still ungrouped
+        const take = (level, from, levels) => {
+            const part = remaining.filter(d => d.day >= from);
+            remaining = remaining.filter(d => d.day < from);
+            out.push(...nest(part, levels, `${id}/${level}s`, from > lo ? from : lo, addDays(boundary, -1)));
+            boundary = from;
+        };
+        if (o.week) take("week", last === "week" ? "0000-01-01" : addDays(weekStartOf(anchor), -7 * (o.weeks - 1)), ["week"]);
+        if (o.month) take("month", last === "month" ? "0000-01-01" : shiftMonth(addDays(boundary, -1).slice(0, 7), -o.months) + "-01", ["month"]);
+        if (o.year) take("year", "0000-01-01", ["year", "month"]);
+        return out;
     }
 
-    function customTree(days) {
-        const levels = LEVELS.filter(level => $(`recLevel-${level}`).checked);
-        return nest(days, levels, "custom:" + levels.join("+"), fromDay || "0000-01-01", toDay || "9999-12-31");
+    function customOptions() {
+        const count = (id, fallback, max) => Math.min(max, Math.max(1, Math.round(Number($(id).value)) || fallback));
+        return {
+            week: $("recLevel-week").checked, weeks: count("recWeeks", SMART.weeks, 104),
+            month: $("recLevel-month").checked, months: count("recMonths", SMART.months, 60),
+            year: $("recLevel-year").checked
+        };
     }
+    const tree = days => rollingTree(days, mode === "smart" ? SMART : customOptions());
 
     // ---------- render ----------
 
@@ -129,7 +151,7 @@
 
         const days = dailyTotals();
         if (!days.length) return empty("No records in this range.");
-        const tree = mode === "smart" ? smartTree(days) : customTree(days);
+        const groups = tree(days);
 
         const walk = (nodes, depth, visible) => nodes.forEach(n => {
             const open = expanded.has(n.id);
@@ -166,7 +188,7 @@
             });
             walk(n.children, depth + 1, visible && open);
         });
-        walk(tree, 0, true);
+        walk(groups, 0, true);
 
         const total = days.reduce((t, d) => ({ kg: t.kg + d.kg, billed: t.billed + d.billed, paid: t.paid + d.paid }), { kg: 0, billed: 0, paid: 0 });
         const tr = foot.insertRow();
@@ -179,7 +201,7 @@
                 if (i) td.className = "num" + (i === 4 && dueClass(due) ? " " + dueClass(due) : "");
             });
         $("recordsRange").textContent = days.length
-            ? `${dayLabel(days[days.length - 1].day)} – ${dayLabel(days[0].day)}` + (mode === "smart" ? ` · weeks up to ${dayLabel(toDay || Mb.todayIST())}` : "")
+            ? `${dayLabel(days[days.length - 1].day)} – ${dayLabel(days[0].day)}` + ` · counted back from ${dayLabel(toDay || Mb.todayIST())}`
             : "";
     }
 
@@ -197,16 +219,44 @@
         if (open && customer) {
             const days = dailyTotals();
             const add = nodes => nodes.forEach(n => { if (n.children.length) { expanded.add(n.id); add(n.children); } });
-            add(mode === "smart" ? smartTree(days) : customTree(days));
+            add(tree(days));
         }
         render();
     }
 
+    // A count box is greyed out while its level is off.
+    function syncCounts() {
+        $("recWeeks").disabled = !$("recLevel-week").checked;
+        $("recMonths").disabled = !$("recLevel-month").checked;
+    }
+
+    function loadSettings() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+            if (saved.mode === "custom" || saved.mode === "smart") mode = saved.mode;
+            if (Number.isInteger(saved.weekEnd) && saved.weekEnd >= 0 && saved.weekEnd <= 6) weekEnd = saved.weekEnd;
+            if (saved.custom) {
+                ["week", "month", "year"].forEach(l => { if (typeof saved.custom[l] === "boolean") $(`recLevel-${l}`).checked = saved.custom[l]; });
+                if (saved.custom.weeks) $("recWeeks").value = saved.custom.weeks;
+                if (saved.custom.months) $("recMonths").value = saved.custom.months;
+            }
+        } catch { /* defaults */ }
+        $("recWeekEnd").value = String(weekEnd);
+        syncCounts();
+    }
+
+    function saveSettings() {
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ mode, weekEnd, custom: customOptions() })); } catch { /* this visit only */ }
+    }
+
     window.BalanceRecords = {
         init() {
+            loadSettings();
             document.querySelectorAll("#recordsMode button").forEach(b =>
-                b.addEventListener("click", () => { mode = b.dataset.mode; render(); }));
-            LEVELS.forEach(level => $(`recLevel-${level}`).addEventListener("change", render));
+                b.addEventListener("click", () => { mode = b.dataset.mode; saveSettings(); render(); }));
+            ["recLevel-year", "recLevel-month", "recLevel-week", "recWeeks", "recMonths"].forEach(id =>
+                $(id).addEventListener("change", () => { syncCounts(); saveSettings(); render(); }));
+            $("recWeekEnd").addEventListener("change", () => { weekEnd = Number($("recWeekEnd").value); saveSettings(); render(); });
             $("recordsExpand").addEventListener("click", () => setAll(true));
             $("recordsCollapse").addEventListener("click", () => setAll(false));
             render();
