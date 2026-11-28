@@ -27,6 +27,25 @@
         .notes-list li + li { margin-top: 6px; }
         .day-title { margin-top: 4px; color: var(--text-muted); }
         .table td.negative { color: var(--danger); }
+        .date-entry { position: relative; display: flex; }
+        .date-entry .input { width: 100%; padding-right: 44px; font-variant-numeric: tabular-nums; }
+        .date-entry .input[aria-invalid="true"] { border-color: var(--danger); }
+        .date-pick {
+            position: absolute; top: 0; right: 0; bottom: 0; width: 42px; display: grid; place-items: center;
+            color: var(--text-muted); border-left: 1px solid var(--border);
+        }
+        .date-pick svg { width: 18px; height: 18px; }
+        .date-pick:hover { color: var(--brand); }
+        .date-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+        .date-pick input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+        .date-pick input:disabled { cursor: not-allowed; }
+        /* Under the box without moving the Previous / Next buttons beside it. */
+        .date-field { position: relative; }
+        .field-error { position: absolute; top: 100%; left: 0; margin-top: 3px; font-size: 0.78rem; color: var(--danger); white-space: nowrap; }
+        .customers-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+        /* Customers with a balance but no entry on the day (shown when "All balances" is on). */
+        .table tr.idle-row td { color: var(--text-muted); }
+        .table tr.idle-row td:first-child { font-style: italic; }
         @media print {
             .grid-2 { grid-template-columns: 1fr 1fr; }
             .table { font-size: 0.75rem; }
@@ -50,9 +69,18 @@
         </div>
 
         <div class="card card-body toolbar no-print">
-            <div class="field">
+            <div class="field date-field">
                 <label for="dayInput">Date</label>
-                <input type="date" id="dayInput" class="input" disabled>
+                <div class="date-entry">
+                    <input type="text" id="dayInput" class="input" placeholder="yyyy-MM-dd" maxlength="10" inputmode="numeric"
+                           autocomplete="off" spellcheck="false" aria-describedby="dayError" disabled>
+                    <span class="date-pick" title="Pick a date">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                        <!-- The native picker sits invisibly over the icon, so tapping it opens the calendar on every device. -->
+                        <input type="date" id="dayPicker" aria-label="Pick a date" tabindex="-1" disabled>
+                    </span>
+                </div>
+                <span class="field-error" id="dayError" hidden></span>
             </div>
             <div class="day-nav">
                 <button type="button" class="btn btn-secondary" id="prevDay" title="Previous day with data" disabled>‹ Previous</button>
@@ -89,7 +117,14 @@
             </section>
 
             <section class="card section">
-                <div class="card-header"><h2 id="customersTitle">Customers</h2></div>
+                <div class="card-header customers-header">
+                    <h2 id="customersTitle">Customers</h2>
+                    <label class="toggle no-print" title="Also list customers who had no entry this day but still have a balance">
+                        <input type="checkbox" id="showAllBalances" role="switch">
+                        <span class="toggle-track" aria-hidden="true"></span>
+                        <span>All non-zero balances</span>
+                    </label>
+                </div>
                 <div class="table-wrap">
                     <table class="table" id="customerTable">
                         <thead>
@@ -146,7 +181,8 @@
     // The archive is large, so it loads only when a day before 2026 is opened.
     function loadArchive() {
         archiveLoad ??= fetchRows(ARCHIVE_SHEET_ID, "deliveries.2023").then(rows => {
-            addDeliveries(rows);
+            // Days from 2026 come from db2.deliveries; dropping any archive overlap keeps them from counting twice.
+            addDeliveries(rows.filter(row => row.timestamp && dayOf(row.timestamp) < CURRENT_START));
             archiveLoaded = true;
         }).catch(error => {
             archiveLoad = null;
@@ -283,24 +319,61 @@
         notesList.replaceChildren(...notes.map(note => Object.assign(document.createElement('li'), { textContent: note })));
         document.getElementById('notesCard').hidden = !notes.length;
 
-        renderCustomers(deliveries);
+        renderCustomers(date);
         document.getElementById('printBtn').disabled = false;
     }
 
-    function renderCustomers(rows) {
+    // A row's balance: totalBalance, or khataBalance on an archive row without one.
+    const balanceOf = row => (row.totalBalance === '' || row.totalBalance == null) ? num(row.khataBalance) : num(row.totalBalance);
+
+    // Each customer's balance at the end of `date`: their last delivery row on or before it.
+    function balancesOn(date) {
+        const balances = new Map();
+        [...deliveriesByDate.keys()].filter(day => day <= date).sort()
+            .forEach(day => deliveriesByDate.get(day).forEach(row => balances.set(row.name, balanceOf(row))));
+        return balances;
+    }
+
+    // Off (default): the day's delivery rows. On: also every customer with no entry that day whose balance
+    // isn't zero, so the Balance total is everyone's dues at the end of the day.
+    function renderCustomers(date) {
+        const rows = deliveriesByDate.get(date) || [];
+        const showAll = document.getElementById('showAllBalances').checked;
+        const active = new Set(rows.map(row => row.name));
+        const idle = showAll
+            ? [...balancesOn(date)].filter(([name, balance]) => !active.has(name) && Math.round(balance) !== 0)
+                .map(([name, balance]) => ({ name, balance, idle: true }))
+            : [];
         const body = document.getElementById('customerTable').tBodies[0];
         body.replaceChildren();
-        document.getElementById('customersTitle').textContent = `Customers (${rows.length})`;
-        if (!rows.length) {
+        document.getElementById('customersTitle').textContent = showAll
+            ? `Customers (${active.size} with entries, ${idle.length} more with a balance)`
+            : `Customers (${rows.length})`;
+        if (!rows.length && !idle.length) {
             const td = body.insertRow().insertCell();
             td.colSpan = 10;
             td.className = 'empty-state';
-            td.textContent = 'No customer entries on this day.';
+            td.textContent = showAll ? 'No customer has a balance or an entry on this day.' : 'No customer entries on this day.';
             return;
         }
         const blank = (value, decimals = 0) => num(value) ? Mb.formatNumber(value, decimals) : '';
         const totals = { pc: 0, kg: 0, amount: 0, cash: 0, online: 0, discount: 0, prev: 0, balance: 0 };
-        [...rows].sort((a, b) => a.name.localeCompare(b.name)).forEach(row => {
+        [...rows, ...idle].sort((a, b) => a.name.localeCompare(b.name)).forEach(row => {
+            if (row.idle) {
+                // No entry today: the balance carried in is the balance carried out.
+                totals.prev += row.balance;
+                totals.balance += row.balance;
+                const tr = body.insertRow();
+                tr.className = 'idle-row';
+                tr.title = 'No entry on this day';
+                [row.name, '', '', '', '', '', '', '', Mb.formatNumber(row.balance, 0), Mb.formatNumber(row.balance, 0)].forEach((value, i) => {
+                    const td = tr.insertCell();
+                    td.textContent = value;
+                    if (i) td.className = 'num';
+                });
+                if (row.balance < 0) tr.cells[9].classList.add('negative');
+                return;
+            }
             totals.pc += num(row.deliveredPc);
             totals.kg += num(row.deliveredKg);
             totals.amount += num(row.deliverAmount);
@@ -337,8 +410,49 @@
         return new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
 
+    // Typed or pasted dates → yyyy-MM-dd, or null. Accepts yyyy-MM-dd (also with / or .), dd-MM-yyyy
+    // (day first, as dates are written in India; also with / or .), single-digit day or month, and a full
+    // ISO timestamp (its IST date). Rejects dates that don't exist, such as 2026-02-30.
+    function parseDay(value) {
+        const input = String(value || '').trim();
+        if (!input) return null;
+        if (/^\d{4}-\d{2}-\d{2}T/.test(input)) {
+            const time = Date.parse(input);
+            return Number.isNaN(time) ? null : Mb.toISTDate(time);
+        }
+        let match = input.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/), y, m, d;
+        if (match) [, y, m, d] = match;
+        else if ((match = input.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/))) [, d, m, y] = match;
+        else if ((match = input.match(/^(\d{4})(\d{2})(\d{2})$/))) [, y, m, d] = match;
+        else return null;
+        const day = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const check = new Date(day + 'T00:00:00Z');
+        return !Number.isNaN(check.getTime()) && check.toISOString().slice(0, 10) === day ? day : null;
+    }
+
+    function showDayError(message) {
+        const input = document.getElementById('dayInput'), error = document.getElementById('dayError');
+        error.hidden = !message;
+        error.textContent = message || '';
+        input.setAttribute('aria-invalid', String(!!message));
+    }
+
+    // Go to the typed date, or say why not. Leaves the page as it is when the text is unchanged.
+    function commitTypedDay() {
+        const input = document.getElementById('dayInput');
+        const day = parseDay(input.value);
+        const text = input.value.trim();
+        if (!day) return showDayError(!text ? 'Enter a date as yyyy-MM-dd.'
+            : /^\d{4}-\d{2}-\d{2}$/.test(text) ? `${text} isn't a real date.` : 'Use yyyy-MM-dd, e.g. 2026-11-28.');
+        showDayError(null);
+        if (day !== new URLSearchParams(location.search).get('date') || document.getElementById('report').hidden) renderDay(day);
+        else input.value = day;
+    }
+
     function updateNav(date) {
+        showDayError(null);
         document.getElementById('dayInput').value = date;
+        document.getElementById('dayPicker').value = date;
         document.getElementById('prevDay').disabled = !dates.some(d => d < date);
         document.getElementById('nextDay').disabled = !dates.some(d => d > date);
     }
@@ -369,17 +483,51 @@
             Mb.setStatus(status, 'error', 'Could not load the daily figures. Please try again.');
             return;
         }
-        ['dayInput', 'latestDay'].forEach(id => document.getElementById(id).disabled = false);
+        ['dayInput', 'dayPicker', 'latestDay'].forEach(id => document.getElementById(id).disabled = false);
         const requested = new URLSearchParams(location.search).get('date');
         renderDay(/^\d{4}-\d{2}-\d{2}$/.test(requested || '') ? requested : dates[dates.length - 1]);
     }
 
-    document.getElementById('dayInput').addEventListener('change', event => {
-        if (event.target.value) renderDay(event.target.value);
+    // Date box: type yyyy-MM-dd and press Enter (or leave the box); a pasted date goes straight to that day.
+    const dayInput = document.getElementById('dayInput');
+    dayInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') { event.preventDefault(); commitTypedDay(); }
+        if (event.key === 'Escape') updateNav(new URLSearchParams(location.search).get('date') || dayInput.value);
     });
+    dayInput.addEventListener('change', commitTypedDay);
+    dayInput.addEventListener('input', () => showDayError(null));
+    dayInput.addEventListener('paste', event => {
+        const day = parseDay(event.clipboardData?.getData('text'));
+        if (!day) return;   // let the text in; Enter or leaving the box then says what's wrong
+        event.preventDefault();
+        dayInput.value = day;
+        commitTypedDay();
+    });
+    // Calendar icon: the native picker (showPicker for desktop browsers that open it only from their own icon).
+    const dayPicker = document.getElementById('dayPicker');
+    dayPicker.addEventListener('click', () => { try { dayPicker.showPicker(); } catch { /* opens natively */ } });
+    dayPicker.addEventListener('change', () => { if (dayPicker.value) renderDay(dayPicker.value); });
     document.getElementById('prevDay').addEventListener('click', () => step(-1));
     document.getElementById('nextDay').addEventListener('click', () => step(1));
     document.getElementById('latestDay').addEventListener('click', () => renderDay(dates[dates.length - 1]));
+
+    // Customers who last bought before 2026 still carry balances, so "All non-zero balances" needs the archive.
+    document.getElementById('showAllBalances').addEventListener('change', event => {
+        const date = document.getElementById('dayInput').value;
+        if (!date || document.getElementById('report').hidden) return;
+        if (!event.target.checked || archiveLoaded) return renderCustomers(date);
+        const status = document.getElementById('status');
+        Mb.setStatus(status, 'info', 'Loading 2023–2025 balances…');
+        event.target.disabled = true;
+        loadArchive().then(() => {
+            Mb.setStatus(status, null);
+            if (document.getElementById('dayInput').value === date) renderCustomers(date);
+        }, error => {
+            console.error('Error fetching archive:', error);
+            Mb.setStatus(status, 'error', 'Could not load 2023–2025 balances, so customers whose last entry was before 2026 may be missing.');
+            renderCustomers(date);
+        }).finally(() => { event.target.disabled = false; });
+    });
 
     initialize();
 </script>

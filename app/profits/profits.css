@@ -175,20 +175,6 @@ body:not([data-sub="balances"]) .balances-only { display: none; }
 .month-toggle-row { cursor: pointer; }
 .card-header { flex-wrap: wrap; }
 
-/* On/off switch built from a checkbox. */
-.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; user-select: none; }
-.toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.toggle-track {
-    position: relative; flex: none; width: 36px; height: 20px; border-radius: 999px;
-    background: var(--border-strong); transition: background 0.2s ease;
-}
-.toggle-track::after {
-    content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
-    background: #fff; box-shadow: var(--shadow-sm); transition: transform 0.2s ease;
-}
-.toggle input:checked + .toggle-track { background: var(--brand); }
-.toggle input:checked + .toggle-track::after { transform: translateX(16px); }
-.toggle input:focus-visible + .toggle-track { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 /* Balances: revenue snapshots (cash, bank, direct debt, online -> balance; + market due -> networth). */
 #balRevenue { max-width: 640px; }
