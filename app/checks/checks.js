@@ -230,24 +230,34 @@
             doubled.length ? `${plural(doubled.length, "day")} with more than one row since ${from}` : `${plural(counts.size, "day")} since ${from}, one row each`,
             doubled.length ? { table: table(["Day", "Rows"], doubled) } : {});
 
-        // sold_amount and deliveredPc against that day's delivery rows.
+        // sold_amount and deliveredPc against that day's delivery rows. Pieces delivered by someone else (a `seller`
+        // other than MBros) aren't in the day's deliveredPc, so they're left out of the PC comparison here only;
+        // every other page and check still counts them (owner, 2026-11-28).
+        const byOthers = row => { const seller = String(row.seller ?? "").trim(); return seller !== "" && seller.toLowerCase() !== "mbros"; };
+        const hasSeller = current.some(({ row }) => "seller" in row);
         const byDay = new Map();
         current.forEach(({ row, day }) => {
-            const t = byDay.get(day) || { amount: 0, pc: 0 };
-            t.amount += number(row.deliverAmount); t.pc += number(row.deliveredPc);
+            const t = byDay.get(day) || { amount: 0, pc: 0, otherPc: 0 };
+            t.amount += number(row.deliverAmount);
+            if (byOthers(row)) t.otherPc += number(row.deliveredPc);
+            else t.pc += number(row.deliveredPc);
             byDay.set(day, t);
         });
         const mismatch = [];
         dayRows.forEach(r => {
-            const t = byDay.get(r.day) || { amount: 0, pc: 0 };
+            const t = byDay.get(r.day) || { amount: 0, pc: 0, otherPc: 0 };
             const da = number(r.sold_amount) - t.amount, dp = number(r.deliveredPc) - t.pc;
             if (Math.abs(da) > TOLERANCE || Math.abs(dp) > 0.5)
-                mismatch.push([r.day, inr(number(r.sold_amount)), inr(t.amount), Mb.formatNumber(number(r.deliveredPc)), Mb.formatNumber(t.pc)]);
+                mismatch.push([r.day, inr(number(r.sold_amount)), inr(t.amount), Mb.formatNumber(number(r.deliveredPc)), Mb.formatNumber(t.pc),
+                    t.otherPc ? Mb.formatNumber(t.otherPc) : ""]);
         });
         add(group, titles[1], mismatch.length ? "warn" : "pass",
             mismatch.length ? `${plural(mismatch.length, "day")} of ${counts.size} where sold_amount or deliveredPc differ from the day's deliveries` : `Match on all ${plural(counts.size, "day")} since ${from}`,
-            { note: "Not every day matched when last measured (1,042 of 1,124 days, 2026-10-30), so this is a warning, not a failure.",
-              ...(mismatch.length ? { table: table(["Day", "sold_amount", "Deliveries", "deliveredPc", "Delivered PC"], mismatch) } : {}) });
+            { note: (hasSeller
+                    ? "Delivered PC leaves out rows whose seller is set and isn't MBros (shown under \"By others, left out\"); sold_amount is compared with all rows. "
+                    : "db2.deliveries has no seller column, so no rows are left out. ") +
+                "Not every day matched when last measured (1,042 of 1,124 days, 2026-10-30), so this is a warning, not a failure.",
+              ...(mismatch.length ? { table: table(["Day", "sold_amount", "Deliveries", "deliveredPc", "Delivered PC (MBros)", "By others, left out"], mismatch) } : {}) });
 
         // Corrected new_due_balance against every customer's latest totalBalance that day (archive + 2026).
         try {

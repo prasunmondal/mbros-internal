@@ -25,7 +25,7 @@ earns, plus pages customers use to pay.
 - **cumilativeCalculations**: the worksheet with the daily business totals (spelling as in the
   sheet). One row per day (a couple of 2023 dates have two). `date` is `YYYY-MM-DD` on newer rows and a
   UTC timestamp of IST midnight on older ones. Its `sold_amount` and `deliveredPc` match that day's
-  delivery rows on most days (1,042 of 1,124, checked 2026-10-30). `shortage` is a percentage
+  delivery rows on most days (1,042 of 1,124, checked 2026-10-30). `deliveredPc` leaves out pieces delivered by others: `db2.deliveries` rows whose `seller` is set and isn't MBros (owner, 2026-11-28). Only `app/checks/` leaves them out; every other page still counts them. `shortage` is a percentage
   `[inferred: (kg − deliveredKg) / kg]`; `employeeSalaries` reads `{Name|Role|Amount}, …`.
 
 ## Business rules
