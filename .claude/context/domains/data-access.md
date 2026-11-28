@@ -42,7 +42,7 @@ the lint here does not check them.
 | main | `db2.deliveries` | `app/profits/` (Revenue tab, Balances), `app/deliveries/`, `app/customer-profit/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
 | main | `cumilativeCalculations` | `app/profits/`, `app/customer-profit/`, `app/daily/` |
 | main | `revenue`: money snapshots by date. Read: `date`, `cashBalance`, `bankBalance`, `debt` (Direct Debt), `onlineBalance`, `customerDue` (Market Due), `inhouseBalance` (Balance), `networth` (owner, 2026-11-04). Not used yet: `categoryForApp`, `id`, `spends`, `spendsNote`, `realisedProfit` | `app/profits/` (Revenue tab, Balances) |
-| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/profits/` (Balances), `app/deliveries/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/` |
+| 2023 archive (ID in `app/deliveries/deliveries.js`) | `deliveries.2023` | `app/profits/` (Balances), `app/deliveries/`, `app/customer-performance/`, `app/statements/` (Customer Statement tab), `app/daily/`, `app/customer-profit/` (Balance Tracker) |
 | meter sheet (ID in `app/meters/`) | `apiData` | `app/meters/` |
 
 `deliveries` no longer exists: on 2026-10-29 the engine answered "Worksheet not found: deliveries",

@@ -18,8 +18,10 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&display=swap">
     <link rel="stylesheet" href="../../assets/css/site.css">
     <script src="../../assets/js/common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="tracker.css">
 </head>
-<body data-page="customer-profit">
+<body data-page="customer-profit" data-view="overview">
 
 <main class="app-main wide">
     <div class="container">
@@ -27,11 +29,16 @@
         <div class="page-header">
             <div>
                 <h1>Customer profit</h1>
-                <p>Profit share and debt movement for a customer (or all customers) over a date range.</p>
+                <p>Profit share, debt movement and balance history for a customer (or all customers) over a date range.</p>
             </div>
             <div class="page-actions">
                 <button type="button" class="btn btn-secondary btn-icon" onclick="window.print()" title="Print" aria-label="Print"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg></button>
             </div>
+        </div>
+
+        <div class="view-switch no-print" role="tablist" aria-label="View">
+            <button type="button" role="tab" data-view="overview" aria-selected="true">Overview</button>
+            <button type="button" role="tab" data-view="tracker" aria-selected="false">Balance Tracker</button>
         </div>
 
         <div class="card card-body toolbar no-print">
@@ -53,6 +60,7 @@
 
         <p id="status" class="status" hidden style="margin-top: 16px;"></p>
 
+        <div class="overview-only">
         <div class="stats section">
             <div class="stat"><div class="stat-label">Profit</div><div class="stat-value" id="profitDisplay">–</div></div>
             <div class="stat"><div class="stat-label">Profit after debt change</div><div class="stat-value" id="profitDisplayDebtIncrementAdjusted">–</div></div>
@@ -86,11 +94,78 @@
                 </table>
             </div>
         </div>
+        </div>
+
+        <div class="tracker-only">
+            <p id="trackerEmpty" class="empty-state card section">Select a customer (or All customers) to see their balance over time.</p>
+            <div id="trackerBody" hidden>
+                <div class="card section">
+                    <div class="card-header tracker-header">
+                        <div>
+                            <h2>Balance over time</h2>
+                            <p class="subtle" id="trackerRangeLabel"></p>
+                        </div>
+                        <div class="tracker-presets no-print" id="trackerPresets" role="group" aria-label="Range">
+                            <button type="button" data-preset="1M">1M</button>
+                            <button type="button" data-preset="3M">3M</button>
+                            <button type="button" data-preset="6M">6M</button>
+                            <button type="button" data-preset="YTD">YTD</button>
+                            <button type="button" data-preset="1Y">1Y</button>
+                            <button type="button" data-preset="ALL">All</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="tracker-options no-print">
+                            <label class="opt"><input type="checkbox" id="optBalance" checked><span class="swatch balance"></span>Daily balance</label>
+                            <label class="opt"><input type="checkbox" id="optMa7"><span class="swatch ma7"></span>7-day average</label>
+                            <label class="opt"><input type="checkbox" id="optMa30"><span class="swatch ma30"></span>30-day average</label>
+                            <label class="opt"><input type="checkbox" id="optTrend" checked><span class="swatch trend"></span>Trend line</label>
+                            <label class="opt"><input type="checkbox" id="optMarkers" checked><span class="swatch marker"></span>Peak &amp; low</label>
+                            <button type="button" class="btn btn-secondary tracker-csv" id="trackerCsv">Download CSV</button>
+                        </div>
+                        <div class="chart-wrap main" id="balanceChartWrap">
+                            <canvas id="balanceChart" aria-label="Daily closing balance" role="img"></canvas>
+                            <div class="zoom-select" id="zoomSelect" hidden></div>
+                        </div>
+                        <p class="chart-title">Daily billed <span class="swatch billed"></span> and received <span class="swatch received"></span> (below the line)</p>
+                        <div class="chart-wrap flow"><canvas id="flowChart" aria-label="Daily billed and received amounts" role="img"></canvas></div>
+                        <div class="chart-wrap nav no-print">
+                            <canvas id="navChart" aria-hidden="true"></canvas>
+                            <div class="nav-brush" id="navBrush">
+                                <div class="nav-shade" id="navShadeLeft"></div>
+                                <div class="nav-shade" id="navShadeRight"></div>
+                                <div class="nav-window" id="navWindow" tabindex="0" role="slider" aria-label="Selected date range">
+                                    <span class="nav-handle" data-handle="left"></span>
+                                    <span class="nav-handle" data-handle="right"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="subtle no-print tracker-hint">Drag the window in the strip to move the range, its edges to resize it, or anywhere else in the strip to draw a new one. With a mouse you can also drag across the chart to zoom in; double-click shows everything. Arrow keys move a focused window.</p>
+                    </div>
+                </div>
+
+                <h2 class="section-title section">Position</h2>
+                <div class="stats" id="trackerStatsMain"></div>
+                <h2 class="section-title section">Risk and trend</h2>
+                <div class="stats" id="trackerStatsRisk"></div>
+                <h2 class="section-title section">Billing and collection</h2>
+                <div class="stats" id="trackerStatsFlow"></div>
+
+                <div class="card section bridge-card">
+                    <div class="card-header"><h2>Balance bridge</h2></div>
+                    <div class="table-wrap">
+                        <table class="table" id="bridgeTable"><tbody></tbody></table>
+                    </div>
+                    <p class="subtle card-body" id="bridgeNote" hidden>The range starts before db2.deliveries (2026-01-01), so billing and payments before then land in other adjustments.</p>
+                </div>
+            </div>
+        </div>
 
     </div>
 </main>
 
 <script src="../../assets/js/config.js"></script>
+<script src="tracker.js"></script>
 <script>
 
     function convertToIST(dateString) {
@@ -117,6 +192,29 @@
             id: "f6893973-f58c-4c10-a219-d9b281138026-1740944738031"
         }]);
         window.profitData = await useTotalBalanceDues(data[0].rows);
+    }
+
+    // 2023–2025 deliveries, for the Balance Tracker's history. useTotalBalanceDues has just read the same
+    // worksheet, so this normally comes from the data cache in assets/js/config.js.
+    async function fetchArchive() {
+        const data = await callSheetsApi([{
+            type: "SELECT",
+            spreadsheetId: "1-uKyCderO-4Zq-YRb8HEzPgbSZPJ_vdzWs2P3BqE2kw",
+            worksheet: "deliveries.2023",
+            id: "mbros-github-site-customer-profit-archive"
+        }]);
+        return data[0].rows;
+    }
+
+    // Customers seen only in the archive: the tracker shows their history; the Overview has no 2026 rows for them.
+    function addArchiveCustomers(archiveRows) {
+        const known = new Set(window.customers.map(c => c.name));
+        const names = [...new Set(archiveRows.map(r => r.name).filter(name => name && !known.has(name)))].sort();
+        if (!names.length) return;
+        const group = document.createElement('optgroup');
+        group.label = 'Archive only (2023–2025)';
+        names.forEach(name => group.appendChild(new Option(name, name)));
+        document.getElementById('customerSelect').appendChild(group);
     }
 
     function populateCustomers(customers) {
@@ -226,14 +324,31 @@
         setStat("debtIncreased", hasRows ? (finalBalance - startingBalance) : null);
     }
 
+    function updateTracker() {
+        BalanceTracker.update(document.getElementById('customerSelect').value,
+            document.getElementById('startDate').value, document.getElementById('endDate').value);
+    }
+
+    // Overview / Balance Tracker switch; #tracker in the URL opens the tracker.
+    function showView(view) {
+        document.body.dataset.view = view;
+        document.querySelectorAll('.view-switch button').forEach(button =>
+            button.setAttribute('aria-selected', String(button.dataset.view === view)));
+        history.replaceState(null, '', view === 'tracker' ? '#tracker' : location.pathname + location.search);
+        BalanceTracker.setVisible(view === 'tracker');
+    }
+
     async function initialize() {
         const status = document.getElementById("status");
         Mb.setStatus(status, "info", "Loading deliveries and profit data…");
         try {
             await fetchData();
             await fetchProfits();
+            const archive = await fetchArchive();
+            addArchiveCustomers(archive);
             Mb.setStatus(status, null);
             document.getElementById("customerSelect").disabled = false;
+            BalanceTracker.setData(window.customers, window.profitData, archive);
         } catch (error) {
             console.error("Error fetching data:", error);
             Mb.setStatus(status, "error", "Could not load data. Please try again.");
@@ -241,7 +356,19 @@
     }
 
     ["customerSelect", "startDate", "endDate"].forEach(id =>
-        document.getElementById(id).addEventListener("change", updateProfit));
+        document.getElementById(id).addEventListener("change", () => { updateProfit(); updateTracker(); }));
+
+    // The tracker's range drives the shared From / To dates, so both views show the same days.
+    BalanceTracker.init({
+        onRangeCommit(fromDay, toDay) {
+            document.getElementById('startDate').value = fromDay;
+            document.getElementById('endDate').value = toDay;
+            updateProfit();
+        }
+    });
+    document.querySelectorAll('.view-switch button').forEach(button =>
+        button.addEventListener('click', () => showView(button.dataset.view)));
+    showView(location.hash === '#tracker' ? 'tracker' : 'overview');
 
     initialize();
 </script>

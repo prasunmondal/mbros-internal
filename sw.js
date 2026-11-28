@@ -22,7 +22,7 @@ const PRECACHE = [
     'app/deliveries/', 'app/deliveries/deliveries.js', 'app/deliveries/deliveries.css',
     'app/customer-performance/',
     'app/daily/',
-    'app/customer-profit/',
+    'app/customer-profit/', 'app/customer-profit/tracker.js', 'app/customer-profit/tracker.css',
     'app/balance/',
     'app/meters/',
     'app/calculator/',
