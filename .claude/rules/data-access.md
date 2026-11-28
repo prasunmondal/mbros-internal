@@ -13,4 +13,5 @@ paths:
 - `callSheetsApi` throws on `success: false`; callers rely on getting `results` back.
 - Request and response shapes are the GridBase wire contract: see the GridBase repo,
   .claude/context/domains/wire-contract.md (there). Do not invent fields here.
+- `checkColumns` only reads results; it must never throw into `callSheetsApi` or change rows.
 - More: `context/domains/data-access.md`.

@@ -170,6 +170,34 @@
             + `<span>${escapeHtml(message)}</span>`;
     }
 
+    // A dismissible page-wide message above the page content (type: error | info | success), shown once per
+    // `key` per page view. Used by the column check in assets/js/config.js.
+    const shownNotices = new Set();
+    function notice(type, message, key = message) {
+        if (shownNotices.has(key)) return;
+        shownNotices.add(key);
+        const show = () => {
+            let area = document.getElementById('mbNotices');
+            if (!area) {
+                area = document.createElement('div');
+                area.id = 'mbNotices';
+                area.className = 'mb-notices no-print';
+                (document.querySelector('main .container') || document.querySelector('main') || document.body).prepend(area);
+            }
+            const element = document.createElement('div');
+            element.setAttribute('role', type === 'error' ? 'alert' : 'status');
+            setStatus(element, type, message);
+            element.querySelector('.spinner')?.remove();
+            const close = Object.assign(document.createElement('button'), { type: 'button', className: 'mb-notice-close', textContent: '×', title: 'Dismiss' });
+            close.setAttribute('aria-label', 'Dismiss');
+            close.addEventListener('click', () => element.remove());
+            element.append(close);
+            area.append(element);
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+        else show();
+    }
+
     // Insert the app header (brand + nav) and footer. The current page is <body data-page="...">.
     function renderShell() {
         const current = document.body.dataset.page;
@@ -288,7 +316,7 @@
         });
     }
 
-    window.Mb = { TOOLS, ready, url, escapeHtml, toISTDate, todayIST, formatNumber, formatRate, formatINR, setStatus };
+    window.Mb = { TOOLS, ready, url, escapeHtml, toISTDate, todayIST, formatNumber, formatRate, formatINR, setStatus, notice };
 
     // Loaded in <head>, so `Mb` exists before page scripts run; the shell goes in once the body is parsed.
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

@@ -56,6 +56,69 @@ const DataCache = (() => {
     };
 })();
 
+// ---------- Column check ----------
+// A renamed or removed column doesn't fail a page: `Number(row.x) || 0` reads it as 0 and the numbers are
+// quietly wrong. So every SELECT result is checked here, two ways:
+// 1. EXPECTED_COLUMNS: the columns pages rely on, per worksheet. One missing shows an error on the page.
+//    Add a column here when a page starts depending on it; drop it when none does. Columns that are only
+//    shown when present (notes, optional amounts) are left out on purpose, so they never raise a false alarm.
+// 2. Every worksheet (listed or not): its column names are remembered in this browser, and any column added
+//    or removed since the last load is reported once, then becomes the new baseline.
+// Columns are the keys of the returned rows, so an empty worksheet is skipped.
+const EXPECTED_COLUMNS = {
+    'db2.deliveries': ['name', 'timestamp', 'orderId', 'deliveredPc', 'deliveredKg', 'rate', 'deliverAmount',
+        'paidCash', 'paidOnline', 'discount', 'autoAdjust', 'adjustments', 'prevAmount', 'khataBalance', 'totalBalance'],
+    'deliveries.2023': ['name', 'timestamp', 'deliveredPc', 'deliveredKg', 'rate', 'deliverAmount',
+        'paidCash', 'paidOnline', 'discount', 'prevAmount', 'khataBalance', 'totalBalance'],
+    'cumilativeCalculations': ['date', 'kg', 'deliveredKg', 'deliveredPc', 'profit', 'sold_amount', 'shortage',
+        'prev_due_balance', 'new_due_balance', 'car_expense', 'labour_expense', 'extra_expenses'],
+    'db2.loads': ['deliverySession', 'transactionType', 'sender', 'via', 'receiver', 'senderAmount', 'viaSellAmount'],
+    'temp.load': ['deliverySession', 'transactionType', 'sender', 'via', 'receiver', 'senderAmount', 'viaSellAmount'],
+    'cal.occasions': ['occassionName', 'daysPrepend', 'daysAppend'],
+    'apiData': ['initialReading', 'currentReading', 'targetUnits', 'EstimatedBill']
+    // `revenue` is not listed: app/profits/monthly.js matches its headers loosely and reports a missing one itself.
+};
+const SEEN_COLUMNS_KEY = 'mb-columns';
+const checkedWorksheets = new Set();
+
+function checkColumns(operation, rows) {
+    if (operation.type !== 'SELECT' || !rows?.length) return;
+    const key = `${operation.spreadsheetId}/${operation.worksheet}`;
+    if (checkedWorksheets.has(key)) return;
+    checkedWorksheets.add(key);
+
+    const columns = new Set();
+    rows.forEach(row => Object.keys(row).forEach(column => columns.add(column)));
+    const name = operation.worksheet;
+    const notify = (type, message) => {
+        (type === 'error' ? console.error : console.warn)(message);
+        if (window.Mb?.notice) Mb.notice(type, message, `${type}:${key}`);
+    };
+
+    const missing = (EXPECTED_COLUMNS[name] || []).filter(column => !columns.has(column));
+    if (missing.length) {
+        notify('error', `The "${name}" worksheet no longer has the column${missing.length > 1 ? 's' : ''} ` +
+            `${missing.join(', ')}. Figures that use ${missing.length > 1 ? 'them' : 'it'} may be wrong until the page is updated.`);
+    }
+
+    try {
+        const seen = JSON.parse(localStorage.getItem(SEEN_COLUMNS_KEY) || '{}');
+        const before = seen[key];
+        const now = [...columns].sort();
+        if (before) {
+            const added = now.filter(column => !before.includes(column));
+            const removed = before.filter(column => !columns.has(column) && !missing.includes(column));
+            if (added.length || removed.length) {
+                notify('info', `The "${name}" worksheet's columns changed since this browser last loaded it.` +
+                    (added.length ? ` Added: ${added.join(', ')}.` : '') +
+                    (removed.length ? ` Removed: ${removed.join(', ')}.` : ''));
+            }
+        }
+        seen[key] = now;
+        localStorage.setItem(SEEN_COLUMNS_KEY, JSON.stringify(seen));
+    } catch { /* storage unavailable: only the expected-column check runs */ }
+}
+
 // Send a batch of operations to the GridBase engine; resolves to one { operationId, rowCount, rows }
 // per operation. A string body goes as text/plain, which avoids a CORS preflight; the engine parses it as JSON.
 // SELECTs already answered since the last refresh come from DataCache; only the rest are sent.
@@ -76,7 +139,11 @@ async function callSheetsApi(operations) {
     }
 
     let next = 0;
-    return operations.map((op, i) => cached[i] ? { ...cached[i], operationId: op.id } : fetched[next++]);
+    const results = operations.map((op, i) => cached[i] ? { ...cached[i], operationId: op.id } : fetched[next++]);
+    results.forEach((result, i) => {
+        try { checkColumns(operations[i], result?.rows); } catch (error) { console.warn('Column check failed', error); }
+    });
+    return results;
 }
 
 // Dues always mean totalBalance. cumilativeCalculations' prev_due_balance and new_due_balance add up every

@@ -15,8 +15,10 @@
 
     const number = value => Number(String(value ?? "").replace(/,/g, "")) || 0;
     const isDue = value => value !== "" && value !== null && value !== undefined && value !== "#N/A";
-    // totalBalance, or khataBalance on a row that has none.
-    const rowBalance = row => isDue(row.totalBalance) ? number(row.totalBalance) : number(row.khataBalance);
+    // totalBalance; an archive row without one falls back to khataBalance. db2.deliveries rows never do, so a
+    // missing totalBalance there shows (and assets/js/config.js reports the missing column) instead of hiding.
+    let archiveRows = new WeakSet();
+    const rowBalance = row => archiveRows.has(row) && !isDue(row.totalBalance) ? number(row.khataBalance) : number(row.totalBalance);
     // Newer rows hold YYYY-MM-DD; older ones a UTC timestamp of IST midnight.
     const dayOf = value => (typeof value === "string" && value.length === 10) ? value : Mb.toISTDate(value);
     const addDays = (day, n) => new Date(Date.parse(day + "T00:00:00Z") + n * DAY_MS).toISOString().slice(0, 10);
@@ -665,6 +667,7 @@
             const current = (deliveryRows || []).filter(r => r.timestamp);
             const currentStart = current.reduce((min, r) => { const d = dayOf(r.timestamp); return d < min ? d : min; }, "9999-12-31");
             const archive = (archiveRows || []).filter(r => r.timestamp && dayOf(r.timestamp) < currentStart);
+            archiveRows = new WeakSet(archive);
             deliveries = [...archive, ...current];
             dayRows = cumulativeRows || [];
             series = customer ? buildSeries(customer) : null;

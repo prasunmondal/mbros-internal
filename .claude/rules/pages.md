@@ -18,6 +18,8 @@ paths:
 - All paths relative (the site may live under a sub-path). App pages carry `noindex`.
 - Pages that read data load `assets/js/config.js` and call `callSheetsApi([...])`; read
   `result[i].rows`. Main spreadsheet: `MAIN_SHEET_ID`; other IDs stay in the page that uses them.
+- A page that starts depending on a worksheet column adds it to `EXPECTED_COLUMNS` in `assets/js/config.js`
+  (drop it when no page uses it), so a rename or removal shows a notice instead of silent zeros.
 - `app/deliveries/deliveries.js` and `app/profits/profits.js` are large: grep, don't read whole.
 - Business calculations: check `context/product.md` first; a changed rule needs the owner.
 - `pay/` and `index.html` are customer-facing: keep Bengali + English text.

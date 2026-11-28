@@ -400,3 +400,9 @@ img { max-width: 100%; display: block; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* Page-wide notices from Mb.notice (assets/js/common.js), e.g. a worksheet column that went missing. */
+.mb-notices { display: grid; gap: 8px; margin-bottom: 16px; }
+.mb-notices .status > span { flex: 1; }
+.mb-notice-close { flex: none; padding: 0 4px; border: 0; background: none; color: inherit; font: inherit; font-size: 1.2rem; line-height: 1; cursor: pointer; opacity: 0.7; }
+.mb-notice-close:hover { opacity: 1; }

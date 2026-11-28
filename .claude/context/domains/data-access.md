@@ -28,6 +28,7 @@ the lint here does not check them.
 - `fetchWithRetry`: 3 retries, exponential back-off from 1 s. It exists because engine failures
   (timeouts, quota, concurrency) come back as HTML without CORS headers.
 - `useTotalBalanceDues(dayRows)` turns `cumilativeCalculations` due columns into `totalBalance` dues (rule in `product.md`). It reads both delivery worksheets, so every page reading those columns loads them.
+- Column check: `callSheetsApi` passes every SELECT result to `checkColumns`. Columns listed for the worksheet in `EXPECTED_COLUMNS` that the rows lack raise an error notice (`Mb.notice`); any column added or removed since this browser last loaded the worksheet raises an info notice once (baseline in `localStorage` `mb-columns`). It exists because a missing column reads as 0, not as an error. `EXPECTED_COLUMNS` holds only columns pages depend on, not optional notes; `revenue` is left out because `app/profits/monthly.js` matches its headers loosely. The `deliveries.2023` list is `[inferred]` from the pages that read it.
 - Every page uses `type: "SELECT"` only. There are no writes from this repo.
 - `DataCache` keeps each SELECT result in IndexedDB, keyed by the operation without its `id`, so
   all app pages and browser tabs reuse a worksheet already fetched. A page reload (F5) or a fresh
