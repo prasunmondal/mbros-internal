@@ -144,6 +144,43 @@
                     </div>
                 </div>
 
+                <div class="card section records-card">
+                    <div class="card-header records-header">
+                        <div>
+                            <h2>Records</h2>
+                            <p class="subtle" id="recordsRange"></p>
+                        </div>
+                        <div class="records-controls no-print">
+                            <div class="tracker-presets" id="recordsMode" role="group" aria-label="Grouping">
+                                <button type="button" data-mode="smart" aria-pressed="true" title="Latest 4 weeks by week, the 6 months before by month, older by year">Smart</button>
+                                <button type="button" data-mode="custom" aria-pressed="false" title="Pick any mix of year, month and week">Custom</button>
+                            </div>
+                            <div class="records-levels" id="recordsCustom" role="group" aria-label="Group by" hidden>
+                                <label><input type="checkbox" id="recLevel-year" checked> Year</label>
+                                <label><input type="checkbox" id="recLevel-month" checked> Month</label>
+                                <label><input type="checkbox" id="recLevel-week" checked> Week</label>
+                            </div>
+                            <button type="button" class="btn btn-secondary records-btn" id="recordsExpand">Expand all</button>
+                            <button type="button" class="btn btn-secondary records-btn" id="recordsCollapse">Collapse all</button>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table records-table" id="recordsTable">
+                            <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th class="num">KG</th>
+                                <th class="num">Billed</th>
+                                <th class="num">Paid</th>
+                                <th class="num" title="Billed − Paid: above zero adds to what is owed">Due</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                            <tfoot></tfoot>
+                        </table>
+                    </div>
+                </div>
+
                 <h2 class="section-title section">Position</h2>
                 <div class="stats" id="trackerStatsMain"></div>
                 <h2 class="section-title section">Risk and trend</h2>
@@ -166,6 +203,7 @@
 
 <script src="../../assets/js/config.js"></script>
 <script src="tracker.js"></script>
+<script src="records.js"></script>
 <script>
 
     function convertToIST(dateString) {
@@ -325,8 +363,10 @@
     }
 
     function updateTracker() {
-        BalanceTracker.update(document.getElementById('customerSelect').value,
-            document.getElementById('startDate').value, document.getElementById('endDate').value);
+        const name = document.getElementById('customerSelect').value;
+        const from = document.getElementById('startDate').value, to = document.getElementById('endDate').value;
+        BalanceTracker.update(name, from, to);
+        BalanceRecords.update(name, from, to);
     }
 
     // Overview / Balance Tracker switch; #tracker in the URL opens the tracker.
@@ -349,6 +389,7 @@
             Mb.setStatus(status, null);
             document.getElementById("customerSelect").disabled = false;
             BalanceTracker.setData(window.customers, window.profitData, archive);
+            BalanceRecords.setData(window.customers, archive);
         } catch (error) {
             console.error("Error fetching data:", error);
             Mb.setStatus(status, "error", "Could not load data. Please try again.");
@@ -364,8 +405,10 @@
             document.getElementById('startDate').value = fromDay;
             document.getElementById('endDate').value = toDay;
             updateProfit();
+            BalanceRecords.update(document.getElementById('customerSelect').value, fromDay, toDay);
         }
     });
+    BalanceRecords.init();
     document.querySelectorAll('.view-switch button').forEach(button =>
         button.addEventListener('click', () => showView(button.dataset.view)));
     showView(location.hash === '#tracker' ? 'tracker' : 'overview');

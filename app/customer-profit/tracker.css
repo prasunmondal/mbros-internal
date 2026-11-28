@@ -98,3 +98,37 @@ body:not([data-view="tracker"]) .tracker-only { display: none; }
     .chart-wrap.main { height: 300px; }
     .stats { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* Records table (records.js): grouped by week / month / year, each group opens to its days. */
+.records-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.records-header .subtle { margin: 2px 0 0; }
+.records-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.records-levels { display: inline-flex; gap: 12px; font-size: 0.85rem; color: var(--text-muted); }
+.records-levels[hidden] { display: none; }
+.records-levels label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.records-btn { padding: 6px 12px; font-size: 0.8rem; }
+.records-table td.rec-label { white-space: nowrap; }
+.records-table tr.rec-year td { font-weight: 700; background: var(--surface-muted); }
+.records-table tr.rec-month td { font-weight: 600; }
+.records-table tr.rec-week td { font-weight: 500; }
+.records-table tr.rec-day td { color: var(--text-muted); font-size: 0.85rem; }
+.rec-toggle {
+    display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none;
+    font: inherit; color: inherit; cursor: pointer; text-align: left;
+}
+.rec-toggle::before { content: "›"; display: inline-block; width: 10px; color: var(--text-subtle); transition: transform 0.15s ease; }
+.rec-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
+.rec-toggle:hover span { text-decoration: underline; }
+.rec-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 2px; }
+.rec-kind { margin-left: 8px; font-size: 0.72rem; font-weight: 500; color: var(--text-subtle); }
+.records-table tr td.due-up { color: var(--danger); }
+.records-table tr td.due-down { color: var(--brand); }
+@media (max-width: 560px) {
+    .rec-kind { display: none; }
+    .records-table { font-size: 0.8rem; }
+    .records-table th, .records-table td { padding: 8px 8px; }
+    .records-table td.rec-label { white-space: normal; min-width: 110px; }
+}
+@media print {
+    .records-table tr[hidden] { display: none; }
+}
