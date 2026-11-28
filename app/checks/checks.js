@@ -255,7 +255,10 @@
             const all = data.archive.error ? current : [...deliveryRows(data.archive.rows).filter(r => r.day < from), ...current];
             const latest = new Map();
             let i = 0;
-            const wrong = [];
+            // Change = this day's difference − the previous day's, so the day a gap opens, grows or closes stands out.
+            // The day a gap closes is listed too (difference ₹0), though it isn't counted as a mismatch.
+            const rows = [];
+            let mismatched = 0, previous = 0;
             corrected.filter(r => isDue(r.new_due_balance)).sort((a, b) => a.day.localeCompare(b.day)).forEach(r => {
                 while (i < all.length && all[i].day <= r.day) {
                     const row = all[i].row;
@@ -264,13 +267,22 @@
                 }
                 let sum = 0;
                 latest.forEach(v => { sum += v; });
-                const diff = number(r.new_due_balance) - sum;
-                if (Math.abs(diff) > TOLERANCE) wrong.push([r.day, inr(number(r.new_due_balance)), inr(sum), inr(diff)]);
+                let diff = number(r.new_due_balance) - sum;
+                const off = Math.abs(diff) > TOLERANCE;
+                if (!off) diff = 0;
+                const change = diff - previous;
+                if (off) mismatched++;
+                if (off || Math.abs(change) > TOLERANCE) {
+                    const what = !off ? "Gap closed" : Math.abs(previous) <= TOLERANCE ? "Gap opened" : Math.abs(change) <= TOLERANCE ? "Unchanged" : change > 0 ? "Grew" : "Shrank";
+                    rows.push([r.day, inr(number(r.new_due_balance)), inr(sum), inr(diff), (change > 0 ? "+" : "") + inr(change), what]);
+                }
+                previous = diff;
             });
-            add(group, titles[2], wrong.length ? "warn" : "pass",
-                wrong.length ? `${plural(wrong.length, "day")} where the day's dues differ from the sum of customer balances` : `Match on every day since ${from}`,
-                { note: "Dues = totalBalance (product.md). The sheet's due columns are corrected by useTotalBalanceDues first, as every page does.",
-                  ...(wrong.length ? { table: table(["Day", "Dues (corrected)", "Sum of customer balances", "Difference"], wrong) } : {}) });
+            add(group, titles[2], mismatched ? "warn" : "pass",
+                mismatched ? `${plural(mismatched, "day")} where the day's dues differ from the sum of customer balances` : `Match on every day since ${from}`,
+                { note: "Dues = totalBalance (product.md). The sheet's due columns are corrected by useTotalBalanceDues first, as every page does. " +
+                    "Change is the difference minus the previous day's: look at the rows of a day where a gap opens or changes.",
+                  ...(rows.length ? { table: table(["Day", "Dues (corrected)", "Sum of customer balances", "Difference", "Change from previous day", "What happened"], rows) } : {}) });
         } catch (error) {
             add(group, titles[2], "fail", `Could not correct the dues: ${error.message || error}`);
         }
